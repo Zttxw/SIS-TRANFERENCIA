@@ -1,0 +1,61 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Transferencia\Models;
+
+use App\Modules\Organization\Models\Dependencia;
+use App\Support\Concerns\Auditable;
+use App\Support\Models\BaseModel;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
+
+/**
+ * @property int $id
+ * @property int $anio
+ * @property Carbon $fecha_corte
+ * @property string $estado
+ */
+class ProcesoTransferencia extends BaseModel
+{
+    use Auditable, SoftDeletes;
+
+    protected $table = 'procesos_transferencia';
+
+    protected $fillable = [
+        'nombre',
+        'anio',
+        'fecha_corte',
+        'estado',
+        'descripcion',
+        'cerrado_en',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'fecha_corte' => 'date',
+            'cerrado_en' => 'datetime',
+            'anio' => 'integer',
+        ];
+    }
+
+    /** @return HasMany<Dependencia, $this> */
+    public function dependencias(): HasMany
+    {
+        return $this->hasMany(Dependencia::class);
+    }
+
+    public function estaCerrado(): bool
+    {
+        return $this->estado === 'cerrado';
+    }
+
+    /** @param  Builder<static>  $query */
+    public function scopeAbiertos(Builder $query): Builder
+    {
+        return $query->where('estado', '!=', 'cerrado');
+    }
+}

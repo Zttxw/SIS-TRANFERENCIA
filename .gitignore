@@ -51,3 +51,6 @@ Thumbs.db
 /.fleet
 /.idea
 /.vscode
+
+# Claude Code local memory (no versionar)
+/memory/
