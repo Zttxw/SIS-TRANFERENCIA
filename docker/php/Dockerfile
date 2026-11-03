@@ -1,6 +1,6 @@
 FROM php:8.3-fpm-alpine
 
-# Instalar dependencias del sistema y extensiones de PHP
+# Dependencias del sistema
 RUN apk add --no-cache \
     postgresql-dev \
     libzip-dev \
@@ -12,10 +12,9 @@ RUN apk add --no-cache \
     libxml2-dev \
     curl \
     git \
-    unzip \
-    linux-headers
+    unzip
 
-# Configurar e instalar extensiones de PHP
+# Extensiones de PHP
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
         pdo \
@@ -29,14 +28,10 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         bcmath \
         opcache
 
-# Instalar Composer
+# Composer
 COPY --from=composer:2.8 /usr/bin/composer /usr/bin/composer
 
-# Configurar directorio de trabajo
 WORKDIR /var/www/html
-
-# Permisos para el usuario www-data
-RUN chown -R www-data:www-data /var/www/html
 
 USER www-data
 
