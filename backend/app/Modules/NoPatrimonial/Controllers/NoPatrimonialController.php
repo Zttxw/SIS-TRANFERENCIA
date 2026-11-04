@@ -1,0 +1,51 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\NoPatrimonial\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Modules\NoPatrimonial\Requests\GuardarBienNoPatrimonialRequest;
+use App\Modules\NoPatrimonial\Services\NoPatrimonialService;
+use App\Support\Http\ApiResponse;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class NoPatrimonialController extends Controller
+{
+    public function __construct(
+        protected NoPatrimonialService $noPatrimonialService,
+    ) {}
+
+    public function index(Request $request): JsonResponse
+    {
+        $filtros = $request->only(['dependencia_id', 'search', 'per_page']);
+        $bienes = $this->noPatrimonialService->listar($filtros);
+
+        return ApiResponse::paginated($bienes, 'Bienes no patrimoniales recuperados.');
+    }
+
+    public function store(GuardarBienNoPatrimonialRequest $request): JsonResponse
+    {
+        $bien = $this->noPatrimonialService->crear(
+            datos: $request->validated(),
+            usuario: $request->user()
+        );
+
+        return ApiResponse::success($bien, 'Bien no patrimonial registrado con éxito (Anexo 06).', 201);
+    }
+
+    public function update(GuardarBienNoPatrimonialRequest $request, int $id): JsonResponse
+    {
+        $bien = $this->noPatrimonialService->actualizar($id, $request->validated());
+
+        return ApiResponse::success($bien, 'Bien no patrimonial actualizado.');
+    }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $this->noPatrimonialService->eliminar($id);
+
+        return ApiResponse::success(null, 'Bien no patrimonial eliminado.');
+    }
+}
