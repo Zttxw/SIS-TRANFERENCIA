@@ -76,3 +76,4 @@ class DocumentoPendienteController extends Controller
         return ApiResponse::success($resumen, 'Resumen de asuntos pendientes.');
     }
 }
+

@@ -55,3 +55,4 @@ class DependenciaController extends Controller
         return ApiResponse::success($dependencia, 'Dependencia encontrada.');
     }
 }
+
