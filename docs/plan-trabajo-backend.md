@@ -95,7 +95,14 @@ backend/app/
 - Reglas de negocio comprobadas: auditoría automática (RN-14), `requiereObservacion()` en verificación de bienes (RN-05), defaults de fuente por modelo SGD/SIGA/MANUAL (RN-03).
 - `vendor/bin/pint` pasa sin observaciones.
 
-> ⚠️ **Pendiente:** ejecutar `php artisan migrate` contra PostgreSQL real (requiere `docker compose up`). Las columnas `jsonb` usan el tipo nativo de PostgreSQL.
+### Migración en PostgreSQL ejecutada (2026-11-04)
+
+- `docker compose up -d db backend` + `php artisan migrate` dentro del contenedor `backend`: las 17 tablas de dominio + Sanctum creadas correctamente (27 tablas en total).
+- Columnas `jsonb` nativas confirmadas: `actas_transferencia.intervinientes`, `actas_transferencia.anexos_entregados`, `movimientos_auditoria.valores_anteriores/nuevos`.
+
+> **Entorno unificado en PHP 8.4** (2026-11-04): imagen Docker actualizada a `php:8.4-fpm-alpine`, `composer.json` fijado a `^8.4` y `composer.lock` re-resuelto en 8.4 (coincide con el host). El contenedor corre PHP 8.4.27.
+>
+> ⚠️ **Nota de puerto:** el host tiene un PostgreSQL 18 local ocupando el puerto 5432, por lo que las migraciones y comandos artisan que tocan la BD deben ejecutarse **dentro del contenedor** (`docker exec sis_transferencia_backend ...`, con `DB_HOST=db`), no desde el host contra `127.0.0.1`.
 
 ## 5. Decisiones abiertas (a validar)
 
