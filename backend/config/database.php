@@ -99,6 +99,21 @@ return [
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
+        'siga' => [
+            'driver' => 'sqlsrv',
+            'host' => env('SIGA_DB_HOST', '192.168.50.53'),
+            'port' => env('SIGA_DB_PORT', '1433'),
+            'database' => env('SIGA_DB_DATABASE', 'SIGA_300687'),
+            'username' => env('SIGA_DB_USERNAME', 'siga_readonly'),
+            'password' => env('SIGA_DB_PASSWORD', ''),
+            'charset' => env('SIGA_DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'encrypt' => env('SIGA_DB_ENCRYPT', 'no'),
+            'trust_server_certificate' => env('SIGA_DB_TRUST_CERT', 'yes'),
+            'odbc_driver' => env('SIGA_DB_ODBC_DRIVER', 'ODBC Driver 17 for SQL Server'),
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),
