@@ -114,6 +114,13 @@ return [
             'odbc_driver' => env('SIGA_DB_ODBC_DRIVER', 'ODBC Driver 17 for SQL Server'),
         ],
 
+        'siga_sqlite' => [
+            'driver' => 'sqlite',
+            'database' => database_path('siga_replica.sqlite'),
+            'prefix' => '',
+            'foreign_key_constraints' => false,
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),

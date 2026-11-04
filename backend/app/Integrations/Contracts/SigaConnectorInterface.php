@@ -34,4 +34,3 @@ interface SigaConnectorInterface
      */
     public function obtenerCentrosCosto(): Collection;
 }
-

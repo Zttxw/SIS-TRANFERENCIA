@@ -30,21 +30,21 @@ readonly class SigaBienDTO
     public static function fromSigaRecord(object $record): self
     {
         return new self(
-            codigoPatrimonial: (string)($record->CODIGO_PATRIMONIAL ?? $record->codigo_patrimonial ?? ''),
-            descripcion: trim((string)($record->DESCRIPCION ?? $record->descripcion ?? '')),
-            marca: isset($record->MARCA) ? trim((string)$record->MARCA) : null,
-            modelo: isset($record->MODELO) ? trim((string)$record->MODELO) : null,
-            serie: isset($record->SERIE) ? trim((string)$record->SERIE) : null,
-            color: isset($record->COLOR) ? trim((string)$record->COLOR) : null,
-            estadoConservacion: isset($record->ESTADO_CONSERV) ? (string)$record->ESTADO_CONSERV : null,
-            valorAdquisicion: isset($record->VALOR_ADQ) ? (float)$record->VALOR_ADQ : null,
-            codigoCentroCosto: isset($record->CENTRO_COSTO) ? (string)$record->CENTRO_COSTO : null,
-            nombreCentroCosto: isset($record->NOMBRE_DEPEND) ? (string)$record->NOMBRE_DEPEND : null,
-            dniResponsable: isset($record->EMPLEADO) ? (string)$record->EMPLEADO : null,
-            nombreResponsable: isset($record->RESPONSABLE) ? (string)$record->RESPONSABLE : null,
-            ubicacionFisica: isset($record->UBICACION) ? (string)$record->UBICACION : null,
-            estadoActual: isset($record->ESTADO_ACTUAL) ? (string)$record->ESTADO_ACTUAL : null,
-            rawAttributes: (array)$record,
+            codigoPatrimonial: (string) ($record->CODIGO_PATRIMONIAL ?? $record->codigo_patrimonial ?? ''),
+            descripcion: trim((string) ($record->DESCRIPCION ?? $record->descripcion ?? '')),
+            marca: isset($record->MARCA) ? trim((string) $record->MARCA) : null,
+            modelo: isset($record->MODELO) ? trim((string) $record->MODELO) : null,
+            serie: isset($record->SERIE) ? trim((string) $record->SERIE) : null,
+            color: isset($record->COLOR) ? trim((string) $record->COLOR) : null,
+            estadoConservacion: isset($record->ESTADO_CONSERV) ? (string) $record->ESTADO_CONSERV : null,
+            valorAdquisicion: isset($record->VALOR_ADQ) ? (float) $record->VALOR_ADQ : null,
+            codigoCentroCosto: isset($record->CENTRO_COSTO) ? (string) $record->CENTRO_COSTO : null,
+            nombreCentroCosto: isset($record->NOMBRE_DEPEND) ? (string) $record->NOMBRE_DEPEND : null,
+            dniResponsable: isset($record->EMPLEADO) ? (string) $record->EMPLEADO : null,
+            nombreResponsable: isset($record->RESPONSABLE) ? (string) $record->RESPONSABLE : null,
+            ubicacionFisica: isset($record->UBICACION) ? (string) $record->UBICACION : null,
+            estadoActual: isset($record->ESTADO_ACTUAL) ? (string) $record->ESTADO_ACTUAL : null,
+            rawAttributes: (array) $record,
         );
     }
 
@@ -68,4 +68,3 @@ readonly class SigaBienDTO
         ];
     }
 }
-

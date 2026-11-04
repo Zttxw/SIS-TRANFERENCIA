@@ -10,44 +10,54 @@ use Throwable;
 
 class TestSigaConnectionCommand extends Command
 {
-    protected $signature = 'siga:test-connection';
-    protected $description = 'Verifica la conexión a la base de datos del SIGA';
+    protected $signature = 'siga:test-connection 
+        {--sqlite : Probar contra la réplica SQLite local en vez del servidor remoto}';
+
+    protected $description = 'Verifica la conexión a la base de datos del SIGA (remota o réplica SQLite)';
 
     public function handle(): int
     {
-        $this->info('Probando conexión con el sistema SIGA (MSSQL)...');
+        $usarSqlite = (bool) $this->option('sqlite');
+        $conexion = $usarSqlite ? 'siga_sqlite' : 'siga';
 
-        $host = config('database.connections.siga.host');
-        $port = config('database.connections.siga.port');
-        $dbName = config('database.connections.siga.database');
-        $user = config('database.connections.siga.username');
-
-        $this->line("• Servidor: {$host}:{$port}");
-        $this->line("• Base de datos: {$dbName}");
-        $this->line("• Usuario: {$user}");
+        $this->info("Probando conexión SIGA [{$conexion}]...");
 
         try {
-            $connection = DB::connection('siga');
-            $versionInfo = $connection->selectOne("SELECT @@VERSION as version, DB_NAME() as current_db");
+            $db = DB::connection($conexion);
 
-            $this->newLine();
-            $this->info('✔ ¡Conexión con SIGA establecida con éxito!');
-            $this->line('  Base de datos conectada: ' . ($versionInfo->current_db ?? 'N/A'));
+            if ($usarSqlite) {
+                $tablas = $db->select("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name");
+                $this->info('✔ Réplica SQLite conectada con éxito.');
+                $this->line('Total tablas encontradas: '.count($tablas));
 
-            // Columnas de MARCA y SIG_PERSONAL
-            $marcaCols = $connection->select("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MARCA'");
-            $personalCols = $connection->select("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SIG_PERSONAL'");
+                $nombresTablas = array_map(fn ($t) => $t->name, $tablas);
+                $this->line('Muestra: '.implode(', ', array_slice($nombresTablas, 0, 8)).'...');
 
-            $this->newLine();
-            $this->info('Columnas clave detectadas:');
-            $this->line('• MARCA: ' . implode(', ', array_map(fn ($c) => $c->COLUMN_NAME, $marcaCols)));
-            $this->line('• SIG_PERSONAL: ' . implode(', ', array_slice(array_map(fn ($c) => $c->COLUMN_NAME, $personalCols), 0, 10)) . '...');
+                // Buscar tabla de patrimonio en la réplica
+                $tablaPatri = in_array('SIG_PATRIMONIO', $nombresTablas, true)
+                    ? 'SIG_PATRIMONIO'
+                    : (in_array('src_SIG_PATRIMONIO', $nombresTablas, true) ? 'src_SIG_PATRIMONIO' : null);
+
+                if ($tablaPatri) {
+                    $total = $db->selectOne("SELECT COUNT(*) as cant FROM {$tablaPatri}")->cant;
+                    $this->info("✔ Tabla de patrimonio '{$tablaPatri}' encontrada con ".number_format((int) $total).' registros.');
+                }
+            } else {
+                $versionInfo = $db->selectOne('SELECT @@VERSION as version, DB_NAME() as current_db');
+                $this->info('✔ ¡Conexión con SIGA MSSQL establecida con éxito!');
+                $this->line('  Base de datos conectada: '.($versionInfo->current_db ?? 'N/A'));
+            }
 
             return self::SUCCESS;
         } catch (Throwable $e) {
             $this->newLine();
-            $this->error('✘ Error de conexión con SIGA:');
+            $this->error("✘ Error de conexión [{$conexion}]:");
             $this->error($e->getMessage());
+
+            if (! $usarSqlite) {
+                $this->comment('Tip: Puedes probar la réplica local usando: php artisan siga:test-connection --sqlite');
+            }
+
             return self::FAILURE;
         }
     }

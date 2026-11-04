@@ -27,4 +27,3 @@ interface SgdConnectorInterface
      */
     public function obtenerDocumentosPendientes(string $codigoDependencia): Collection;
 }
-

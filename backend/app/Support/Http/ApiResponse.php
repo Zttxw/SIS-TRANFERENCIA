@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support\Http;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -31,6 +32,32 @@ final class ApiResponse
 
         if ($meta !== null) {
             $payload['meta'] = $meta;
+        }
+
+        return response()->json($payload, $status);
+    }
+
+    /**
+     * Respuesta estructurada para resultados paginados.
+     */
+    public static function paginated(
+        LengthAwarePaginator $paginator,
+        ?string $message = null,
+        int $status = 200,
+    ): JsonResponse {
+        $payload = [
+            'success' => true,
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ];
+
+        if ($message !== null) {
+            $payload['message'] = $message;
         }
 
         return response()->json($payload, $status);

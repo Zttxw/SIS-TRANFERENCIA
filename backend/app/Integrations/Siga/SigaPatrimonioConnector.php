@@ -14,14 +14,35 @@ use Illuminate\Support\Collection;
  * Conector oficial de lectura para el módulo de Patrimonio del SIGA-MEF.
  * Utiliza las tablas oficiales identificadas en exportar_anexo04:
  * SIG_PATRIMONIO, SIG_CENTRO_COSTO, MARCA, SIG_PERSONAL, SIG_UBICAC_FISICA.
+ * Soporta conexión MSSQL remota o réplica SQLite local (con prefijo src_).
  */
 class SigaPatrimonioConnector implements SigaConnectorInterface
 {
     protected ConnectionInterface $db;
 
-    public function __construct(DatabaseManager $dbManager)
+    protected string $prefix = '';
+
+    protected string $conexionActual = 'siga';
+
+    public function __construct(
+        protected DatabaseManager $dbManager,
+        string $connection = 'siga'
+    ) {
+        $this->usarConexion($connection);
+    }
+
+    public function usarConexion(string $connection): self
     {
-        $this->db = $dbManager->connection('siga');
+        $this->conexionActual = $connection;
+        $this->db = $this->dbManager->connection($connection);
+        $this->prefix = ($connection === 'siga_sqlite') ? 'src_' : '';
+
+        return $this;
+    }
+
+    public function getConexionActual(): string
+    {
+        return $this->conexionActual;
     }
 
     /**
@@ -32,6 +53,11 @@ class SigaPatrimonioConnector implements SigaConnectorInterface
      */
     public function obtenerBienesPorCentroCosto(string $codigoCentroCosto): Collection
     {
+        $tPatri = "{$this->prefix}SIG_PATRIMONIO";
+        $tCc = "{$this->prefix}SIG_CENTRO_COSTO";
+        $tMarca = "{$this->prefix}MARCA";
+        $tPersonal = "{$this->prefix}SIG_PERSONAL";
+
         $records = $this->db->select("
             SELECT 
                 p.CODIGO_ACTIVO as CODIGO_PATRIMONIAL,
@@ -47,10 +73,10 @@ class SigaPatrimonioConnector implements SigaConnectorInterface
                 p.EMPLEADO,
                 per.nombre_completo as RESPONSABLE,
                 p.ESTADO_ACTUAL
-            FROM SIG_PATRIMONIO p
-            LEFT JOIN SIG_CENTRO_COSTO cc ON p.CENTRO_COSTO = cc.CENTRO_COSTO
-            LEFT JOIN MARCA m ON p.MARCA = m.MARCA
-            LEFT JOIN SIG_PERSONAL per ON p.EMPLEADO = per.empleado
+            FROM {$tPatri} p
+            LEFT JOIN {$tCc} cc ON p.CENTRO_COSTO = cc.CENTRO_COSTO
+            LEFT JOIN {$tMarca} m ON p.MARCA = m.MARCA
+            LEFT JOIN {$tPersonal} per ON p.EMPLEADO = per.empleado
             WHERE p.CENTRO_COSTO = ?
               AND (p.ESTADO_ACTUAL <> 'N' OR p.ESTADO_ACTUAL IS NULL)
             ORDER BY p.CODIGO_ACTIVO
@@ -66,6 +92,11 @@ class SigaPatrimonioConnector implements SigaConnectorInterface
      */
     public function obtenerBienesPorResponsable(string $dniResponsable): Collection
     {
+        $tPatri = "{$this->prefix}SIG_PATRIMONIO";
+        $tCc = "{$this->prefix}SIG_CENTRO_COSTO";
+        $tMarca = "{$this->prefix}MARCA";
+        $tPersonal = "{$this->prefix}SIG_PERSONAL";
+
         $records = $this->db->select("
             SELECT 
                 p.CODIGO_ACTIVO as CODIGO_PATRIMONIAL,
@@ -81,10 +112,10 @@ class SigaPatrimonioConnector implements SigaConnectorInterface
                 p.EMPLEADO,
                 per.nombre_completo as RESPONSABLE,
                 p.ESTADO_ACTUAL
-            FROM SIG_PATRIMONIO p
-            LEFT JOIN SIG_CENTRO_COSTO cc ON p.CENTRO_COSTO = cc.CENTRO_COSTO
-            LEFT JOIN MARCA m ON p.MARCA = m.MARCA
-            LEFT JOIN SIG_PERSONAL per ON p.EMPLEADO = per.empleado
+            FROM {$tPatri} p
+            LEFT JOIN {$tCc} cc ON p.CENTRO_COSTO = cc.CENTRO_COSTO
+            LEFT JOIN {$tMarca} m ON p.MARCA = m.MARCA
+            LEFT JOIN {$tPersonal} per ON p.EMPLEADO = per.empleado
             WHERE p.EMPLEADO = ?
               AND (p.ESTADO_ACTUAL <> 'N' OR p.ESTADO_ACTUAL IS NULL)
             ORDER BY p.CODIGO_ACTIVO
@@ -100,20 +131,22 @@ class SigaPatrimonioConnector implements SigaConnectorInterface
      */
     public function obtenerCentrosCosto(): Collection
     {
+        $tCc = "{$this->prefix}SIG_CENTRO_COSTO";
+
         $records = $this->db->select("
             SELECT 
                 CENTRO_COSTO as codigo,
                 NOMBRE_DEPEND as nombre,
                 SEDE as sede
-            FROM SIG_CENTRO_COSTO
+            FROM {$tCc}
             WHERE ESTADO = 'A'
             ORDER BY CENTRO_COSTO
         ");
 
         return collect($records)->map(fn ($r) => [
-            'codigo' => (string)$r->codigo,
-            'nombre' => trim((string)$r->nombre),
-            'sede' => isset($r->sede) ? (string)$r->sede : null,
+            'codigo' => (string) $r->codigo,
+            'nombre' => trim((string) $r->nombre),
+            'sede' => isset($r->sede) ? (string) $r->sede : null,
         ]);
     }
 }
