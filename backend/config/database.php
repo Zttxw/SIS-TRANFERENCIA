@@ -114,6 +114,35 @@ return [
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
+        // Conexión de SOLO LECTURA al SGD (SQL Server). Fuente de la estructura
+        // organizacional y del padrón de personal (plan §4.1, RN-01, RN-06).
+        // El driver pdo_sqlsrv solo existe en el host: ejecutar `sgd:ingestar`
+        // desde el host, no dentro del contenedor.
+        'sgd' => [
+            'driver' => 'sqlsrv',
+            'host' => env('SGD_DB_HOST', '127.0.0.1'),
+            'port' => env('SGD_DB_PORT', '1433'),
+            'database' => env('SGD_DB_DATABASE', ''),
+            'username' => env('SGD_DB_USERNAME', ''),
+            'password' => env('SGD_DB_PASSWORD', ''),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'readonly' => true,
+            'appname' => 'SIS-TRANSFERENCIA',
+            // ODBC Driver 17 exige 'yes'/'no' en Encrypt y 'true'/'false' en
+            // TrustServerCertificate (no booleanos ni la cadena 'false').
+            'encrypt' => filter_var(env('SGD_DB_ENCRYPT', false), FILTER_VALIDATE_BOOL) ? 'yes' : 'no',
+            'trust_server_certificate' => filter_var(env('SGD_DB_TRUST_SERVER_CERTIFICATE', true), FILTER_VALIDATE_BOOL) ? 'true' : 'false',
+            'login_timeout' => (int) env('SGD_LOGIN_TIMEOUT', 5),
+            // El timeout de consulta solo aplica donde existe el driver sqlsrv
+            // (el host). La constante no está definida en el contenedor Alpine,
+            // por lo que se omite allí para no romper la carga de configuración.
+            'options' => defined('PDO::SQLSRV_ATTR_QUERY_TIMEOUT') ? [
+                constant('PDO::SQLSRV_ATTR_QUERY_TIMEOUT') => (int) env('SGD_QUERY_TIMEOUT', 30),
+            ] : [],
+        ],
+
     ],
 
     /*

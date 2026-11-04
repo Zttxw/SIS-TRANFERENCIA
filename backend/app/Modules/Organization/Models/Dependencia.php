@@ -39,6 +39,10 @@ class Dependencia extends BaseModel
         'tipo',
         'nivel',
         'activa',
+        'codigo_encargado_sgd',
+        'tipo_encargatura',
+        'codigo_titular_sgd',
+        'encargado_servidor_id',
         'fuente',
         'fuente_referencia',
         'extraido_en',
@@ -74,6 +78,16 @@ class Dependencia extends BaseModel
     public function servidores(): HasMany
     {
         return $this->hasMany(Servidor::class);
+    }
+
+    /**
+     * Servidor encargado de la dependencia, según lo declara el SGD (RN-01).
+     *
+     * @return BelongsTo<Servidor, $this>
+     */
+    public function encargado(): BelongsTo
+    {
+        return $this->belongsTo(Servidor::class, 'encargado_servidor_id');
     }
 
     public function esRaiz(): bool

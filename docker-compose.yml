@@ -58,8 +58,11 @@ services:
       POSTGRES_DB: ${DB_DATABASE:-sis_transferencia}
       POSTGRES_USER: ${DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    # Publicado en 55432 del host para no colisionar con el PostgreSQL local
+    # (puerto 5432 ocupado). La ingesta desde el host (requiere pdo_sqlsrv)
+    # escribe en este puerto; el backend en contenedor usa db:5432 interno.
     ports:
-      - "5432:5432"
+      - "${DB_HOST_PORT:-55432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:

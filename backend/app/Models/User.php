@@ -5,18 +5,20 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Modules\Auth\Models\AsignacionRol;
 use App\Modules\Organization\Models\Servidor;
+use App\Support\Enums\Permiso;
 use App\Support\Enums\Rol;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['dni', 'name', 'email', 'password', 'activo', 'servidor_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -33,6 +35,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'activo' => 'boolean',
         ];
     }
 
@@ -42,10 +45,15 @@ class User extends Authenticatable
         return $this->hasMany(AsignacionRol::class);
     }
 
-    /** @return HasOne<Servidor, $this> */
-    public function servidor(): HasOne
+    /**
+     * Servidor del padrón SGD vinculado a esta cuenta (plan §5). La cuenta es la
+     * credencial de acceso; el servidor es la persona y la fuente de datos.
+     *
+     * @return BelongsTo<Servidor, $this>
+     */
+    public function servidor(): BelongsTo
     {
-        return $this->hasOne(Servidor::class);
+        return $this->belongsTo(Servidor::class, 'servidor_id');
     }
 
     /**
@@ -62,5 +70,28 @@ class User extends Authenticatable
     public function esAdministrador(): bool
     {
         return $this->tieneRol(Rol::ADMINISTRADOR);
+    }
+
+    /**
+     * ¿Alguno de los roles del usuario otorga el permiso dado? Se resuelve contra
+     * el catálogo materializado `rol_permiso` (plan §5). Solo cuentas activas.
+     */
+    public function tienePermiso(Permiso $permiso): bool
+    {
+        if (! $this->activo) {
+            return false;
+        }
+
+        $roles = $this->asignacionesRol()->pluck('rol')->all();
+
+        if ($roles === []) {
+            return false;
+        }
+
+        return DB::table('rol_permiso')
+            ->join('permisos', 'permisos.id', '=', 'rol_permiso.permiso_id')
+            ->whereIn('rol_permiso.rol', $roles)
+            ->where('permisos.codigo', $permiso->value)
+            ->exists();
     }
 }

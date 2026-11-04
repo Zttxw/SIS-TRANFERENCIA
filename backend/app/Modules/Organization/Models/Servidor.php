@@ -12,6 +12,7 @@ use App\Support\Enums\FuenteDato;
 use App\Support\Models\BaseModel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -36,9 +37,11 @@ class Servidor extends BaseModel
         'proceso_transferencia_id',
         'dependencia_id',
         'user_id',
+        'codigo_sgd',
         'dni',
         'nombres',
         'apellidos',
+        'email',
         'cargo',
         'regimen_laboral',
         'modalidad_contractual',
@@ -68,10 +71,19 @@ class Servidor extends BaseModel
         return $this->belongsTo(Dependencia::class);
     }
 
-    /** @return BelongsTo<User, $this> */
-    public function usuario(): BelongsTo
+    /**
+     * Cuenta de acceso vinculada a este servidor, si existe (users.servidor_id).
+     *
+     * @return HasOne<User, $this>
+     */
+    public function cuenta(): HasOne
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->hasOne(User::class, 'servidor_id');
+    }
+
+    public function tieneCuenta(): bool
+    {
+        return $this->cuenta()->exists();
     }
 
     public function nombreCompleto(): string

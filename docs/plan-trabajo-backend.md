@@ -81,10 +81,12 @@ backend/app/
 | **F3** | Migraciones + modelos de anexos patrimoniales (Patrimonio, NoPatrimonial) + evidencias | ✅ |
 | **F4** | Migraciones + modelos de anexos documentales/gestión (Gestion, Acervo, Personal, Documentos) | ✅ |
 | **F5** | Expediente, Actas | ✅ |
-| **F6** | Seeders (roles, catálogos, datos de prueba) + factories | ⬜ |
-| **F7** | Services + Form Requests + Controllers + rutas API (por módulo) | ⬜ |
+| **F6** | Seeders (roles, catálogos, datos de prueba) + factories | 🟡 Parcial |
+| **F7** | Services + Form Requests + Controllers + rutas API (por módulo) | 🟡 Auth |
 | **F8** | Policies/autorización por rol y ámbito | ⬜ |
 | **F9** | Importadores (Excel SGD/SIGA) + Reportes (PDF/Excel) | ⬜ |
+| **Auth+Ingesta SGD** | Login por DNI (Sanctum), ingesta directa SGD→dominio, preparar activación, catálogo roles/permisos | ✅ |
+| **Ingesta SGD ampliada** | Enriquecimiento (email, encargatura), catálogos SGD, acervo digital (Anexo 03) y documentos pendientes (§7.7) | ✅ |
 
 **Alcance de esta sesión:** F0 → F5 completadas (migraciones y modelos esenciales + soporte reutilizable). Services/Controllers/rutas (F7+) en sesiones siguientes.
 
@@ -114,3 +116,17 @@ backend/app/
 
 - **2026-11-03 v1.0** — Plan creado. Inicio de F0 (dependencias composer, soporte transversal) y F1 (núcleo organizacional).
 - **2026-11-03 v1.1** — Completadas F0–F5: 17 migraciones, 17 modelos, 6 enums, 4 traits reutilizables, Sanctum instalado. Decisiones confirmadas: auth Sanctum, Servidor separado de User. Verificado con SQLite + Pint.
+- **2026-11-04 v1.2** — Autenticación e ingesta SGD.
+  - **Auth por DNI:** `users` gana `dni` (login único), `activo`, `servidor_id`; email nullable. `Modules/Auth`: `AutenticacionService` (login/logout Sanctum), `AuthController` (`POST /api/auth/login`, `logout`, `GET /api/auth/me`), `LoginRequest`.
+  - **Ingesta SGD (solo lectura):** conexión `sgd` (sqlsrv) en `config/database.php` + `config/sgd.php` + bloque `SGD_DB_*` en `.env`. `Modules/Organization/Services/IngestaSgd` + comando `sgd:ingestar` pueblan `dependencias` (jerarquía, encargado) y `servidores` (DNI, nombres, apellidos, **cargo real** vía `RHTM_CARGOS`) del proceso activo con `updateOrCreate` idempotente. Fuentes: `RHTM_DEPENDENCIA`, `RHTM_PER_EMPLEADOS` (+ `RHTM_CARGOS`).
+  - **Preparar activación:** `PrepararActivacion` + `ActivacionController` (`GET /api/servidores`, `preparar-activacion`, `activar`). El encargado de dependencia (según SGD) recibe rol `responsable_centro_costo` por cada dependencia encargada.
+  - **Autorización:** enum `Permiso` + catálogo `permisos`/`rol_permiso` (migración) sembrado por `RolesPermisosSeeder`; `AdminSeeder` crea proceso 2026 + admin inicial.
+  - **Entorno (importante):** `pdo_sqlsrv` solo existe en el host → `sgd:ingestar` se corre **desde el host**. El Postgres del contenedor se publicó en **host:55432** (el 5432 lo ocupa un Postgres local); el `.env` del host apunta a `127.0.0.1:55432`, mientras el contenedor usa `db:5432` por variables de compose (tienen prioridad sobre `.env`).
+  - **Verificado (2026-11-04):** SGD lee 157 dependencias / 645 empleados; ingesta puebla 157 deps (156 con padre, 157 con encargado resuelto) y 645 servidores (cargo real + dependencia). Flujo e2e: propuesta de roles → activación → login por DNI → permisos derivados → rechazo de password inválida. Pint y `php artisan test` en verde.
+- **2026-11-04 v1.3** — Ingesta SGD ampliada (catálogos + documental). Base de REPORTE_SGD (ingeniería inversa del SGD ya verificada en vivo).
+  - **Enriquecimiento organizacional:** `servidores.email` ← `CEMP_EMAIL` (validado con `FILTER_VALIDATE_EMAIL`); `dependencias.tipo_encargatura` ← `CO_TIPO_ENCARGATURA` y `codigo_titular_sgd` ← `CO_EMP_TITULAR`. Migración `...000004_enrich_organization_from_sgd`.
+  - **Catálogos SGD (solo lectura):** tablas `tipos_documentales_sgd` (`SI_MAE_TIPO_DOC`, 82) y `estados_sgd` (`TDTR_ESTADOS` dominios `TDTV_REMITOS`/`TDTV_DESTINOS`, 18). Modelos `TipoDocumentalSgd`, `EstadoSgd`; servicio `IngestaCatalogosSgd`. Migración `...000005_create_sgd_catalogos_tables`.
+  - **Acervo digital (Anexo 03, §7.3):** `IngestaDocumentalSgd::ingestarAcervoDigital` — resumen por dependencia emisora + tipo documental + año vía `GROUP BY` en SQL Server (no trae documentos individuales). Escribe `acervo_documental` con `tipo=digital`.
+  - **Documentos pendientes (§7.7):** `IngestaDocumentalSgd::ingestarDocumentosPendientes` — enfoque de **agregado directo** (no se copia el bruto). Join `TDTV_DESTINOS`×`TDTV_REMITOS` filtrado en origen por reglas R01–R03 + estado de recepción no resuelto. **Pendiente** = `ES_DOC_REC NOT IN (2,3,4,5,9)` (atendido/archivado/derivado/enviado/anulado); verificado en vivo que `ES_DES` es inútil (siempre `0`) y el estado real vive en `ES_DOC_REC`. Asunto desde `DE_ASU` (requirió ampliar `documentos_pendientes.asunto` a `text`, migración `...000006`). Poda idempotente: soft-delete de pendientes SGD del ámbito que ya no vienen de la consulta; nunca toca registros manuales.
+  - **Comando:** `sgd:ingestar` gana `--catalogos`, `--documental`, `--solo-catalogos`. Orden: organizacional → catálogos → documental (la documental usa los catálogos para nombrar tipos).
+  - **Verificado (2026-11-04, piloto dep 00001):** catálogos 82 tipos + 18 estados; acervo 5 series digitales (CARTA/INFORME/MEMORÁNDUM/PROVEIDO/HOJA DE ENVIO); 43 documentos pendientes (37 no leídos + 6 recibidos), re-ejecución idempotente estable. Pint y `php artisan test` en verde. **Ingesta del universo completo (157 deps) aún no ejecutada** — pendiente de visto bueno por volumen.
