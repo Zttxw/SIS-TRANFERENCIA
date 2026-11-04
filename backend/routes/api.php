@@ -3,8 +3,10 @@
 use App\Modules\Acervo\Controllers\AcervoController;
 use App\Modules\Auth\Controllers\ActivacionController;
 use App\Modules\Auth\Controllers\AuthController;
+use App\Modules\Documentos\Controllers\DocumentoPendienteController;
 use App\Modules\Gestion\Controllers\GestionController;
 use App\Modules\NoPatrimonial\Controllers\NoPatrimonialController;
+use App\Modules\Organization\Controllers\DependenciaController;
 use App\Modules\Patrimonio\Controllers\PatrimonioController;
 use App\Modules\Personal\Controllers\PersonalController;
 use App\Modules\Transferencia\Controllers\TransferenciaController;
@@ -21,10 +23,23 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/user', fn (Request $request) => $request->user());
 
+    // Catálogo de dependencias y centros de costo.
+    Route::get('/dependencias', [DependenciaController::class, 'index']);
+    Route::get('/dependencias/{id}', [DependenciaController::class, 'show']);
+
     // Padrón de servidores y activación de cuentas (plan §7.1).
     Route::get('/servidores', [ActivacionController::class, 'index']);
     Route::post('/servidores/{servidor}/preparar-activacion', [ActivacionController::class, 'preparar']);
     Route::post('/servidores/{servidor}/activar', [ActivacionController::class, 'activar']);
+
+    // Anexo 01: Reporte de Asuntos Pendientes y Prioritarios (SGD) (plan §7.7).
+    Route::prefix('documentos-pendientes')->group(function () {
+        Route::get('/', [DocumentoPendienteController::class, 'index']);
+        Route::get('/resumen', [DocumentoPendienteController::class, 'resumen']);
+        Route::post('/', [DocumentoPendienteController::class, 'store']);
+        Route::put('/{id}', [DocumentoPendienteController::class, 'update']);
+        Route::delete('/{id}', [DocumentoPendienteController::class, 'destroy']);
+    });
 
     // Anexo 02: Informe de Gestión por Centro de Costo (plan §7.2).
     Route::prefix('gestion')->group(function () {
