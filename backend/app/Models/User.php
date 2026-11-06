@@ -94,4 +94,90 @@ class User extends Authenticatable
             ->where('permisos.codigo', $permiso->value)
             ->exists();
     }
+
+    /**
+     * Roles con visión institucional: acceden a todas las dependencias sin
+     * acotar por ámbito (plan §5, §6 Etapa 6).
+     */
+    private const ROLES_AMBITO_GLOBAL = [
+        Rol::ADMINISTRADOR,
+        Rol::ETTS,
+        Rol::ETTE,
+    ];
+
+    /**
+     * Roles consolidadores: su ámbito es la dependencia asignada **y su
+     * subárbol** (plan §6, Etapa 4). El resto de roles (servidor/delegado) solo
+     * alcanza la dependencia asignada exacta.
+     */
+    private const ROLES_CON_SUBARBOL = [
+        Rol::RESPONSABLE_CENTRO_COSTO,
+        Rol::RESPONSABLE_EQUIPO,
+        Rol::COORDINADOR,
+    ];
+
+    /**
+     * ¿El usuario ve toda la organización, sin acotar por dependencia?
+     */
+    public function tieneAmbitoGlobal(): bool
+    {
+        if (! $this->activo) {
+            return false;
+        }
+
+        return $this->asignacionesRol
+            ->contains(fn (AsignacionRol $a) => in_array($a->rol, self::ROLES_AMBITO_GLOBAL, true));
+    }
+
+    /**
+     * IDs de las dependencias sobre las que el usuario puede operar (plan §5,
+     * F8-ámbito). Los roles consolidadores expanden al subárbol de su
+     * dependencia; servidor/delegado quedan en la dependencia asignada exacta.
+     *
+     * Devuelve `null` cuando el ámbito es global (sin filtro): el llamador debe
+     * tratar `null` como "todas", no como "ninguna".
+     *
+     * @return list<int>|null
+     */
+    public function dependenciasEnAmbito(): ?array
+    {
+        if ($this->tieneAmbitoGlobal()) {
+            return null;
+        }
+
+        $ids = [];
+
+        foreach ($this->asignacionesRol as $asignacion) {
+            if ($asignacion->dependencia_id === null) {
+                continue;
+            }
+
+            if (in_array($asignacion->rol, self::ROLES_CON_SUBARBOL, true)) {
+                $dependencia = $asignacion->dependencia;
+                if ($dependencia !== null) {
+                    $ids = array_merge($ids, $dependencia->idsSubarbol());
+                }
+            } else {
+                $ids[] = $asignacion->dependencia_id;
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * ¿El usuario puede operar sobre la dependencia dada (o su ámbito la
+     * incluye)? Base de las comprobaciones de ámbito en servicios/controllers.
+     */
+    public function puedeAccederDependencia(int $dependenciaId): bool
+    {
+        $ambito = $this->dependenciasEnAmbito();
+
+        // Ámbito global: acceso a cualquier dependencia.
+        if ($ambito === null) {
+            return $this->activo;
+        }
+
+        return in_array($dependenciaId, $ambito, true);
+    }
 }

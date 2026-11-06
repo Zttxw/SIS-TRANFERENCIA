@@ -136,10 +136,12 @@ enum Permiso: string
                 self::VerReportes,
                 self::ExportarReportes,
             ],
-            // ETTS: consulta y consolida la información institucional.
+            // ETTS: recibe las entregas de 1er/2do nivel, las revisa y consolida
+            // institucionalmente (directiva §7.6).
             Rol::ETTS => [
                 self::AccederPlataforma,
                 self::VerAnexos,
+                self::RevisarEntrega,
                 self::ConsolidarEntrega,
                 self::GenerarActas,
                 self::VerExpediente,

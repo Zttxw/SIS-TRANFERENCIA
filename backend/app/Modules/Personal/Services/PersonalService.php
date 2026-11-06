@@ -7,11 +7,14 @@ namespace App\Modules\Personal\Services;
 use App\Models\User;
 use App\Modules\Personal\Models\Personal;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Support\Concerns\RespetaEstadoEntrega;
 use App\Support\Enums\FuenteDato;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class PersonalService
 {
+    use RespetaEstadoEntrega;
+
     /**
      * Lista el personal declarado con filtros y paginación (Anexo 05).
      */
@@ -23,6 +26,11 @@ class PersonalService
 
         if (! empty($filtros['dependencia_id'])) {
             $query->where('dependencia_id', (int) $filtros['dependencia_id']);
+        }
+
+        // Acotación por ámbito (F8): lista de dependencias accesibles al usuario.
+        if (array_key_exists('dependencia_ids', $filtros) && $filtros['dependencia_ids'] !== null) {
+            $query->whereIn('dependencia_id', $filtros['dependencia_ids']);
         }
 
         if (! empty($filtros['search'])) {
@@ -46,6 +54,8 @@ class PersonalService
     public function guardar(array $datos, User $usuario, ?int $procesoId = null): Personal
     {
         $procesoId = $procesoId ?? $this->resolverProcesoActivoId();
+
+        $this->exigirEntregaModificable((int) $datos['dependencia_id'], $procesoId);
 
         return Personal::updateOrCreate(
             [
@@ -74,6 +84,7 @@ class PersonalService
     public function eliminar(int $id): bool
     {
         $p = Personal::findOrFail($id);
+        $this->exigirEntregaModificable((int) $p->dependencia_id);
 
         return (bool) $p->delete();
     }

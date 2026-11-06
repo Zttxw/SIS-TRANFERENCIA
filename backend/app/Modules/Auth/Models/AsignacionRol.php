@@ -10,6 +10,8 @@ use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Concerns\Auditable;
 use App\Support\Enums\Rol;
 use App\Support\Models\BaseModel;
+use Database\Factories\AsignacionRolFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -21,7 +23,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class AsignacionRol extends BaseModel
 {
-    use Auditable;
+    /** @use HasFactory<AsignacionRolFactory> */
+    use Auditable, HasFactory;
+
+    protected static function newFactory(): AsignacionRolFactory
+    {
+        return AsignacionRolFactory::new();
+    }
 
     protected $table = 'asignaciones_rol';
 

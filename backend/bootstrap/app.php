@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\VerificarPermiso;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,7 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
         __DIR__.'/../app/Integrations/Siga/Commands',
     ])
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Autorización por permiso (plan §5). Combinar siempre con auth:sanctum.
+        $middleware->alias([
+            'permiso' => VerificarPermiso::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

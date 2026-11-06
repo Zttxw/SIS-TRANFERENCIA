@@ -4,15 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Gestion\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Support\Http\AnexoFormRequest;
 
-class GuardarInformeGestionRequest extends FormRequest
+class GuardarInformeGestionRequest extends AnexoFormRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     public function rules(): array
     {
         return [

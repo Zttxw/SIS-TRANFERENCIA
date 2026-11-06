@@ -9,6 +9,8 @@ use App\Support\Concerns\Auditable;
 use App\Support\Concerns\HasFuenteDato;
 use App\Support\Enums\FuenteDato;
 use App\Support\Models\BaseModel;
+use Database\Factories\DependenciaFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -24,7 +26,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Dependencia extends BaseModel
 {
-    use Auditable, HasFuenteDato, SoftDeletes;
+    /** @use HasFactory<DependenciaFactory> */
+    use Auditable, HasFactory, HasFuenteDato, SoftDeletes;
+
+    protected static function newFactory(): DependenciaFactory
+    {
+        return DependenciaFactory::new();
+    }
 
     protected $table = 'dependencias';
 
@@ -93,5 +101,40 @@ class Dependencia extends BaseModel
     public function esRaiz(): bool
     {
         return $this->parent_id === null;
+    }
+
+    /**
+     * IDs de esta dependencia y de todo su subárbol (hijas, nietas, …) dentro
+     * del mismo proceso. Base de la autorización por ámbito para roles
+     * consolidadores (plan §6, Etapa 4): un responsable de centro de costo ve y
+     * consolida su dependencia y las subordinadas.
+     *
+     * Resuelto en memoria por niveles — la jerarquía institucional es pequeña
+     * (≈157 nodos) y portable entre SQLite/PostgreSQL sin CTE recursivo.
+     *
+     * @return list<int>
+     */
+    public function idsSubarbol(): array
+    {
+        $ids = [$this->id];
+        $frontera = [$this->id];
+
+        while ($frontera !== []) {
+            $hijas = self::query()
+                ->whereIn('parent_id', $frontera)
+                ->pluck('id')
+                ->all();
+
+            $hijas = array_values(array_diff($hijas, $ids));
+
+            if ($hijas === []) {
+                break;
+            }
+
+            $ids = array_merge($ids, $hijas);
+            $frontera = $hijas;
+        }
+
+        return $ids;
     }
 }

@@ -5,16 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\NoPatrimonial\Requests;
 
 use App\Support\Enums\EstadoConservacion;
-use Illuminate\Foundation\Http\FormRequest;
+use App\Support\Http\AnexoFormRequest;
 use Illuminate\Validation\Rules\Enum;
 
-class GuardarBienNoPatrimonialRequest extends FormRequest
+class GuardarBienNoPatrimonialRequest extends AnexoFormRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     public function rules(): array
     {
         return [

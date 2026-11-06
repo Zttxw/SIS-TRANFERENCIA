@@ -7,7 +7,9 @@ namespace App\Modules\Transferencia\Models;
 use App\Modules\Organization\Models\Dependencia;
 use App\Support\Concerns\Auditable;
 use App\Support\Models\BaseModel;
+use Database\Factories\ProcesoTransferenciaFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
@@ -20,7 +22,13 @@ use Illuminate\Support\Carbon;
  */
 class ProcesoTransferencia extends BaseModel
 {
-    use Auditable, SoftDeletes;
+    /** @use HasFactory<ProcesoTransferenciaFactory> */
+    use Auditable, HasFactory, SoftDeletes;
+
+    protected static function newFactory(): ProcesoTransferenciaFactory
+    {
+        return ProcesoTransferenciaFactory::new();
+    }
 
     protected $table = 'procesos_transferencia';
 

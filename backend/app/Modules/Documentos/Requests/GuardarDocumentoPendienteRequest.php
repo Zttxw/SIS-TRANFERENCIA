@@ -4,15 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Documentos\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Support\Http\AnexoFormRequest;
 
-class GuardarDocumentoPendienteRequest extends FormRequest
+class GuardarDocumentoPendienteRequest extends AnexoFormRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     /**
      * @return array<string, mixed>
      */
@@ -31,4 +26,3 @@ class GuardarDocumentoPendienteRequest extends FormRequest
         ];
     }
 }
-

@@ -74,4 +74,14 @@ class Entrega extends BaseModel
     {
         return in_array($this->estado, [EstadoEntrega::BORRADOR, EstadoEntrega::OBSERVADA], true);
     }
+
+    /**
+     * ¿La entrega se remite al ETTS institucional? Ocurre cuando la dependencia
+     * está en la cima de su cadena de consolidación (sin padre): su destino es
+     * el ETTS, no otra dependencia (directiva §7.6).
+     */
+    public function esHaciaEtts(): bool
+    {
+        return $this->dependencia_destino_id === null;
+    }
 }

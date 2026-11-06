@@ -7,12 +7,15 @@ namespace App\Modules\Documentos\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Documentos\Requests\GuardarDocumentoPendienteRequest;
 use App\Modules\Documentos\Services\DocumentoPendienteService;
+use App\Support\Concerns\AutorizaAmbito;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DocumentoPendienteController extends Controller
 {
+    use AutorizaAmbito;
+
     public function __construct(
         protected DocumentoPendienteService $documentoService,
     ) {}
@@ -22,7 +25,10 @@ class DocumentoPendienteController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $filtros = $request->only(['dependencia_id', 'estado_atencion', 'search', 'per_page']);
+        $filtros = $this->acotarFiltrosAlAmbito(
+            $request->user(),
+            $request->only(['dependencia_id', 'estado_atencion', 'search', 'per_page'])
+        );
         $documentos = $this->documentoService->listar($filtros);
 
         return ApiResponse::paginated($documentos, 'Relación de asuntos pendientes recuperada con éxito.');
@@ -71,9 +77,9 @@ class DocumentoPendienteController extends Controller
     public function resumen(Request $request): JsonResponse
     {
         $dependenciaId = (int) $request->query('dependencia_id', $request->user()->servidor?->dependencia_id ?? 1);
+        $this->autorizarDependencia($request->user(), $dependenciaId);
         $resumen = $this->documentoService->resumen($dependenciaId);
 
         return ApiResponse::success($resumen, 'Resumen de asuntos pendientes.');
     }
 }
-

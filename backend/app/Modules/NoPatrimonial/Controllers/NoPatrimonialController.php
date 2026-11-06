@@ -7,19 +7,25 @@ namespace App\Modules\NoPatrimonial\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\NoPatrimonial\Requests\GuardarBienNoPatrimonialRequest;
 use App\Modules\NoPatrimonial\Services\NoPatrimonialService;
+use App\Support\Concerns\AutorizaAmbito;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class NoPatrimonialController extends Controller
 {
+    use AutorizaAmbito;
+
     public function __construct(
         protected NoPatrimonialService $noPatrimonialService,
     ) {}
 
     public function index(Request $request): JsonResponse
     {
-        $filtros = $request->only(['dependencia_id', 'search', 'per_page']);
+        $filtros = $this->acotarFiltrosAlAmbito(
+            $request->user(),
+            $request->only(['dependencia_id', 'search', 'per_page'])
+        );
         $bienes = $this->noPatrimonialService->listar($filtros);
 
         return ApiResponse::paginated($bienes, 'Bienes no patrimoniales recuperados.');

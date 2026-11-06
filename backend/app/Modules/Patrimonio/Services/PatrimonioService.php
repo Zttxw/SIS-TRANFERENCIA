@@ -7,6 +7,7 @@ namespace App\Modules\Patrimonio\Services;
 use App\Models\User;
 use App\Modules\Patrimonio\Models\BienPatrimonial;
 use App\Modules\Patrimonio\Models\VerificacionBien;
+use App\Support\Concerns\RespetaEstadoEntrega;
 use App\Support\Enums\EstadoConservacion;
 use App\Support\Enums\EstadoVerificacionBien;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\DB;
 
 class PatrimonioService
 {
+    use RespetaEstadoEntrega;
+
     /**
      * Lista los bienes patrimoniales con filtros y paginación.
      */
@@ -26,6 +29,11 @@ class PatrimonioService
 
         if (! empty($filtros['dependencia_id'])) {
             $query->where('dependencia_id', (int) $filtros['dependencia_id']);
+        }
+
+        // Acotación por ámbito (F8): lista de dependencias accesibles al usuario.
+        if (array_key_exists('dependencia_ids', $filtros) && $filtros['dependencia_ids'] !== null) {
+            $query->whereIn('dependencia_id', $filtros['dependencia_ids']);
         }
 
         if (! empty($filtros['servidor_id'])) {
@@ -77,6 +85,8 @@ class PatrimonioService
     {
         return DB::transaction(function () use ($id, $datos, $usuario) {
             $bien = BienPatrimonial::findOrFail($id);
+
+            $this->exigirEntregaModificable((int) $bien->dependencia_id, $bien->proceso_transferencia_id);
 
             $estadoEnum = $datos['estado'] instanceof EstadoVerificacionBien
                 ? $datos['estado']

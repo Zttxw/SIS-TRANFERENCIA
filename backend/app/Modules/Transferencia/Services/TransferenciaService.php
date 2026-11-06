@@ -6,6 +6,7 @@ namespace App\Modules\Transferencia\Services;
 
 use App\Models\User;
 use App\Modules\Acervo\Models\AcervoDocumental;
+use App\Modules\Documentos\Models\DocumentoPendiente;
 use App\Modules\Gestion\Models\InformeGestion;
 use App\Modules\NoPatrimonial\Models\BienNoPatrimonial;
 use App\Modules\Organization\Models\Dependencia;
@@ -16,6 +17,8 @@ use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Enums\EstadoEntrega;
 use App\Support\Enums\EstadoVerificacionBien;
+use App\Support\Http\ApiResponse;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -99,15 +102,23 @@ class TransferenciaService
             'entrega' => $entrega ? [
                 'id' => $entrega->id,
                 'estado' => $entrega->estado->value,
+                'destino_id' => $entrega->dependencia_destino_id,
+                'hacia_etts' => $entrega->esHaciaEtts(),
                 'remitida_en' => $entrega->remitida_en?->toIso8601String(),
                 'revisada_en' => $entrega->revisada_en?->toIso8601String(),
+                'consolidada_en' => $entrega->consolidada_en?->toIso8601String(),
                 'comentario' => $entrega->comentario,
             ] : null,
         ];
     }
 
     /**
-     * Remite la entrega de la dependencia al superior jerárquico (plan §7.8, Etapas 2-4).
+     * Remite la entrega de la dependencia a su destino (plan §7.8, Etapas 2-4).
+     *
+     * El destino es el padre jerárquico (`parent_id`). Cuando la dependencia
+     * está en la cima de su cadena (1er nivel, sin padre), el destino es NULL =
+     * el ETTS institucional (directiva §7.6, Etapa 6): el ETTS recibe estas
+     * entregas y las consolida con el mismo `revisarEntrega`.
      */
     public function remitirEntrega(int $dependenciaId, User $usuario, ?string $comentario = null): Entrega
     {
@@ -121,6 +132,7 @@ class TransferenciaService
                     'dependencia_id' => $dep->id,
                 ],
                 [
+                    // NULL ⇒ ETTS institucional (dependencia sin padre).
                     'dependencia_destino_id' => $dep->parent_id,
                     'emisor_id' => $usuario->id,
                     'estado' => EstadoEntrega::REMITIDA,
@@ -132,38 +144,126 @@ class TransferenciaService
     }
 
     /**
-     * Genera o consulta el Acta oficial de Transferencia (Anexo 07).
+     * Revisa la entrega remitida por una dependencia subordinada (plan §6
+     * Etapas 3-4, §7.8). El responsable del centro de costo padre evalúa los
+     * entregables y:
+     *  - `observar`   → la devuelve para subsanación (OBSERVADA), o
+     *  - `consolidar` → la incorpora a su propia consolidación (CONSOLIDADA).
+     *
+     * No muta datos de origen (RN-06); solo cambia el estado del flujo y deja
+     * constancia del receptor y la fecha de revisión (RN-14).
+     *
+     * Relación con las observaciones (plan §7.9): marcar la entrega OBSERVADA es
+     * el *estado agregado*; las observaciones concretas sobre cada anexo se
+     * registran por separado (ObservacionService / POST /api/observaciones) por
+     * el mismo revisor (tiene observaciones.registrar). Cuando el responsable
+     * subsana la última observación abierta de la dependencia, la entrega vuelve
+     * a REMITIDA automáticamente (ObservacionService::reRemitirSiCorresponde).
      */
-    public function obtenerActa(int $dependenciaId): ActaTransferencia
+    public function revisarEntrega(int $dependenciaId, User $usuario, string $accion, ?string $comentario = null): Entrega
+    {
+        $procesoId = $this->resolverProcesoActivoId();
+
+        $entrega = Entrega::where('proceso_transferencia_id', $procesoId)
+            ->where('dependencia_id', $dependenciaId)
+            ->firstOrFail();
+
+        if (! in_array($entrega->estado, [EstadoEntrega::REMITIDA, EstadoEntrega::EN_REVISION], true)) {
+            throw new \DomainException('Solo pueden revisarse entregas remitidas o en revisión.');
+        }
+
+        $nuevoEstado = $accion === 'consolidar'
+            ? EstadoEntrega::CONSOLIDADA
+            : EstadoEntrega::OBSERVADA;
+
+        return DB::transaction(function () use ($entrega, $usuario, $nuevoEstado, $comentario) {
+            $entrega->fill([
+                'receptor_id' => $usuario->id,
+                'estado' => $nuevoEstado,
+                'revisada_en' => Carbon::now(),
+                'consolidada_en' => $nuevoEstado === EstadoEntrega::CONSOLIDADA ? Carbon::now() : null,
+                'comentario' => $comentario ?? $entrega->comentario,
+            ])->save();
+
+            return $entrega->fresh(['emisor', 'receptor', 'dependenciaDestino']);
+        });
+    }
+
+    /**
+     * Genera o consulta el Acta oficial de Transferencia (Anexo 07, §7.10).
+     *
+     * El acta solo puede emitirse cuando la entrega de la dependencia está
+     * CONSOLIDADA (409 en otro caso). Su relación de anexos entregados refleja
+     * la presencia real de cada anexo (no un hardcode): se apoya en
+     * `obtenerEstadoEntrega()` y en la presencia de documentos pendientes.
+     */
+    public function obtenerActa(int $dependenciaId, ?User $usuario = null): ActaTransferencia
     {
         $procesoId = $this->resolverProcesoActivoId();
         $dep = Dependencia::findOrFail($dependenciaId);
 
-        return ActaTransferencia::firstOrCreate(
-            [
-                'proceso_transferencia_id' => $procesoId,
-                'dependencia_id' => $dep->id,
+        $entrega = Entrega::where('proceso_transferencia_id', $procesoId)
+            ->where('dependencia_id', $dep->id)
+            ->latest('id')
+            ->first();
+
+        if ($entrega === null || $entrega->estado !== EstadoEntrega::CONSOLIDADA) {
+            throw new HttpResponseException(
+                ApiResponse::error(
+                    'El acta solo puede emitirse cuando la entrega de la dependencia está consolidada.',
+                    409,
+                )
+            );
+        }
+
+        $anexos = $this->presenciaAnexos($dep->id, $procesoId);
+
+        $acta = ActaTransferencia::firstOrNew([
+            'proceso_transferencia_id' => $procesoId,
+            'dependencia_id' => $dep->id,
+        ]);
+
+        $acta->fill([
+            'numero_acta' => $acta->numero_acta ?? 'ACTA-'.Carbon::now()->year.'-'.str_replace('.', '', (string) $dep->codigo),
+            'fecha_acta' => $acta->fecha_acta ?? Carbon::now()->toDateString(),
+            'intervinientes' => $acta->intervinientes ?? [
+                'titular_saliente' => null,
+                'titular_entrante' => null,
             ],
-            [
-                'codigo' => 'ACTA-'.Carbon::now()->year.'-'.str_replace('.', '', $dep->codigo),
-                'lugar' => 'San Jerónimo, Cusco',
-                'fecha_hora' => Carbon::now(),
-                'intervinientes' => [
-                    'titular_saliente' => null,
-                    'titular_entrante' => null,
-                ],
-                'anexos_entregados' => [
-                    'anexo_01' => true,
-                    'anexo_02' => true,
-                    'anexo_03' => true,
-                    'anexo_04' => true,
-                    'anexo_05' => true,
-                    'anexo_06' => true,
-                    'anexo_07' => true,
-                ],
-                'estado' => 'borrador',
-            ]
-        );
+            'anexos_entregados' => $anexos,
+            'estado' => $acta->estado === 'suscrita' ? 'suscrita' : 'generada',
+            'generada_por_id' => $usuario?->id ?? $acta->generada_por_id,
+        ]);
+        $acta->save();
+
+        return $acta;
+    }
+
+    /**
+     * Presencia real de cada anexo para una dependencia (plan §7.10). Un anexo
+     * cuenta como "entregado" si existe al menos un registro suyo (o, para el
+     * acta, el propio acto de emitirla).
+     *
+     * @return array<string, bool>
+     */
+    public function presenciaAnexos(int $dependenciaId, ?int $procesoId = null): array
+    {
+        $procesoId = $procesoId ?? $this->resolverProcesoActivoId();
+        $estado = $this->obtenerEstadoEntrega($dependenciaId, $procesoId);
+
+        $documentos = DocumentoPendiente::where('dependencia_id', $dependenciaId)
+            ->where('proceso_transferencia_id', $procesoId)
+            ->exists();
+
+        return [
+            'anexo_01' => $documentos,
+            'anexo_02' => (bool) ($estado['anexo02_gestion']['existe'] ?? false),
+            'anexo_03' => ($estado['anexo03_acervo']['total_series'] ?? 0) > 0,
+            'anexo_04' => ($estado['anexo04_patrimonio']['total_bienes'] ?? 0) > 0,
+            'anexo_05' => ($estado['anexo05_personal']['total_personal'] ?? 0) > 0,
+            'anexo_06' => ($estado['anexo06_nopatrimonial']['total_bienes'] ?? 0) > 0,
+            'anexo_07' => true,
+        ];
     }
 
     private function resolverProcesoActivoId(): int
