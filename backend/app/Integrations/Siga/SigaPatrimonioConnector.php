@@ -75,6 +75,7 @@ class SigaPatrimonioConnector implements SigaConnectorInterface
                 p.ESTADO_ACTUAL
             FROM {$tPatri} p
             LEFT JOIN {$tCc} cc ON p.CENTRO_COSTO = cc.CENTRO_COSTO
+                AND cc.ANO_EJE = (SELECT MAX(c2.ANO_EJE) FROM {$tCc} c2 WHERE c2.CENTRO_COSTO = p.CENTRO_COSTO)
             LEFT JOIN {$tMarca} m ON p.MARCA = m.MARCA
             LEFT JOIN {$tPersonal} per ON p.EMPLEADO = per.empleado
             WHERE p.CENTRO_COSTO = ?
@@ -114,6 +115,7 @@ class SigaPatrimonioConnector implements SigaConnectorInterface
                 p.ESTADO_ACTUAL
             FROM {$tPatri} p
             LEFT JOIN {$tCc} cc ON p.CENTRO_COSTO = cc.CENTRO_COSTO
+                AND cc.ANO_EJE = (SELECT MAX(c2.ANO_EJE) FROM {$tCc} c2 WHERE c2.CENTRO_COSTO = p.CENTRO_COSTO)
             LEFT JOIN {$tMarca} m ON p.MARCA = m.MARCA
             LEFT JOIN {$tPersonal} per ON p.EMPLEADO = per.empleado
             WHERE p.EMPLEADO = ?
@@ -135,12 +137,13 @@ class SigaPatrimonioConnector implements SigaConnectorInterface
 
         $records = $this->db->select("
             SELECT 
-                CENTRO_COSTO as codigo,
-                NOMBRE_DEPEND as nombre,
-                SEDE as sede
-            FROM {$tCc}
-            WHERE ESTADO = 'A'
-            ORDER BY CENTRO_COSTO
+                cc.CENTRO_COSTO as codigo,
+                cc.NOMBRE_DEPEND as nombre,
+                cc.SEDE as sede
+            FROM {$tCc} cc
+            WHERE cc.ESTADO = 'A'
+              AND cc.ANO_EJE = (SELECT MAX(c2.ANO_EJE) FROM {$tCc} c2 WHERE c2.CENTRO_COSTO = cc.CENTRO_COSTO)
+            ORDER BY cc.CENTRO_COSTO
         ");
 
         return collect($records)->map(fn ($r) => [

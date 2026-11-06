@@ -48,7 +48,7 @@ class IngestaPatrimonioSiga
 
         DB::transaction(function () use ($proceso, $centrosCosto, &$mapaDependencias, $extraidoEn) {
             foreach ($centrosCosto as $cc) {
-                $dep = Dependencia::firstOrCreate(
+                $dep = Dependencia::withTrashed()->updateOrCreate(
                     [
                         'proceso_transferencia_id' => $proceso->id,
                         'codigo' => $cc['codigo'],
@@ -61,6 +61,9 @@ class IngestaPatrimonioSiga
                         'extraido_en' => $extraidoEn,
                     ]
                 );
+                if ($dep->trashed()) {
+                    $dep->restore();
+                }
                 $mapaDependencias[$cc['codigo']] = $dep->id;
             }
         });
@@ -97,7 +100,7 @@ class IngestaPatrimonioSiga
                         $apellidos = count($partes) >= 2 ? $partes[0].' '.$partes[1] : ($partes[0] ?? null);
                         $nombres = count($partes) >= 3 ? implode(' ', array_slice($partes, 2)) : ($item->nombreResponsable ?? 'Servidor');
 
-                        $servidor = Servidor::firstOrCreate(
+                        $servidor = Servidor::withTrashed()->updateOrCreate(
                             [
                                 'proceso_transferencia_id' => $proceso->id,
                                 'dni' => $dni,
@@ -110,13 +113,16 @@ class IngestaPatrimonioSiga
                                 'extraido_en' => $extraidoEn,
                             ]
                         );
+                        if ($servidor->trashed()) {
+                            $servidor->restore();
+                        }
                         $mapaServidores[$dni] = $servidor->id;
                     }
                     $servidorId = $mapaServidores[$dni];
                 }
 
                 // Guardar o actualizar Bien Patrimonial
-                $bien = BienPatrimonial::updateOrCreate(
+                $bien = BienPatrimonial::withTrashed()->updateOrCreate(
                     [
                         'proceso_transferencia_id' => $proceso->id,
                         'codigo_patrimonial' => $item->codigoPatrimonial,
@@ -135,6 +141,9 @@ class IngestaPatrimonioSiga
                         'extraido_en' => $extraidoEn,
                     ]
                 );
+                if ($bien->trashed()) {
+                    $bien->restore();
+                }
 
                 // Inicializar estado de verificación en PENDIENTE si no existe
                 VerificacionBien::firstOrCreate(
