@@ -18,7 +18,7 @@ export default defineConfig({
     // por completo (plan §3). El frontend solo adjunta el header Bearer.
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: process.env.VITE_BACKEND_URL || 'http://web',
         changeOrigin: true,
       },
     },
