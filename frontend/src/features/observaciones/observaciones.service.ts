@@ -37,3 +37,4 @@ export const observacionesService = {
     return res.data.data
   },
 }
+

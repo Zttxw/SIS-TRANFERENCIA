@@ -19,6 +19,8 @@ export interface PaginationMeta {
   last_page: number
   per_page: number
   total: number
+  from?: number
+  to?: number
 }
 
 /** Respuesta paginada: `{ success, data: T[], meta }`. */

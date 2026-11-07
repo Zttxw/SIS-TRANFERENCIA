@@ -440,5 +440,25 @@ navegación (sidebar propuesto) antes de E2.
   - **Routing:** ruta `/gestion` habilitada en `router/index.tsx` bajo `AppLayout` y `RutaProtegida`.
   - **Verificación:** `npm run build` y `npm run lint` 100% limpios y validados.
 
-- **(pendiente)** — E5: Anexos documentales/listado (01, 03, 05, 06).
+- **2026-11-07 — E5 (Anexos documentales/listado: 01, 03, 05, 06):**
+  - **Componente de Paginación Reutilizable** (`src/components/ui/pagination.tsx`): barra de navegación paginada con selector de páginas y totales.
+  - **Anexo 01 — Documentos Pendientes** (`features/documentos/`):
+    - Tipos (`src/types/documentos.ts`), servicio (`documentosService`) y hooks (`useDocumentos`, `useResumenDocumentosPendientes`, `useCrearDocumento`, `useActualizarDocumento`, `useEliminarDocumento`).
+    - Modal de alta/edición (`DocumentoModal.tsx`).
+    - Pantalla `DocumentosPage.tsx`: resumen cuantitativo (KPIs), filtros por estado de atención y buscador de texto, tabla con distinción entre fuente **SGD Oficial** (solo lectura, RN-06) y **Manual**, acciones CRUD y panel de observaciones integrado (`anexo="documento"`).
+  - **Anexo 03 — Acervo Documental** (`features/acervo/`):
+    - Tipos (`src/types/acervo.ts`), servicio (`acervoService`) y hooks (`useAcervo`, `useCrearAcervo`, `useActualizarAcervo`, `useEliminarAcervo`).
+    - Modal de alta/edición (`AcervoModal.tsx`) para series documentales con tipado numérico estricto.
+    - Pantalla `AcervoPage.tsx`: filtro por formato (Físico vs Digital), tabla con series, periodo, cantidad, unidad de conservación y ubicación, CRUD completo y panel de observaciones (`anexo="acervo"`).
+  - **Anexo 05 — Personal a Cargo** (`features/personal/`):
+    - Tipos (`src/types/personal.ts`), servicio (`personalService`) y hooks (`usePersonal`, `useGuardarPersonal`, `useEliminarPersonal`).
+    - Modal de servidor (`PersonalModal.tsx`) con validación de DNI de 8 dígitos y regímenes laborales del sector público (D.L. 276, 728, 1057 CAS, Locación).
+    - Pantalla `PersonalPage.tsx`: padrón de personal del área, búsqueda en tiempo real, CRUD con upsert backend por DNI y panel de observaciones (`anexo="personal"`).
+  - **Anexo 06 — Bienes No Patrimoniales** (`features/nopatrimonial/`):
+    - Tipos (`src/types/nopatrimonial.ts`), servicio (`noPatrimonialService`) y hooks (`useNoPatrimonial`, `useCrearBienNoPatrimonial`, `useActualizarBienNoPatrimonial`, `useEliminarBienNoPatrimonial`).
+    - Modal de activos auxiliares (`NoPatrimonialModal.tsx`) con estado de conservación (`bueno`, `regular`, `malo`, `inservible`).
+    - Pantalla `NoPatrimonialPage.tsx`: inventario de activos auxiliares y herramientas menores, CRUD y panel de observaciones (`anexo="nopatrimonial"`).
+  - **Enrutado:** rutas `/documentos`, `/acervo`, `/personal`, `/nopatrimonial` montadas en `src/router/index.tsx`.
+  - **Verificación:** `npm run build` y `npm run lint` 100% limpios y sin errores.
+
 - **(pendiente)** — E6: Anexo 04 (Patrimonio) y verificación física.

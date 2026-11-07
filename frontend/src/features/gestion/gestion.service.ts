@@ -15,3 +15,4 @@ export const gestionService = {
     return res.data.data
   },
 }
+

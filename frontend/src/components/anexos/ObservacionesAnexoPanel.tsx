@@ -378,3 +378,4 @@ export function ObservacionesAnexoPanel({
     </Card>
   )
 }
+

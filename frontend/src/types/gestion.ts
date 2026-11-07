@@ -44,3 +44,4 @@ export interface GuardarInformeGestionPayload {
   asuntos_pendientes?: string | null
   estado?: EstadoInformeGestion
 }
+

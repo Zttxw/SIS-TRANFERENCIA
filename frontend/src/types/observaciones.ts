@@ -56,3 +56,4 @@ export interface FiltrosObservaciones {
   per_page?: number
   page?: number
 }
+

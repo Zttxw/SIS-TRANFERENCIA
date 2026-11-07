@@ -77,3 +77,4 @@ export function AlertaBloqueoEntrega({ estadoEntrega, className = '' }: AlertaBl
     </div>
   )
 }
+
