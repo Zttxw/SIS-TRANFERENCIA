@@ -43,3 +43,4 @@ export async function revisarEntrega(
 ): Promise<void> {
   await api.post('/transferencia/revisar', payload)
 }
+

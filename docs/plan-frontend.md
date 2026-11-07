@@ -424,6 +424,21 @@ navegación (sidebar propuesto) antes de E2.
   - **Routing:** montado en ruta raíz `/` dentro del guard `RutaProtegida` y `AppLayout`.
   - **Verificación:** `npm run build` y `npm run lint` 100% limpios; proxies Nginx y Vite operativos en puertos 8000 y 5173.
 
-- **(pendiente)** — E4: Patrón de anexo + Anexo 02 (Gestión) de referencia.
+- **2026-11-07 — E4 (Patrón de anexo + Anexo 02 Gestión de referencia):**
+  - **Componentes transversales y patrón de anexo**:
+    - `AlertaBloqueoEntrega.tsx` (`src/components/anexos/`): banner reactivo que interpreta el estado de entrega (`remitida`, `observada`, `consolidada`) y notifica al usuario si la edición está congelada o habilitada por subsanación (RN-13).
+    - `AnexoHeader.tsx` (`src/components/anexos/`): encabezado estandarizado con badge de anexo, referencia normativa a la Directiva N.° 001-2026-MDSJ/A, botón de retorno al dashboard y slot de acciones.
+    - `ObservacionesAnexoPanel.tsx` (`src/components/anexos/`): bandeja polimórfica que lista observaciones abiertas/subsanadas del anexo (`GET /observaciones`), permite formular observaciones a coordinadores (`observaciones.registrar`) y responder con sustento de subsanación (`observaciones.subsanar`).
+    - `Textarea.tsx` (`src/components/ui/`): primitiva reutilizable de área de texto con estilo institucional.
+  - **Módulo de Observaciones** (`src/types/observaciones.ts`, `features/observaciones/`):
+    - Tipos, servicio (`observacionesService`) y hooks (`useObservaciones`, `useRegistrarObservacion`, `useSubsanarObservacion`, `useDesestimarObservacion`).
+  - **Anexo 02 — Informe de Gestión** (`src/types/gestion.ts`, `features/gestion/`):
+    - Tipos para `InformeGestion` y `GuardarInformeGestionPayload`.
+    - Servicio `gestionService` (`GET /gestion/informe`, `POST /gestion/informe`).
+    - Hook `useInformeGestion` y `useGuardarInformeGestion` con captura y notificación amigable de 409 Conflict.
+    - `InformeGestionPage.tsx`: formulario con validación `zod` (`react-hook-form`), contadores de caracteres, secciones para funciones, logros, dificultades y pendientes, botones para "Guardar Borrador" y "Marcar Completado", y panel integrado de observaciones.
+  - **Routing:** ruta `/gestion` habilitada en `router/index.tsx` bajo `AppLayout` y `RutaProtegida`.
+  - **Verificación:** `npm run build` y `npm run lint` 100% limpios y validados.
+
 - **(pendiente)** — E5: Anexos documentales/listado (01, 03, 05, 06).
 - **(pendiente)** — E6: Anexo 04 (Patrimonio) y verificación física.
