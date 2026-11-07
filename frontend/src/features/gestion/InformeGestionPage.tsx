@@ -43,7 +43,7 @@ const informeSchema = z.object({
 type FormValues = z.infer<typeof informeSchema>
 
 export function InformeGestionPage() {
-  const { dependenciaId, setDependenciaId } = useDependenciaActiva()
+  const { dependenciaId } = useDependenciaActiva()
   const { data: estadoData, isLoading: cargandoEstado } = useEstadoEntrega(dependenciaId)
   const { data: informe, isLoading: cargandoInforme } = useInformeGestion(dependenciaId)
   const guardarMut = useGuardarInformeGestion()
@@ -118,12 +118,6 @@ export function InformeGestionPage() {
             Utilice el selector de dependencias en la barra superior para elegir el despacho o centro de costo
             específico y gestionar su Anexo 02.
           </p>
-          <div className="mt-4 flex justify-center">
-            <Button onClick={() => setDependenciaId(48)} className="gap-2">
-              <Building2 className="h-4 w-4" />
-              Cargar Oficina de Tecnología de la Información (OTI)
-            </Button>
-          </div>
         </Card>
       </div>
     )
