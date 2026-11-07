@@ -40,3 +40,4 @@ export function EnDesarrolloPage({ titulo, modulo, etapa }: EnDesarrolloPageProp
     </div>
   )
 }
+

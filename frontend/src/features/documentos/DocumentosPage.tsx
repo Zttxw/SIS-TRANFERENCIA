@@ -36,7 +36,7 @@ import { DocumentoModal } from './DocumentoModal'
 import type { DocumentoPendiente, GuardarDocumentoPayload } from '@/types/documentos'
 
 export function DocumentosPage() {
-  const { dependenciaId } = useDependenciaActiva()
+  const { dependenciaId, setDependenciaId } = useDependenciaActiva()
   const [pagina, setPagina] = useState(1)
   const [busqueda, setBusqueda] = useState('')
   const [estadoFiltro, setEstadoFiltro] = useState('')
@@ -103,6 +103,12 @@ export function DocumentosPage() {
           <p className="mt-1 text-sm text-muted-foreground max-w-md mx-auto">
             Seleccione el despacho o centro de costo en el selector superior para gestionar sus asuntos pendientes.
           </p>
+          <div className="mt-4 flex justify-center">
+            <Button onClick={() => setDependenciaId(48)} className="gap-2">
+              <Building2 className="h-4 w-4" />
+              Cargar Oficina de Tecnología de la Información (OTI)
+            </Button>
+          </div>
         </Card>
       </div>
     )

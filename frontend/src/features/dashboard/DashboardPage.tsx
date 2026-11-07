@@ -4,6 +4,7 @@ import {
   AlertCircle,
   ArrowRight,
   Boxes,
+  Building2,
   Clock,
   FileCheck,
   FileSpreadsheet,
@@ -73,7 +74,7 @@ function renderBadgeEstado(estado: EstadoEntrega | null) {
 }
 
 export function DashboardPage() {
-  const { dependenciaId } = useDependenciaActiva()
+  const { dependenciaId, setDependenciaId } = useDependenciaActiva()
   const { data: estadoData, isLoading, error } = useEstadoEntrega(dependenciaId)
   const { data: resumenDocs } = useResumenDocumentos(dependenciaId)
 
@@ -98,6 +99,12 @@ export function DashboardPage() {
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
             Su cuenta tiene ámbito global. Utilice el selector de la barra superior para elegir la unidad orgánica y visualizar el estado de entrega y sus anexos correspondientes.
           </p>
+          <div className="mt-6 flex justify-center">
+            <Button onClick={() => setDependenciaId(48)} className="gap-2">
+              <Building2 className="h-4 w-4" />
+              Cargar Oficina de Tecnología de la Información (OTI)
+            </Button>
+          </div>
         </Card>
       </div>
     )

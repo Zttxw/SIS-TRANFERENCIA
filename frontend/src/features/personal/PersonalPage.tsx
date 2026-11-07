@@ -33,7 +33,7 @@ import { PersonalModal } from './PersonalModal'
 import type { GuardarPersonalPayload, Personal } from '@/types/personal'
 
 export function PersonalPage() {
-  const { dependenciaId } = useDependenciaActiva()
+  const { dependenciaId, setDependenciaId } = useDependenciaActiva()
   const [pagina, setPagina] = useState(1)
   const [busqueda, setBusqueda] = useState('')
 
@@ -85,6 +85,12 @@ export function PersonalPage() {
           <p className="mt-1 text-sm text-muted-foreground max-w-md mx-auto">
             Utilice el selector de dependencias en la barra superior para gestionar el padrón de servidores asignados.
           </p>
+          <div className="mt-4 flex justify-center">
+            <Button onClick={() => setDependenciaId(48)} className="gap-2">
+              <Building2 className="h-4 w-4" />
+              Cargar Oficina de Tecnología de la Información (OTI)
+            </Button>
+          </div>
         </Card>
       </div>
     )

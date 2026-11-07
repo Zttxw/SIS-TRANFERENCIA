@@ -35,7 +35,8 @@ export function DependenciaProvider({ children }: { children: React.ReactNode })
   const { usuario } = useAuth()
   const [override, setOverride] = useState<Override>(() => leerPersistida())
 
-  const propia = usuario?.servidor?.dependencia_id ?? null
+  // Por defecto se asocia al servidor del usuario, o a OTI (id 48) como despacho institucional activo
+  const propia = usuario?.servidor?.dependencia_id ?? 48
   const dependenciaId =
     override === undefined ? propia : override === 'all' ? null : override
 
