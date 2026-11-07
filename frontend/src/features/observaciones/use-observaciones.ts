@@ -16,6 +16,17 @@ export function useObservaciones(filtros: FiltrosObservaciones = {}) {
   })
 }
 
+function invalidarTodoElDominio(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: ['observaciones'] })
+  queryClient.invalidateQueries({ queryKey: ['transferencia-estado'] })
+  queryClient.invalidateQueries({ queryKey: ['informe-gestion'] })
+  queryClient.invalidateQueries({ queryKey: ['documentos'] })
+  queryClient.invalidateQueries({ queryKey: ['acervo'] })
+  queryClient.invalidateQueries({ queryKey: ['patrimonio'] })
+  queryClient.invalidateQueries({ queryKey: ['personal'] })
+  queryClient.invalidateQueries({ queryKey: ['nopatrimonial'] })
+}
+
 export function useRegistrarObservacion() {
   const queryClient = useQueryClient()
 
@@ -24,9 +35,7 @@ export function useRegistrarObservacion() {
       observacionesService.registrar(payload),
     onSuccess: () => {
       toast.success('Observación registrada con éxito.')
-      queryClient.invalidateQueries({ queryKey: ['observaciones'] })
-      queryClient.invalidateQueries({ queryKey: ['transferencia-estado'] })
-      queryClient.invalidateQueries({ queryKey: ['informe-gestion'] })
+      invalidarTodoElDominio(queryClient)
     },
     onError: (error: any) => {
       const msg = error?.response?.data?.message ?? 'No se pudo registrar la observación.'
@@ -42,10 +51,10 @@ export function useSubsanarObservacion() {
     mutationFn: (payload: SubsanarObservacionPayload) =>
       observacionesService.subsanar(payload),
     onSuccess: () => {
-      toast.success('Observación subsanada correctamente.')
-      queryClient.invalidateQueries({ queryKey: ['observaciones'] })
-      queryClient.invalidateQueries({ queryKey: ['transferencia-estado'] })
-      queryClient.invalidateQueries({ queryKey: ['informe-gestion'] })
+      toast.success(
+        'Observación subsanada. Si era la última observación pendiente, la entrega se re-remite automáticamente.',
+      )
+      invalidarTodoElDominio(queryClient)
     },
     onError: (error: any) => {
       const msg = error?.response?.data?.message ?? 'No se pudo subsanar la observación.'
@@ -61,9 +70,7 @@ export function useDesestimarObservacion() {
     mutationFn: (id: number) => observacionesService.desestimar(id),
     onSuccess: () => {
       toast.success('Observación desestimada.')
-      queryClient.invalidateQueries({ queryKey: ['observaciones'] })
-      queryClient.invalidateQueries({ queryKey: ['transferencia-estado'] })
-      queryClient.invalidateQueries({ queryKey: ['informe-gestion'] })
+      invalidarTodoElDominio(queryClient)
     },
     onError: (error: any) => {
       const msg = error?.response?.data?.message ?? 'No se pudo desestimar la observación.'
@@ -71,4 +78,3 @@ export function useDesestimarObservacion() {
     },
   })
 }
-

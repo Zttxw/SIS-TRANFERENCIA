@@ -481,4 +481,23 @@ navegación (sidebar propuesto) antes de E2.
   - **Enrutado:** ruta `/patrimonio` montada en `src/router/index.tsx`.
   - **Verificación:** `npm run build` y `npm run lint` 100% limpios y validados.
 
-- **(pendiente)** — E7: Observaciones y subsanaciones globales (§7.9).
+- **2026-11-07 — E7 (Observaciones y subsanaciones globales):**
+  - **Tipos y modelos** (`src/types/observaciones.ts`):
+    - Enum extendido `EstadoObservacion` (`abierta`, `en_subsanacion`, `subsanada`, `desestimada`).
+    - Configuración institucional y rutas para los 6 anexos observables (`ANEXOS_OBSERVABLES_CONFIG`).
+    - Utilidades de resolución polimórfica `resolverAnexoDesdeTipo` y formateador contextual `formatearDetalleObservable` para identificar documentos, bienes, acervo o personal observado.
+  - **Servicios y hooks** (`features/observaciones/`):
+    - Hook `useObservaciones` con filtrado multidimensional (dependencia, anexo, estado, paginación).
+    - Mutaciones `useRegistrarObservacion`, `useSubsanarObservacion`, `useDesestimarObservacion` con invalidación reactiva integral del estado de la entrega, resumen de control y listados de anexos.
+  - **Modales de ciclo de vida**:
+    - `RegistrarObservacionModal.tsx`: formulario con validación `zod` (`react-hook-form`), selector de anexo, ID observable y descripción.
+    - `SubsanarObservacionModal.tsx`: visualización del texto observado, sustento técnico de subsanación y notificación explícita sobre la re-remisión automática institucional (RN-13).
+  - **Bandeja General de Observaciones** (`features/observaciones/ObservacionesPage.tsx`):
+    - Tarjetas KPI con conteo de total, pendientes/abiertas, subsanadas y desestimadas.
+    - Barra de herramientas con filtros por estado, anexo, toggle de ámbito de centro de costo y búsqueda en tiempo real.
+    - Tarjetas detalladas de observaciones con metadatos de autoría, fecha, bloque de observación, bloque de subsanación con auditoría de fecha/responsable, navegación directa al anexo correspondiente y acciones rápidas contextuales por permiso (`observaciones.subsanar`, `observaciones.registrar`).
+    - Paginación integrada con `<Pagination>`.
+  - **Enrutado:** ruta `/observaciones` montada en `src/router/index.tsx`.
+  - **Verificación:** `npm run build` y `npm run lint` 100% limpios y validados.
+
+- **(pendiente)** — E8: Flujo jerárquico de entrega y revisión (§6 Etapas 3-4, §7.8).

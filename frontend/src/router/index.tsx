@@ -9,6 +9,7 @@ import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DocumentosPage } from '@/features/documentos/DocumentosPage'
 import { InformeGestionPage } from '@/features/gestion/InformeGestionPage'
 import { NoPatrimonialPage } from '@/features/nopatrimonial/NoPatrimonialPage'
+import { ObservacionesPage } from '@/features/observaciones/ObservacionesPage'
 import { PatrimonioPage } from '@/features/patrimonio/PatrimonioPage'
 import { PersonalPage } from '@/features/personal/PersonalPage'
 import { AppLayout } from '@/layouts/AppLayout'
@@ -36,16 +37,7 @@ export const router = createBrowserRouter([
           { path: 'personal', element: <PersonalPage /> },
           { path: 'nopatrimonial', element: <NoPatrimonialPage /> },
           { path: 'patrimonio', element: <PatrimonioPage /> },
-          {
-            path: 'observaciones',
-            element: (
-              <EnDesarrolloPage
-                titulo="Bandeja General de Observaciones"
-                modulo="Gestión Global de Observaciones y Subsanaciones"
-                etapa="E7"
-              />
-            ),
-          },
+          { path: 'observaciones', element: <ObservacionesPage /> },
           {
             path: 'entregas',
             element: (
