@@ -42,3 +42,4 @@ export interface FiltrosAcervo {
   per_page?: number
   page?: number
 }
+

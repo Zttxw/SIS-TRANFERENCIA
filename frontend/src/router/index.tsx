@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 import { DependenciaProvider } from '@/auth/DependenciaProvider'
 import { RutaProtegida } from '@/auth/RutaProtegida'
+import { EnDesarrolloPage } from '@/components/common/EnDesarrolloPage'
 import { AcervoPage } from '@/features/acervo/AcervoPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
@@ -12,9 +13,8 @@ import { PersonalPage } from '@/features/personal/PersonalPage'
 import { AppLayout } from '@/layouts/AppLayout'
 
 /**
- * Enrutado (plan E2/E3/E4/E5). `/login` es público; el resto cuelga de <RutaProtegida>.
+ * Enrutado (plan E2/E3/E4/E5/E6). `/login` es público; el resto cuelga de <RutaProtegida>.
  * El <DependenciaProvider> vive dentro del área protegida (necesita al usuario).
- * Dashboard vive en index (`/`), Anexos 01, 02, 03, 05, 06 montados.
  */
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -34,6 +34,56 @@ export const router = createBrowserRouter([
           { path: 'acervo', element: <AcervoPage /> },
           { path: 'personal', element: <PersonalPage /> },
           { path: 'nopatrimonial', element: <NoPatrimonialPage /> },
+          {
+            path: 'patrimonio',
+            element: (
+              <EnDesarrolloPage
+                titulo="Anexo 04 · Inventario Patrimonial SIGA"
+                modulo="Inventario y Verificación Física de Bienes"
+                etapa="E6"
+              />
+            ),
+          },
+          {
+            path: 'observaciones',
+            element: (
+              <EnDesarrolloPage
+                titulo="Bandeja General de Observaciones"
+                modulo="Gestión Global de Observaciones y Subsanaciones"
+                etapa="E7"
+              />
+            ),
+          },
+          {
+            path: 'entregas',
+            element: (
+              <EnDesarrolloPage
+                titulo="Monitoreo Jerárquico de Entregas"
+                modulo="Seguimiento Institucional de Entregas por Nivel"
+                etapa="E7"
+              />
+            ),
+          },
+          {
+            path: 'acta',
+            element: (
+              <EnDesarrolloPage
+                titulo="Anexo 07 · Acta de Transferencia"
+                modulo="Emisión de Actas de Transferencia Institucional"
+                etapa="E8"
+              />
+            ),
+          },
+          {
+            path: 'admin',
+            element: (
+              <EnDesarrolloPage
+                titulo="Panel de Administración"
+                modulo="Padrón de Servidores y Activación de Cuentas"
+                etapa="E9"
+              />
+            ),
+          },
           { path: '*', element: <Navigate to="/" replace /> },
         ],
       },

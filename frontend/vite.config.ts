@@ -14,6 +14,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    watch: {
+      usePolling: true,
+    },
     // Proxy de desarrollo: redirige /api -> backend Laravel para evitar CORS
     // por completo (plan §3). El frontend solo adjunta el header Bearer.
     proxy: {

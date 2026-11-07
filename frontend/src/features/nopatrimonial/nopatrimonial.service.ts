@@ -32,3 +32,4 @@ export const noPatrimonialService = {
     await api.delete(`/nopatrimonial/${id}`)
   },
 }
+

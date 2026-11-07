@@ -56,3 +56,4 @@ export interface FiltrosDocumentos {
   per_page?: number
   page?: number
 }
+

@@ -40,3 +40,4 @@ export interface FiltrosNoPatrimonial {
   per_page?: number
   page?: number
 }
+

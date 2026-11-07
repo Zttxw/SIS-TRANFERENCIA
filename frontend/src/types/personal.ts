@@ -40,3 +40,4 @@ export interface FiltrosPersonal {
   per_page?: number
   page?: number
 }
+

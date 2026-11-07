@@ -33,3 +33,4 @@ export const acervoService = {
     await api.delete(`/acervo/${id}`)
   },
 }
+

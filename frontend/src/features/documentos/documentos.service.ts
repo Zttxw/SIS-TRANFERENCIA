@@ -49,3 +49,4 @@ export const documentosService = {
     await api.delete(`/documentos-pendientes/${id}`)
   },
 }
+

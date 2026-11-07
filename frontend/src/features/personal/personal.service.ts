@@ -23,3 +23,4 @@ export const personalService = {
     await api.delete(`/personal/${id}`)
   },
 }
+
