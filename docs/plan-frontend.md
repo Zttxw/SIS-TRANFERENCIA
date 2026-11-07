@@ -461,4 +461,24 @@ navegación (sidebar propuesto) antes de E2.
   - **Enrutado:** rutas `/documentos`, `/acervo`, `/personal`, `/nopatrimonial` montadas en `src/router/index.tsx`.
   - **Verificación:** `npm run build` y `npm run lint` 100% limpios y sin errores.
 
-- **(pendiente)** — E6: Anexo 04 (Patrimonio) y verificación física.
+- **2026-11-07 — E6 (Anexo 04 Patrimonio y verificación física):**
+  - **Tipos y modelos** (`src/types/patrimonio.ts`): interfaces para `BienPatrimonial`, `VerificacionBien`, `VerificarBienPayload`, `ResumenPatrimonial`, `FiltrosPatrimonio`, estados de verificación (`pendiente`, `confirmado`, `con_observacion`, `no_ubicado`) y conservación (`bueno`, `regular`, `malo`, `inservible`).
+  - **Servicio y hooks** (`features/patrimonio/patrimonio.service.ts` y `use-patrimonio.ts`):
+    - `patrimonioService.listarBienes(dependenciaId, filtros, page)`
+    - `patrimonioService.obtenerBien(id)`
+    - `patrimonioService.obtenerResumen(dependenciaId)`
+    - `patrimonioService.verificarBien(id, payload)`
+    - TanStack Query hooks con invalidación reactiva de listado y métricas de avance.
+  - **Modal de verificación física** (`features/patrimonio/VerificarBienModal.tsx`):
+    - Checklist de contraste físico contra el padrón SIGA-MEF.
+    - Validación de campos requeridos (estado de conservación, estado de verificación).
+    - Enlace de observación polimórfica obligatoria si el bien resulta `no_ubicado` o `con_observacion` (RN-05).
+  - **Pantalla de inventario patrimonial** (`features/patrimonio/PatrimonioPage.tsx`):
+    - Encabezado con `AnexoHeader`, `AlertaBloqueoEntrega` y panel colapsable de observaciones (`anexo="patrimonio"`).
+    - Métricas en tiempo real: Total de bienes asignados, valor neto total S/., bienes confirmados, observados y no ubicados con barra de porcentaje de avance físico.
+    - Filtros por estado de verificación y buscador de código patrimonial (12 dígitos) o descripción del bien.
+    - Tabla paginada de bienes con badge de estado, datos de adquisición/marca/modelo/serie y disparador de verificación física con gating `<Can permiso="patrimonio.verificar">`.
+  - **Enrutado:** ruta `/patrimonio` montada en `src/router/index.tsx`.
+  - **Verificación:** `npm run build` y `npm run lint` 100% limpios y validados.
+
+- **(pendiente)** — E7: Observaciones y subsanaciones globales (§7.9).
