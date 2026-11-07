@@ -406,4 +406,24 @@ navegación (sidebar propuesto) antes de E2.
     backend + PostgreSQL arriba** (no se levantó Docker/DB para no introducir
     efectos; usuario admin sembrado: DNI `00000000`).
 
-- **(pendiente)** — E3: Dashboard de estado de la entrega.
+- **2026-11-07 — E3 (Dashboard de estado de la entrega):**
+  - **Tipos y modelos** (`src/types/transferencia.ts`): estructuras para
+    `EstadoEntregaResponse`, `EntregaDetalle`, `ObservacionDetalle`, estados de entrega
+    (`borrador`, `remitida`, `observada`, `subsanada`, `consolidada`) y payloads de workflow.
+  - **Servicio y hooks** (`features/dashboard/dashboard.service.ts` y `use-dashboard.ts`):
+    consultas React Query para `GET /transferencia/estado` y `GET /documentos-pendientes/resumen`;
+    mutaciones para `POST /transferencia/remitir` y `POST /transferencia/revisar`.
+  - **Modales de workflow**:
+    - `RemitirModal.tsx`: confirmación para remitir la entrega al nivel superior con comentario opcional.
+    - `RevisarModal.tsx`: permite consolidar u observar la entrega con registro obligatorio de sustento.
+  - **Dashboard Principal** (`features/dashboard/DashboardPage.tsx`):
+    - Banner institucional de estado con badges de ciclo de vida (`borrador`, `remitida`, `observada`, `consolidada`).
+    - Tarjeta de avance físico del **Anexo 04 (Patrimonio)** con barra de progreso, conteos confirmados/pendientes e importe valorizado.
+    - Cuadrícula de accesos directos para Anexos 01, 02, 03, 05, 06 y bandeja de Observaciones con indicadores en tiempo real.
+    - Botones de acción contextuales según rol y estado (`Remitir`, `Revisar`, `Emitir Acta`), protegidos por `<Can>`.
+  - **Routing:** montado en ruta raíz `/` dentro del guard `RutaProtegida` y `AppLayout`.
+  - **Verificación:** `npm run build` y `npm run lint` 100% limpios; proxies Nginx y Vite operativos en puertos 8000 y 5173.
+
+- **(pendiente)** — E4: Patrón de anexo + Anexo 02 (Gestión) de referencia.
+- **(pendiente)** — E5: Anexos documentales/listado (01, 03, 05, 06).
+- **(pendiente)** — E6: Anexo 04 (Patrimonio) y verificación física.
