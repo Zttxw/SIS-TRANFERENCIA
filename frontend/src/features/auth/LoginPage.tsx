@@ -75,7 +75,7 @@ export function LoginPage() {
           />
           <div>
             <div className="text-xs sm:text-sm font-semibold text-white leading-tight">
-              Municipalidad Distrital de San Jerónimo
+              Municipalidad de San Jerónimo
             </div>
             <div className="text-[10px] sm:text-[11px] text-white/70 leading-tight">
               Cusco, Perú
@@ -90,7 +90,7 @@ export function LoginPage() {
             </h1>
             <p className="text-xs text-white/80 leading-relaxed font-normal">
               Plataforma oficial para la entrega de cargo, verificación de bienes
-              y rendición de cuentas de la Municipalidad Distrital de San Jerónimo.
+              y rendición de cuentas de la Municipalidad de San Jerónimo.
             </p>
           </div>
 
@@ -103,7 +103,7 @@ export function LoginPage() {
 
         <footer className="text-[11px] text-white/60 flex items-center justify-between border-t border-white/10 pt-3">
           <span>Gestión 2023 - 2026</span>
-          <span>San Jerónimo · Cusco</span>
+          <span>Elaborado por OTI</span>
         </footer>
       </section>
 
@@ -116,7 +116,7 @@ export function LoginPage() {
         />
         <div>
           <div className="text-xs font-semibold text-white leading-tight">
-            Municipalidad Distrital de San Jerónimo
+            Municipalidad de San Jerónimo
           </div>
           <div className="text-[10px] text-white/70 leading-tight">
             Cusco, Perú
