@@ -98,3 +98,4 @@ export function filtrarArbol(nodos: NodoArbol[], query: string): NodoArbol[] {
 
   return resultado
 }
+
