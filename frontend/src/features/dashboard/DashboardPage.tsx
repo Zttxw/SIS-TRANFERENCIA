@@ -2,16 +2,20 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   AlertCircle,
+  Archive,
   ArrowRight,
   BarChart3,
-  Boxes,
   Building2,
+  Calendar,
+  CheckCircle2,
+  ClipboardList,
   Clock,
-  FileCheck,
-  FileSpreadsheet,
+  FileCheck2,
   FileText,
-  FolderArchive,
   History,
+  Lock,
+  Package,
+  PackageOpen,
   Send,
   ShieldAlert,
   ShieldCheck,
@@ -24,7 +28,6 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
@@ -39,35 +42,35 @@ function renderBadgeEstado(estado: EstadoEntrega | null) {
   switch (estado) {
     case 'consolidada':
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
           <ShieldCheck className="h-3.5 w-3.5" />
           Consolidada
         </span>
       )
     case 'remitida':
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-3 py-1 text-xs font-semibold text-blue-700 dark:text-blue-400">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
           <Clock className="h-3.5 w-3.5" />
-          Remitida (En espera de revisión)
+          Remitida (En revisión)
         </span>
       )
     case 'observada':
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/15 px-3 py-1 text-xs font-semibold text-red-700 dark:text-red-400">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-semibold text-red-700">
           <AlertCircle className="h-3.5 w-3.5" />
-          Observada (Requiere subsanación)
+          Observada
         </span>
       )
     case 'subsanada':
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/15 px-3 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-400">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/15 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
           <History className="h-3.5 w-3.5" />
-          Subsanada (Reevaluación)
+          Subsanada
         </span>
       )
     default:
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
           <FileText className="h-3.5 w-3.5" />
           Borrador (En preparación)
         </span>
@@ -75,6 +78,12 @@ function renderBadgeEstado(estado: EstadoEntrega | null) {
   }
 }
 
+/**
+ * Vista de Dashboard / Mi Entrega de Información.
+ * Diseño compacto, simple y operativo basado en la arquitectura oficial de la MDSJ:
+ * - Para Administrador Global sin dependencia: Tablero Operativo Institucional.
+ * - Para Despachos / Servidores: Cuadro compacto de 7 Anexos + Tarjeta lateral de Remisión y Trazabilidad.
+ */
 export function DashboardPage() {
   const { usuario } = useAuth()
   const { dependenciaId, setDependenciaId } = useDependenciaActiva()
@@ -91,7 +100,7 @@ export function DashboardPage() {
     if (!esGlobal) {
       return (
         <div className="flex min-h-[400px] items-center justify-center">
-          <Spinner className="h-8 w-8 text-primary" />
+          <Spinner className="h-8 w-8 text-[#3484A5]" />
         </div>
       )
     }
@@ -101,7 +110,7 @@ export function DashboardPage() {
   if (isLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <Spinner className="h-8 w-8 text-primary" />
+        <Spinner className="h-8 w-8 text-[#3484A5]" />
       </div>
     )
   }
@@ -118,13 +127,168 @@ export function DashboardPage() {
     )
   }
 
-  const { dependencia, anexo02_gestion, anexo03_acervo, anexo04_patrimonio, anexo05_personal, anexo06_nopatrimonial, entrega } = estadoData
+  const {
+    dependencia,
+    anexo02_gestion,
+    anexo03_acervo,
+    anexo04_patrimonio,
+    anexo05_personal,
+    anexo06_nopatrimonial,
+    entrega,
+  } = estadoData
+
   const estadoEntrega = entrega?.estado ?? 'borrador'
-  const esEditable = estadoEntrega === 'borrador' || estadoEntrega === 'observada' || estadoEntrega === 'subsanada'
+  const esEditable =
+    estadoEntrega === 'borrador' ||
+    estadoEntrega === 'observada' ||
+    estadoEntrega === 'subsanada'
   const haciaEtts = entrega?.hacia_etts ?? (dependencia.parent_id === null)
 
+  const superiorRevisor = haciaEtts
+    ? 'Equipo de Transferencia del Titular Saliente (ETTS Institucional)'
+    : 'su superior jerárquico inmediato'
+
+  // Lista consolidada de los 7 Anexos para renderizado compacto tipo tabla
+  const filasAnexos = [
+    {
+      id: 'anexo01',
+      codigo: 'Anexo 01',
+      nombre: 'Asuntos y Documentos Pendientes',
+      icono: FileText,
+      fuente: 'SGD',
+      colorFuente: 'bg-blue-50 text-blue-700 border-blue-200',
+      resumen: `${resumenDocs?.total_pendientes ?? 0} expedientes pendientes de trámite`,
+      detalle: 'Trámites documentarios no resueltos al corte',
+      ruta: '/documentos',
+      accion: 'Ver / Completar',
+      completado: (resumenDocs?.total_pendientes ?? 0) === 0,
+    },
+    {
+      id: 'anexo02',
+      codigo: 'Anexo 02',
+      nombre: 'Informe de Gestión',
+      icono: ClipboardList,
+      fuente: 'Manual',
+      colorFuente: 'bg-slate-100 text-slate-700 border-slate-200',
+      resumen: anexo02_gestion.existe
+        ? 'Informe registrado y formulado'
+        : 'Pendiente de formulación',
+      detalle: 'Memoria, funciones, logros y dificultades',
+      ruta: '/gestion',
+      accion: 'Ver / Completar',
+      completado: anexo02_gestion.existe,
+    },
+    {
+      id: 'anexo03',
+      codigo: 'Anexo 03',
+      nombre: 'Acervo Documental',
+      icono: Archive,
+      fuente: 'SGD / Manual',
+      colorFuente: 'bg-purple-50 text-purple-700 border-purple-200',
+      resumen: `${anexo03_acervo.total_series} series documentales registradas`,
+      detalle: 'Inventario físico de archivos y cajas de gestión',
+      ruta: '/acervo',
+      accion: 'Ver / Completar',
+      completado: anexo03_acervo.total_series > 0,
+    },
+    {
+      id: 'anexo04',
+      codigo: 'Anexo 04',
+      nombre: 'Bienes Patrimoniales',
+      icono: Package,
+      fuente: 'SIGA / Manual',
+      colorFuente: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      resumen: `${anexo04_patrimonio.confirmados} de ${anexo04_patrimonio.total_bienes} verificados (${anexo04_patrimonio.porcentaje_avance}%)`,
+      detalle: `${anexo04_patrimonio.pendientes} bienes muebles pendientes de cotejo físico`,
+      ruta: '/patrimonio',
+      accion: 'Ver / Cotejar',
+      esPatrimonio: true,
+      avance: anexo04_patrimonio.porcentaje_avance,
+      completado: anexo04_patrimonio.pendientes === 0 && anexo04_patrimonio.total_bienes > 0,
+    },
+    {
+      id: 'anexo05',
+      codigo: 'Anexo 05',
+      nombre: 'Personal Asignado',
+      icono: Users,
+      fuente: 'SGD',
+      colorFuente: 'bg-teal-50 text-teal-700 border-teal-200',
+      resumen: `${anexo05_personal.total_personal} servidores en padrón operativo`,
+      detalle: 'Régimen laboral y situación contractual',
+      ruta: '/personal',
+      accion: 'Ver / Completar',
+      completado: anexo05_personal.total_personal > 0,
+    },
+    {
+      id: 'anexo06',
+      codigo: 'Anexo 06',
+      nombre: 'Bienes No Patrimoniales',
+      icono: PackageOpen,
+      fuente: 'Manual',
+      colorFuente: 'bg-slate-100 text-slate-700 border-slate-200',
+      resumen:
+        anexo06_nopatrimonial.total_bienes > 0
+          ? `${anexo06_nopatrimonial.total_bienes} bienes registrados`
+          : 'Sin registros adicionales',
+      detalle: 'Activos auxiliares o no catalogados en SIGA',
+      ruta: '/nopatrimonial',
+      accion: 'Ver / Completar',
+      completado: true,
+    },
+    {
+      id: 'anexo07',
+      codigo: 'Anexo 07',
+      nombre: 'Acta de Transferencia y Entrega',
+      icono: FileCheck2,
+      fuente: 'Sistema / Consolidado',
+      colorFuente: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      resumen:
+        estadoEntrega === 'consolidada'
+          ? 'Acta oficial lista para firma y emisión'
+          : 'Requiere consolidación previa de la entrega',
+      detalle: 'Acta formal de cierre y entrega de cargo',
+      ruta: '/acta',
+      accion: estadoEntrega === 'consolidada' ? 'Ver / Firmar' : 'Ver Requisitos',
+      completado: estadoEntrega === 'consolidada',
+    },
+  ]
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 max-w-7xl mx-auto">
+      {/* ========================================================
+          BARRA DE CONTEXTO SUPERIOR Y PLAZOS INSTITUCIONALES
+          ======================================================== */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs border-b border-border pb-3">
+        <div className="flex items-center gap-2 flex-wrap text-slate-600">
+          <span className="font-semibold text-slate-800 uppercase tracking-tight">
+            {usuario?.servidor?.cargo || (esGlobal ? 'Administración Municipal' : 'Servidor Público')}
+          </span>
+          <span className="text-slate-300">·</span>
+          <span className="font-mono text-[#3484A5] font-semibold">[{dependencia.codigo}]</span>
+          <span className="font-medium truncate max-w-sm text-slate-700">
+            {dependencia.nombre}
+          </span>
+          <span className="text-slate-300">·</span>
+          <span className="font-semibold text-[#3484A5]">Mi entrega</span>
+        </div>
+
+        {/* Fechas de corte y plazos estilo píldora */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 text-slate-700 font-mono text-[11px] font-medium border border-slate-200">
+            <Calendar className="h-3.5 w-3.5 text-slate-500" />
+            <span>
+              Fecha de corte: <strong className="text-slate-800">31/10/2026</strong>
+            </span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/15 text-amber-900 font-mono text-[11px] font-semibold border border-amber-300">
+            <Clock className="h-3.5 w-3.5 text-amber-700" />
+            <span>
+              Plazo de entrega: <strong className="text-amber-950">07/11/2026</strong>
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Barra de Retorno al Tablero Global (Exclusiva para Administrador / ETTS) */}
       {esGlobal && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[#3484A5]/10 border border-[#3484A5]/25 rounded-xl p-3 sm:px-4">
@@ -145,376 +309,289 @@ export function DashboardPage() {
           </Button>
         </div>
       )}
-      {/* Cabecera del Dashboard */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="rounded bg-primary/10 px-2 py-0.5 font-mono text-xs font-semibold text-primary">
-              {dependencia.codigo}
-            </span>
-            <span className="text-xs font-medium text-muted-foreground">
-              Nivel jerárquico {dependencia.nivel}
-            </span>
-          </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
-            {dependencia.nombre}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Monitoreo y consolidación de la información de entrega de gestión.
-          </p>
-        </div>
 
-        {/* Acciones de Workflow */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Botón Remitir */}
-          <Can permiso="entregas.remitir">
-            {esEditable && (
-              <Button onClick={() => setModalRemitir(true)} className="gap-2 shadow-sm">
-                <Send className="h-4 w-4" />
-                Remitir Entrega
-              </Button>
-            )}
-          </Can>
-
-          {/* Botón Revisar */}
-          <Can permiso="entregas.revisar">
-            {(estadoEntrega === 'remitida' || estadoEntrega === 'en_revision') && (
-              <Button onClick={() => setModalRevisar(true)} variant="secondary" className="gap-2">
-                <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                Revisar Entrega
-              </Button>
-            )}
-          </Can>
-
-          {/* Botón Emitir Acta */}
-          <Can permiso="actas.generar">
-            {estadoEntrega === 'consolidada' ? (
-              <Link
-                to="/acta"
-                className={buttonVariants({ variant: 'default', className: 'gap-2' })}
-              >
-                <FileCheck className="h-4 w-4" />
-                Generar Acta de Transferencia
-              </Link>
-            ) : (
-              <Button variant="outline" className="gap-2" disabled>
-                <FileCheck className="h-4 w-4" />
-                Acta (Requiere Consolidación)
-              </Button>
-            )}
-          </Can>
-        </div>
+      {/* ========================================================
+          TÍTULO Y DESCRIPCIÓN PRINCIPAL
+          ======================================================== */}
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+          Mi entrega de información
+        </h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          Verifique la información precargada desde el SGD y el SIGA, complete lo que falte y remita su entrega a su responsable inmediato.
+        </p>
       </div>
 
-      {/* Tarjeta de Estado de la Entrega */}
-      <Card className="overflow-hidden border-l-4 border-l-primary shadow-sm">
-        <CardHeader className="bg-muted/20 pb-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle className="text-lg">Estado de la Entrega Institucional</CardTitle>
-              <CardDescription className="text-xs">
-                {haciaEtts
-                  ? 'Dependencia de 1er nivel · Remisión directa al Equipo de Trabajo de Transferencia (ETTS)'
-                  : 'Dependencia subordinada · Remisión jerárquica a la unidad superior'}
-              </CardDescription>
-            </div>
-            <div>{renderBadgeEstado(estadoEntrega)}</div>
-          </div>
-        </CardHeader>
-        <CardContent className="grid gap-4 pt-4 sm:grid-cols-2 md:grid-cols-4 text-sm">
-          <div>
-            <span className="text-xs text-muted-foreground block">Fecha de Remisión:</span>
-            <span className="font-medium text-foreground">
-              {entrega?.remitida_en ? new Date(entrega.remitida_en).toLocaleString('es-PE') : 'Aún no remitida'}
-            </span>
-          </div>
-          <div>
-            <span className="text-xs text-muted-foreground block">Última Revisión:</span>
-            <span className="font-medium text-foreground">
-              {entrega?.revisada_en ? new Date(entrega.revisada_en).toLocaleString('es-PE') : 'Pendiente'}
-            </span>
-          </div>
-          <div>
-            <span className="text-xs text-muted-foreground block">Consolidación:</span>
-            <span className="font-medium text-foreground">
-              {entrega?.consolidada_en ? new Date(entrega.consolidada_en).toLocaleString('es-PE') : 'Pendiente'}
-            </span>
-          </div>
-          <div>
-            <span className="text-xs text-muted-foreground block">Destino Jerárquico:</span>
-            <span className="font-medium text-foreground">
-              {haciaEtts ? 'ETTS Institucional' : `Dependencia Padre (ID ${dependencia.parent_id})`}
-            </span>
-          </div>
-
-          {entrega?.comentario && (
-            <div className="col-span-full rounded-lg bg-muted/40 p-3 text-xs">
-              <span className="font-semibold text-foreground">Observación / Nota: </span>
-              <span className="text-muted-foreground">{entrega.comentario}</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Widget Destacado: Avance de Verificación Patrimonial (Anexo 04) */}
-      <Card className="shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600">
-                <Boxes className="h-5 w-5" />
-              </div>
-              <div>
-                <CardTitle className="text-base">Anexo 04 · Inventario Físico de Bienes Patrimoniales</CardTitle>
-                <CardDescription className="text-xs">
-                  Cotejo de campo y verificación de bienes muebles según Directiva N.° 001-2026-MDSJ/A
-                </CardDescription>
-              </div>
-            </div>
-            <Link
-              to="/patrimonio"
-              className={buttonVariants({ variant: 'outline', size: 'sm', className: 'gap-1.5' })}
-            >
-              Realizar Verificación
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-xs font-medium">
-              <span className="text-muted-foreground">Avance de Verificación Física</span>
-              <span className="text-primary font-bold">{anexo04_patrimonio.porcentaje_avance}%</span>
-            </div>
-            <div className="h-3 w-full overflow-hidden rounded-full bg-secondary">
-              <div
-                className="h-full bg-primary transition-all duration-500 ease-in-out"
-                style={{ width: `${anexo04_patrimonio.porcentaje_avance}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 text-center text-sm pt-1">
-            <div className="rounded-lg bg-muted/30 p-2.5">
-              <span className="text-xs text-muted-foreground block">Total Bienes SIGA</span>
-              <span className="text-lg font-bold text-foreground">{anexo04_patrimonio.total_bienes}</span>
-            </div>
-            <div className="rounded-lg bg-emerald-500/10 p-2.5">
-              <span className="text-xs text-emerald-700 dark:text-emerald-400 block font-medium">Confirmados</span>
-              <span className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
-                {anexo04_patrimonio.confirmados}
-              </span>
-            </div>
-            <div className="rounded-lg bg-amber-500/10 p-2.5">
-              <span className="text-xs text-amber-700 dark:text-amber-400 block font-medium">Pendientes</span>
-              <span className="text-lg font-bold text-amber-700 dark:text-amber-400">
-                {anexo04_patrimonio.pendientes}
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Cuadrícula de los Anexos Restantes */}
-      <div>
-        <h2 className="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-          Anexos de la Transferencia de Gestión
-        </h2>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Anexo 01: Documentos Pendientes */}
-          <Card className="hover:border-primary/50 transition-colors shadow-sm flex flex-col justify-between">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
-                  <FileText className="h-5 w-5" />
-                </div>
-                <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-secondary-foreground">
-                  Anexo 01
+      {/* ========================================================
+          LAYOUT PRINCIPAL: DOS COLUMNAS (8 COLS + 4 COLS)
+          ======================================================== */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* ========================================================
+            COLUMNA IZQUIERDA: INFORMACIÓN A VERIFICAR Y COMPLETAR
+            ======================================================== */}
+        <div className="lg:col-span-8 space-y-4">
+          <Card className="border shadow-xs overflow-hidden">
+            <CardHeader className="py-3 px-4 border-b border-border bg-slate-50/70">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4 text-[#3484A5]" />
+                  <span>Información a verificar y completar</span>
+                </CardTitle>
+                <span className="text-[11px] font-mono text-[#3484A5] font-semibold">
+                  7 Anexos Normativos
                 </span>
               </div>
-              <CardTitle className="text-base mt-2">Documentos Pendientes</CardTitle>
-              <CardDescription className="text-xs line-clamp-2">
-                Asuntos, expedientes y trámites documentarios pendientes de resolución (SGD).
-              </CardDescription>
             </CardHeader>
-            <CardContent className="pt-0 space-y-3">
-              <div className="flex items-center justify-between text-xs border-t pt-2">
-                <span className="text-muted-foreground">Total pendientes:</span>
-                <span className="font-bold text-foreground">
-                  {resumenDocs?.total_pendientes ?? 0} expedientes
-                </span>
+
+            <CardContent className="p-0 divide-y divide-border text-xs">
+              {filasAnexos.map((anexo) => {
+                const Icono = anexo.icono
+                return (
+                  <div
+                    key={anexo.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 gap-3 hover:bg-slate-50/60 transition-colors"
+                  >
+                    {/* Identificación y Título */}
+                    <div className="flex items-start gap-3 min-w-0 sm:w-[42%]">
+                      <div className="h-8 w-8 rounded-lg bg-[#3484A5]/10 flex items-center justify-center text-[#3484A5] shrink-0 mt-0.5">
+                        <Icono className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-slate-800 hover:text-[#3484A5] transition-colors">
+                            {anexo.codigo} · {anexo.nombre}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                          {anexo.detalle}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Fuente de Datos */}
+                    <div className="sm:w-[15%] shrink-0">
+                      <span
+                        className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono font-semibold border ${anexo.colorFuente}`}
+                      >
+                        {anexo.fuente}
+                      </span>
+                    </div>
+
+                    {/* Resumen y Avance */}
+                    <div className="sm:w-[25%] min-w-0">
+                      <p className="font-medium text-slate-700 text-xs truncate">
+                        {anexo.resumen}
+                      </p>
+                      {anexo.esPatrimonio && typeof anexo.avance === 'number' && (
+                        <div className="mt-1 flex items-center gap-2">
+                          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-200">
+                            <div
+                              className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                              style={{ width: `${anexo.avance}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-mono font-bold text-emerald-700">
+                            {anexo.avance}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Acciones */}
+                    <div className="sm:w-[18%] flex items-center justify-end gap-1.5 shrink-0">
+                      <Link
+                        to={anexo.ruta}
+                        className={buttonVariants({
+                          variant: 'outline',
+                          size: 'sm',
+                          className:
+                            'h-7 text-xs px-2.5 font-medium border-[#3484A5]/30 text-[#3484A5] hover:bg-[#3484A5]/10 gap-1 cursor-pointer',
+                        })}
+                      >
+                        <span>{anexo.accion}</span>
+                        <ArrowRight className="h-3 w-3" />
+                      </Link>
+                    </div>
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ========================================================
+            COLUMNA DERECHA: REMITIR ENTREGA Y REGISTRO DE AUDITORÍA
+            ======================================================== */}
+        <div className="lg:col-span-4 space-y-4">
+          {/* Tarjeta de Remisión */}
+          <Card className="border shadow-xs">
+            <CardHeader className="py-3 px-4 border-b border-border bg-slate-50/70">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                  <Send className="h-4 w-4 text-[#3484A5]" />
+                  <span>Remitir mi entrega</span>
+                </CardTitle>
+                <div>{renderBadgeEstado(estadoEntrega)}</div>
               </div>
-              <Link
-                to="/documentos"
-                className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'w-full justify-between' })}
-              >
-                Acceder al Anexo 01
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+            </CardHeader>
+
+            <CardContent className="p-4 space-y-3.5 text-xs">
+              <p className="text-muted-foreground leading-relaxed">
+                Al remitir, su información pasará a revisión formal de{' '}
+                <strong className="text-slate-800">{superiorRevisor}</strong>. Solo podrá
+                modificarla si se le solicita una corrección mediante observación.
+              </p>
+
+              {/* Alerta contextual según estado */}
+              {esEditable ? (
+                <div className="rounded-lg bg-amber-500/10 border border-amber-300/80 p-3 text-amber-900 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-950">
+                    <AlertCircle className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+                    <span>Verificación obligatoria</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800 leading-normal">
+                    Asegúrese de haber revisado los bienes patrimoniales y el acervo documental
+                    antes de remitir formalmente el paquete de entrega.
+                  </p>
+                </div>
+              ) : estadoEntrega === 'remitida' ? (
+                <div className="rounded-lg bg-blue-500/10 border border-blue-300/80 p-3 text-blue-900 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-blue-950">
+                    <Clock className="h-3.5 w-3.5 text-blue-700 shrink-0" />
+                    <span>Entrega en revisión</span>
+                  </div>
+                  <p className="text-[11px] text-blue-800 leading-normal">
+                    La entrega se encuentra en custodia del superior jerárquico. La edición queda
+                    bloqueada hasta su validación.
+                  </p>
+                </div>
+              ) : estadoEntrega === 'consolidada' ? (
+                <div className="rounded-lg bg-emerald-500/10 border border-emerald-300/80 p-3 text-emerald-900 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-emerald-950">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
+                    <span>Entrega consolidada</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-800 leading-normal">
+                    Su despacho ha completado formalmente el cierre de entrega de gestión.
+                  </p>
+                </div>
+              ) : null}
+
+              {/* Botón Principal de Workflow */}
+              <div className="pt-1">
+                <Can permiso="entregas.remitir">
+                  {esEditable && (
+                    <Button
+                      onClick={() => setModalRemitir(true)}
+                      className="w-full h-9 bg-[#3484A5] hover:bg-[#2b718d] text-white font-semibold text-xs gap-2 shadow-xs cursor-pointer"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                      <span>Remitir mi entrega</span>
+                    </Button>
+                  )}
+                </Can>
+
+                <Can permiso="entregas.revisar">
+                  {(estadoEntrega === 'remitida' || estadoEntrega === 'en_revision') && (
+                    <Button
+                      onClick={() => setModalRevisar(true)}
+                      className="w-full h-9 bg-[#2CA792] hover:bg-[#258b7a] text-white font-semibold text-xs gap-2 shadow-xs cursor-pointer"
+                    >
+                      <ShieldCheck className="h-4 w-4" />
+                      <span>Revisar Entrega</span>
+                    </Button>
+                  )}
+                </Can>
+
+                <Can permiso="actas.generar">
+                  {estadoEntrega === 'consolidada' && (
+                    <Link
+                      to="/acta"
+                      className={buttonVariants({
+                        className:
+                          'w-full h-9 bg-[#3484A5] hover:bg-[#2b718d] text-white font-semibold text-xs gap-2 shadow-xs',
+                      })}
+                    >
+                      <FileCheck2 className="h-4 w-4" />
+                      <span>Generar Acta de Transferencia</span>
+                    </Link>
+                  )}
+                </Can>
+
+                {!esEditable && estadoEntrega !== 'consolidada' && (
+                  <Button
+                    disabled
+                    variant="outline"
+                    className="w-full h-9 text-xs text-muted-foreground gap-2 cursor-not-allowed"
+                  >
+                    <Lock className="h-3.5 w-3.5" />
+                    <span>Edición bloqueada por trámite</span>
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
 
-          {/* Anexo 02: Informe de Gestión */}
-          <Card className="hover:border-primary/50 transition-colors shadow-sm flex flex-col justify-between">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600">
-                  <FileSpreadsheet className="h-5 w-5" />
-                </div>
-                <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-secondary-foreground">
-                  Anexo 02
-                </span>
-              </div>
-              <CardTitle className="text-base mt-2">Informe de Gestión</CardTitle>
-              <CardDescription className="text-xs line-clamp-2">
-                Memoria de gestión, objetivos institucionales, logros y dificultades de la unidad.
-              </CardDescription>
+          {/* Tarjeta de Historial y Auditoría */}
+          <Card className="border shadow-xs">
+            <CardHeader className="py-2.5 px-4 border-b border-border bg-slate-50/50">
+              <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <History className="h-3.5 w-3.5 text-[#3484A5]" />
+                <span>Trazabilidad y Cronograma</span>
+              </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0 space-y-3">
-              <div className="flex items-center justify-between text-xs border-t pt-2">
-                <span className="text-muted-foreground">Estado del informe:</span>
-                <span className={`font-bold ${anexo02_gestion.existe ? 'text-emerald-600' : 'text-amber-600'}`}>
-                  {anexo02_gestion.existe ? 'Registrado' : 'Pendiente'}
-                </span>
-              </div>
-              <Link
-                to="/gestion"
-                className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'w-full justify-between' })}
-              >
-                Acceder al Anexo 02
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </CardContent>
-          </Card>
 
-          {/* Anexo 03: Acervo Documental */}
-          <Card className="hover:border-primary/50 transition-colors shadow-sm flex flex-col justify-between">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10 text-purple-600">
-                  <FolderArchive className="h-5 w-5" />
-                </div>
-                <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-secondary-foreground">
-                  Anexo 03
-                </span>
+            <CardContent className="p-4 space-y-2.5 text-xs">
+              <div className="flex justify-between items-center text-muted-foreground">
+                <span>Fecha de corte:</span>
+                <span className="font-mono font-semibold text-slate-800">31/10/2026</span>
               </div>
-              <CardTitle className="text-base mt-2">Acervo Documental</CardTitle>
-              <CardDescription className="text-xs line-clamp-2">
-                Inventario de series documentales, archivos de gestión y acervo digitalizado.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-3">
-              <div className="flex items-center justify-between text-xs border-t pt-2">
-                <span className="text-muted-foreground">Series registradas:</span>
-                <span className="font-bold text-foreground">
-                  {anexo03_acervo.total_series} series
-                </span>
-              </div>
-              <Link
-                to="/acervo"
-                className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'w-full justify-between' })}
-              >
-                Acceder al Anexo 03
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </CardContent>
-          </Card>
 
-          {/* Anexo 05: Personal */}
-          <Card className="hover:border-primary/50 transition-colors shadow-sm flex flex-col justify-between">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-500/10 text-teal-600">
-                  <Users className="h-5 w-5" />
-                </div>
-                <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-secondary-foreground">
-                  Anexo 05
+              <div className="flex justify-between items-center text-muted-foreground">
+                <span>Fecha de remisión:</span>
+                <span className="font-mono text-slate-800">
+                  {entrega?.remitida_en
+                    ? new Date(entrega.remitida_en).toLocaleString('es-PE', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : 'Aún no remitida'}
                 </span>
               </div>
-              <CardTitle className="text-base mt-2">Personal Asignado</CardTitle>
-              <CardDescription className="text-xs line-clamp-2">
-                Padrón de personal asignado, regímenes laborales y situación contractual.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-3">
-              <div className="flex items-center justify-between text-xs border-t pt-2">
-                <span className="text-muted-foreground">Total colaboradores:</span>
-                <span className="font-bold text-foreground">
-                  {anexo05_personal.total_personal} servidores
-                </span>
-              </div>
-              <Link
-                to="/personal"
-                className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'w-full justify-between' })}
-              >
-                Acceder al Anexo 05
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </CardContent>
-          </Card>
 
-          {/* Anexo 06: Bienes No Patrimoniales */}
-          <Card className="hover:border-primary/50 transition-colors shadow-sm flex flex-col justify-between">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600">
-                  <Boxes className="h-5 w-5" />
-                </div>
-                <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-secondary-foreground">
-                  Anexo 06
+              <div className="flex justify-between items-center text-muted-foreground">
+                <span>Última revisión:</span>
+                <span className="font-mono text-slate-800">
+                  {entrega?.revisada_en
+                    ? new Date(entrega.revisada_en).toLocaleString('es-PE', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : 'Pendiente'}
                 </span>
               </div>
-              <CardTitle className="text-base mt-2">Bienes No Patrimoniales</CardTitle>
-              <CardDescription className="text-xs line-clamp-2">
-                Bienes auxiliares, suministros y activos no catalogados en el SIGA oficial.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-3">
-              <div className="flex items-center justify-between text-xs border-t pt-2">
-                <span className="text-muted-foreground">Bienes registrados:</span>
-                <span className="font-bold text-foreground">
-                  {anexo06_nopatrimonial.total_bienes} bienes
-                </span>
-              </div>
-              <Link
-                to="/nopatrimonial"
-                className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'w-full justify-between' })}
-              >
-                Acceder al Anexo 06
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </CardContent>
-          </Card>
 
-          {/* Observaciones Institucionales */}
-          <Card className="hover:border-primary/50 transition-colors shadow-sm flex flex-col justify-between">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500/10 text-orange-600">
-                  <AlertCircle className="h-5 w-5" />
-                </div>
-                <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-secondary-foreground">
-                  Flujo
+              <div className="flex justify-between items-center text-muted-foreground">
+                <span>Destino jerárquico:</span>
+                <span className="font-semibold text-slate-800">
+                  {haciaEtts ? 'ETTS Institucional' : `Despacho Superior (ID ${dependencia.parent_id})`}
                 </span>
               </div>
-              <CardTitle className="text-base mt-2">Bandeja de Observaciones</CardTitle>
-              <CardDescription className="text-xs line-clamp-2">
-                Registro y subsanación de observaciones emitidas por revisores o coordinadores.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-3">
-              <div className="flex items-center justify-between text-xs border-t pt-2">
-                <span className="text-muted-foreground">Supervisión:</span>
-                <span className="font-bold text-foreground">Directiva §7.9</span>
-              </div>
-              <Link
-                to="/observaciones"
-                className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'w-full justify-between' })}
-              >
-                Ver Observaciones
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+
+              {entrega?.comentario && (
+                <div className="mt-2 rounded-lg bg-slate-100/80 p-2.5 text-[11px] border border-slate-200">
+                  <span className="font-semibold text-slate-800 block mb-0.5">
+                    Nota de Remisión:
+                  </span>
+                  <span className="text-slate-600">{entrega.comentario}</span>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

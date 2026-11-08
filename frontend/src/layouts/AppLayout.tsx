@@ -59,9 +59,19 @@ export function AppLayout() {
 
   const nav = (
     <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2 text-xs">
+      <div className="px-3 pt-2 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-white/50">
+        {usuario?.es_global ? 'Administración' : 'Servidor Público'}
+      </div>
       {items.map((item) => {
         const Icono = item.ruta === '/organigrama' ? infoEstructura.icono : item.icono
-        const etiquetaEfectiva = item.ruta === '/organigrama' ? infoEstructura.etiqueta : item.etiqueta
+        const etiquetaEfectiva =
+          item.ruta === '/'
+            ? usuario?.es_global
+              ? 'Dashboard'
+              : 'Mi entrega'
+            : item.ruta === '/organigrama'
+            ? infoEstructura.etiqueta
+            : item.etiqueta
 
         // Si es un módulo contenedor con submódulos hijos (ej. "Anexos de Transferencia")
         if (item.hijos && item.hijos.length > 0) {
