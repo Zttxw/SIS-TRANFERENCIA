@@ -217,22 +217,11 @@ export function LoginPage() {
             </Button>
           </form>
 
-          {/* Enlaces de pie */}
-          <div className="pt-1 space-y-3 text-center">
+          {/* Ayuda de acceso */}
+          <div className="pt-1 text-center">
             <p className="text-[11px] text-slate-400 leading-tight">
               ¿Olvidaste tu contraseña? Contacta al administrador del sistema.
             </p>
-
-            <div className="border-t border-slate-100 pt-3">
-              <a
-                href="https://munisanjeronimo.gob.pe"
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs text-slate-500 hover:text-slate-800 transition-colors"
-              >
-                ← Volver al portal público
-              </a>
-            </div>
           </div>
         </div>
       </main>
