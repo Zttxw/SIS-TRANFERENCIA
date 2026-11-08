@@ -16,7 +16,6 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { z } from 'zod'
 
 import { useAuth } from '@/auth/hooks'
-import { FranjaAndina } from '@/components/common/FranjaAndina'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -77,38 +76,25 @@ export function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 selection:bg-[#1d6d8a]/20 selection:text-[#1d6d8a]">
       {/* ========================================================
-          PANEL IZQUIERDO INSTITUCIONAL (TEAL MDSJ)
+          PANEL IZQUIERDO INSTITUCIONAL (TEAL MDSJ LIMPIO Y PLANO)
           ======================================================== */}
-      <section className="relative hidden md:flex md:w-1/2 lg:w-[54%] flex-col justify-between bg-gradient-to-br from-[#175b73] via-[#1d6d8a] to-[#144f64] text-white p-8 lg:p-14 xl:p-16 overflow-hidden">
-        {/* Trama de puntos sutil en fondo */}
-        <div
-          className="pointer-events-none absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.8) 1.2px, transparent 1.2px)',
-            backgroundSize: '22px 22px',
-          }}
-        />
-
-        {/* Resplandor decorativo sutil */}
-        <div className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-cyan-400/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-emerald-400/10 blur-3xl" />
-
-        {/* Encabezado: Logotipo oficial MDSJ */}
-        <header className="relative z-10 flex items-center gap-3">
+      <section className="relative hidden md:flex md:w-1/2 lg:w-[50%] flex-col justify-between bg-[#1d6d8a] text-white p-8 lg:p-12 xl:p-14 overflow-hidden">
+        {/* Encabezado: Logotipo oficial MDSJ (mdsj-blanco.png) */}
+        <header className="flex items-center">
           <img
-            src="/brand/logo-oficial-blanco.png"
+            src="/brand/mdsj-blanco.png"
             alt="Municipalidad Distrital de San Jerónimo"
-            className="h-14 lg:h-16 w-auto object-contain drop-shadow"
+            className="h-10 lg:h-12 w-auto object-contain"
           />
         </header>
 
-        {/* Contenido Central: Mensaje y Pilares */}
-        <div className="relative z-10 my-auto py-10 space-y-8 max-w-xl">
-          <div className="space-y-4">
-            <h1 className="text-3xl lg:text-4xl xl:text-[2.6rem] font-extrabold tracking-tight text-white leading-tight">
+        {/* Contenido Central: Mensaje y Pilares con tipografía proporcionada */}
+        <div className="my-auto py-8 space-y-6 max-w-lg">
+          <div className="space-y-3">
+            <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-white leading-snug">
               Panel interno de transferencia de gestión
             </h1>
-            <p className="text-sm lg:text-base text-cyan-50/90 leading-relaxed font-normal">
+            <p className="text-xs lg:text-sm text-cyan-50/85 leading-relaxed font-normal">
               Plataforma oficial para la rendición de cuentas, verificación física
               de inventarios patrimoniales y suscripción del Acta de Transferencia
               de la Municipalidad Distrital de San Jerónimo.
@@ -116,22 +102,22 @@ export function LoginPage() {
           </div>
 
           {/* Lista de características institucionales */}
-          <ul className="space-y-3.5 pt-2 text-xs lg:text-sm text-cyan-50/95 font-medium">
-            <li className="flex items-start gap-3">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-teal-200/40 bg-teal-400/20 text-teal-100 shadow-sm mt-0.5">
-                <CheckCircle2 className="h-3.5 w-3.5" />
+          <ul className="space-y-3 pt-1 text-xs text-cyan-50/90 font-normal">
+            <li className="flex items-start gap-2.5">
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-teal-400/20 text-teal-100 mt-0.5">
+                <CheckCircle2 className="h-3 w-3" />
               </span>
               <span>Conforme a la Directiva CGR N.° 016-2022-CG/PREVI y Directiva MDSJ</span>
             </li>
-            <li className="flex items-start gap-3">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-teal-200/40 bg-teal-400/20 text-teal-100 shadow-sm mt-0.5">
-                <ShieldCheck className="h-3.5 w-3.5" />
+            <li className="flex items-start gap-2.5">
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-teal-400/20 text-teal-100 mt-0.5">
+                <ShieldCheck className="h-3 w-3" />
               </span>
               <span>Contraste físico con padrón SIGA-MEF y conciliación documental</span>
             </li>
-            <li className="flex items-start gap-3">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-teal-200/40 bg-teal-400/20 text-teal-100 shadow-sm mt-0.5">
-                <CheckCircle2 className="h-3.5 w-3.5" />
+            <li className="flex items-start gap-2.5">
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-teal-400/20 text-teal-100 mt-0.5">
+                <CheckCircle2 className="h-3 w-3" />
               </span>
               <span>Cadena de custodia digital y sellado probatorio con hash SHA-256</span>
             </li>
@@ -139,65 +125,56 @@ export function LoginPage() {
         </div>
 
         {/* Pie de panel izquierdo */}
-        <footer className="relative z-10 text-xs text-cyan-100/75 flex items-center justify-between border-t border-white/10 pt-4">
+        <footer className="text-[11px] text-cyan-100/70 flex items-center justify-between border-t border-white/10 pt-3">
           <span>Gestión Municipal 2023 - 2026</span>
           <span>San Jerónimo · Cusco, Perú</span>
         </footer>
       </section>
 
-      {/* ========================================================
-          FRANJA ANDINA TIPO TEJIDO (CENTRO / DIVISIÓN)
-          ======================================================== */}
-      {/* Vista de escritorio: Franja vertical entre paneles */}
-      <div className="hidden md:block relative z-20 shadow-2xl">
-        <FranjaAndina orientation="vertical" className="h-full" />
-      </div>
-
-      {/* Vista móvil: Encabezado compacto + Franja horizontal */}
-      <header className="md:hidden flex flex-col bg-[#1d6d8a] text-white">
-        <div className="p-5 flex items-center justify-center">
+      {/* Vista móvil: Encabezado compacto institucional */}
+      <header className="md:hidden flex flex-col bg-[#1d6d8a] text-white p-5">
+        <div className="flex items-center justify-center">
           <img
-            src="/brand/logo-oficial-blanco.png"
+            src="/brand/mdsj-blanco.png"
             alt="Municipalidad Distrital de San Jerónimo"
-            className="h-12 w-auto object-contain"
+            className="h-9 w-auto object-contain"
           />
         </div>
-        <FranjaAndina orientation="horizontal" className="h-4" />
       </header>
 
       {/* ========================================================
           PANEL DERECHO: FORMULARIO DE ACCESO
           ======================================================== */}
-      <main className="flex-1 flex flex-col justify-center items-center p-6 sm:p-10 lg:p-16">
-        <div className="w-full max-w-sm sm:max-w-md space-y-6">
+      <main className="flex-1 flex flex-col justify-center items-center p-6 sm:p-10 lg:p-14 bg-white md:bg-slate-50/60">
+        <div className="w-full max-w-sm space-y-5">
           {/* Badge de Acceso Restringido */}
           <div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 border border-slate-200">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600 border border-slate-200">
               <Lock className="h-3 w-3 text-slate-500" />
               <span>Acceso restringido</span>
             </span>
           </div>
 
           {/* Título de Bienvenida */}
-          <div className="space-y-1.5">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+          <div className="space-y-1">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               Iniciar sesión
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500">
+            <p className="text-xs text-slate-500">
               Ingresa tus credenciales para acceder al panel interno.
             </p>
           </div>
 
           {/* Formulario */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5" noValidate>
             {/* Campo DNI */}
-            <div className="space-y-1.5">
-              <Label htmlFor="dni" className="text-xs font-semibold text-slate-700">
+            <div className="space-y-1">
+              <Label htmlFor="dni" className="text-xs font-medium text-slate-700">
                 Usuario (DNI)
               </Label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <User className="h-4 w-4" />
+                  <User className="h-3.5 w-3.5" />
                 </span>
                 <Input
                   id="dni"
@@ -206,31 +183,31 @@ export function LoginPage() {
                   autoComplete="username"
                   maxLength={8}
                   placeholder="Número de DNI (8 dígitos)"
-                  className="pl-9 h-11 text-sm bg-slate-50/50 border-slate-200 focus-visible:ring-[#1d6d8a] focus-visible:border-[#1d6d8a]"
+                  className="pl-9 h-10 text-xs sm:text-sm bg-slate-50/50 border-slate-200 focus-visible:ring-[#1d6d8a] focus-visible:border-[#1d6d8a]"
                   aria-invalid={!!errors.dni}
                   {...register('dni')}
                 />
               </div>
               {errors.dni && (
-                <p className="text-xs text-destructive font-medium">{errors.dni.message}</p>
+                <p className="text-[11px] text-destructive font-medium">{errors.dni.message}</p>
               )}
             </div>
 
             {/* Campo Contraseña */}
-            <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-xs font-semibold text-slate-700">
+            <div className="space-y-1">
+              <Label htmlFor="password" className="text-xs font-medium text-slate-700">
                 Contraseña
               </Label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <Lock className="h-4 w-4" />
+                  <Lock className="h-3.5 w-3.5" />
                 </span>
                 <Input
                   id="password"
                   type={mostrarPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   placeholder="••••••••"
-                  className="pl-9 pr-10 h-11 text-sm bg-slate-50/50 border-slate-200 focus-visible:ring-[#1d6d8a] focus-visible:border-[#1d6d8a]"
+                  className="pl-9 pr-9 h-10 text-xs sm:text-sm bg-slate-50/50 border-slate-200 focus-visible:ring-[#1d6d8a] focus-visible:border-[#1d6d8a]"
                   aria-invalid={!!errors.password}
                   {...register('password')}
                 />
@@ -241,14 +218,14 @@ export function LoginPage() {
                   aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                 >
                   {mostrarPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="h-3.5 w-3.5" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-3.5 w-3.5" />
                   )}
                 </button>
               </div>
               {errors.password && (
-                <p className="text-xs text-destructive font-medium">
+                <p className="text-[11px] text-destructive font-medium">
                   {errors.password.message}
                 </p>
               )}
@@ -258,9 +235,9 @@ export function LoginPage() {
             {errors.root && (
               <div
                 role="alert"
-                className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive font-medium"
+                className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-2.5 text-xs text-destructive font-medium"
               >
-                <AlertCircle className="h-4 w-4 shrink-0" />
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                 <span>{errors.root.message}</span>
               </div>
             )}
@@ -269,22 +246,22 @@ export function LoginPage() {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full h-11 bg-[#1d6d8a] hover:bg-[#15546b] text-white font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full h-10 bg-[#1d6d8a] hover:bg-[#15546b] text-white font-medium text-xs sm:text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer mt-1"
             >
               {isSubmitting ? (
                 <span>Ingresando...</span>
               ) : (
                 <>
                   <span>Ingresar</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-3.5 w-3.5" />
                 </>
               )}
             </Button>
           </form>
 
           {/* Enlaces y Ayuda */}
-          <div className="pt-2 space-y-4 text-center">
-            <p className="text-xs text-slate-500">
+          <div className="pt-2 space-y-3.5 text-center">
+            <p className="text-[11px] text-slate-500">
               ¿Olvidaste tu contraseña? Contacta al administrador del sistema o a la OTI.
             </p>
 
@@ -293,7 +270,7 @@ export function LoginPage() {
                 <span className="w-full border-t border-slate-200" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-slate-50 px-2 text-slate-400 text-[10px] tracking-wider">
+                <span className="bg-white md:bg-slate-50/60 px-2 text-slate-400 text-[10px] tracking-wider">
                   MDSJ
                 </span>
               </div>
@@ -306,7 +283,7 @@ export function LoginPage() {
                 rel="noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-[#1d6d8a] transition-colors"
               >
-                <ArrowLeft className="h-3.5 w-3.5" />
+                <ArrowLeft className="h-3 w-3" />
                 <span>Volver al portal institucional</span>
               </a>
             </div>
