@@ -71,7 +71,7 @@ export function LoginPage() {
           <img
             src="/brand/mdsj-blanco.png"
             alt="Municipalidad Distrital de San Jerónimo"
-            className="h-8 w-auto object-contain"
+            className="h-11 lg:h-12 w-auto object-contain"
           />
         </header>
 
@@ -81,15 +81,15 @@ export function LoginPage() {
               Panel interno de transferencia de gestión
             </h1>
             <p className="text-xs text-white/80 leading-relaxed font-normal">
-              Consulta inventarios patrimoniales, realiza la verificación física
-              y suscribe el acta oficial de la Municipalidad Distrital de San Jerónimo.
+              Plataforma oficial para la entrega de cargo, verificación de bienes
+              y rendición de cuentas de la Municipalidad Distrital de San Jerónimo.
             </p>
           </div>
 
           <ul className="space-y-2 pt-1 text-xs text-white/85 font-normal">
-            <li>• Directiva CGR N.° 016-2022-CG/PREVI y Directiva MDSJ</li>
-            <li>• Conciliación física y documental con SIGA-MEF</li>
-            <li>• Trazabilidad y sellado probatorio con hash SHA-256</li>
+            <li>• Verificación física de bienes asignados a tu oficina</li>
+            <li>• Registro de documentos y expedientes pendientes</li>
+            <li>• Emisión y firma del acta oficial de entrega de cargo</li>
           </ul>
         </div>
 
@@ -104,7 +104,7 @@ export function LoginPage() {
         <img
           src="/brand/mdsj-blanco.png"
           alt="Municipalidad Distrital de San Jerónimo"
-          className="h-7 w-auto object-contain"
+          className="h-9 w-auto object-contain"
         />
       </header>
 
