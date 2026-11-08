@@ -2,6 +2,7 @@ import {
   Archive,
   ClipboardList,
   FileCheck2,
+  Files,
   FileText,
   FolderTree,
   LayoutDashboard,
@@ -16,17 +17,19 @@ import {
 
 import { PERMISOS, type Permiso } from '@/auth/permisos'
 
-/**
- * Navegación del sidebar: estructura PLANA por anexo (decisión confirmada con
- * el usuario, plan §10). Cada ítem se oculta si el usuario no tiene `permiso`.
- * Las rutas se cablean en E3+ a medida que cada pantalla exista; por ahora el
- * sidebar las lista con gating correcto.
- */
-export interface ItemNav {
+export interface SubItemNav {
   etiqueta: string
   ruta: string
   icono: LucideIcon
   permiso: Permiso
+}
+
+export interface ItemNav {
+  etiqueta: string
+  ruta?: string
+  icono: LucideIcon
+  permiso: Permiso
+  hijos?: SubItemNav[]
 }
 
 export const ITEMS_NAV: ItemNav[] = [
@@ -43,40 +46,47 @@ export const ITEMS_NAV: ItemNav[] = [
     permiso: PERMISOS.VerAnexos,
   },
   {
-    etiqueta: 'Anexo 01 · Documentos',
-    ruta: '/documentos',
-    icono: FileText,
+    etiqueta: 'Anexos de Transferencia',
+    icono: Files,
     permiso: PERMISOS.VerAnexos,
-  },
-  {
-    etiqueta: 'Anexo 02 · Gestión',
-    ruta: '/gestion',
-    icono: ClipboardList,
-    permiso: PERMISOS.VerAnexos,
-  },
-  {
-    etiqueta: 'Anexo 03 · Acervo',
-    ruta: '/acervo',
-    icono: Archive,
-    permiso: PERMISOS.VerAnexos,
-  },
-  {
-    etiqueta: 'Anexo 04 · Patrimonio',
-    ruta: '/patrimonio',
-    icono: Package,
-    permiso: PERMISOS.VerAnexos,
-  },
-  {
-    etiqueta: 'Anexo 05 · Personal',
-    ruta: '/personal',
-    icono: Users,
-    permiso: PERMISOS.VerAnexos,
-  },
-  {
-    etiqueta: 'Anexo 06 · No patrimonial',
-    ruta: '/nopatrimonial',
-    icono: PackageOpen,
-    permiso: PERMISOS.VerAnexos,
+    hijos: [
+      {
+        etiqueta: 'Anexo 01 · Documentos',
+        ruta: '/documentos',
+        icono: FileText,
+        permiso: PERMISOS.VerAnexos,
+      },
+      {
+        etiqueta: 'Anexo 02 · Gestión',
+        ruta: '/gestion',
+        icono: ClipboardList,
+        permiso: PERMISOS.VerAnexos,
+      },
+      {
+        etiqueta: 'Anexo 03 · Acervo',
+        ruta: '/acervo',
+        icono: Archive,
+        permiso: PERMISOS.VerAnexos,
+      },
+      {
+        etiqueta: 'Anexo 04 · Patrimonio',
+        ruta: '/patrimonio',
+        icono: Package,
+        permiso: PERMISOS.VerAnexos,
+      },
+      {
+        etiqueta: 'Anexo 05 · Personal',
+        ruta: '/personal',
+        icono: Users,
+        permiso: PERMISOS.VerAnexos,
+      },
+      {
+        etiqueta: 'Anexo 06 · No patrimonial',
+        ruta: '/nopatrimonial',
+        icono: PackageOpen,
+        permiso: PERMISOS.VerAnexos,
+      },
+    ],
   },
   {
     etiqueta: 'Observaciones',

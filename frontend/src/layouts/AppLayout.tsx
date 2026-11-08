@@ -1,6 +1,6 @@
-import { LogOut, Menu, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, LogOut, Menu, X } from 'lucide-react'
 import { useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 
 import { useAuth } from '@/auth/hooks'
 import { Button } from '@/components/ui/button'
@@ -11,11 +11,24 @@ import { ITEMS_NAV } from './navegacion'
 
 /**
  * Layout base autenticado: barra lateral de navegación (sidebar) con identidad
- * institucional (#3484A5) y topbar con selector de dependencia + usuario + logout.
+ * institucional (#3484A5), submenú colapsable para anexos y topbar con selector de dependencia + usuario + logout.
  */
 export function AppLayout() {
   const { usuario, permisos, cerrarSesion } = useAuth()
+  const location = useLocation()
   const [menuAbierto, setMenuAbierto] = useState(false)
+
+  // Rutas de anexos para detectar estado activo
+  const rutasAnexos = [
+    '/documentos',
+    '/gestion',
+    '/acervo',
+    '/patrimonio',
+    '/personal',
+    '/nopatrimonial',
+  ]
+  const estaEnAnexo = rutasAnexos.some((r) => location.pathname.startsWith(r))
+  const [anexosAbierto, setAnexosAbierto] = useState(true)
 
   const items = ITEMS_NAV.filter((item) => permisos.has(item.permiso))
 
@@ -23,10 +36,74 @@ export function AppLayout() {
     <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2 text-xs">
       {items.map((item) => {
         const Icono = item.icono
+
+        // Si es un módulo contenedor con submódulos hijos (ej. "Anexos de Transferencia")
+        if (item.hijos && item.hijos.length > 0) {
+          const hijosPermitidos = item.hijos.filter((h) => permisos.has(h.permiso))
+          if (hijosPermitidos.length === 0) return null
+
+          return (
+            <div key={item.etiqueta} className="space-y-1">
+              <button
+                type="button"
+                onClick={() => setAnexosAbierto((prev) => !prev)}
+                className={cn(
+                  'w-full flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium transition-all duration-150',
+                  estaEnAnexo
+                    ? 'bg-white/20 text-white font-semibold'
+                    : 'text-white/80 hover:bg-white/10 hover:text-white',
+                )}
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <Icono className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{item.etiqueta}</span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-white/20 text-white rounded-full">
+                    {hijosPermitidos.length}
+                  </span>
+                  {anexosAbierto ? (
+                    <ChevronDown className="h-3.5 w-3.5 text-white/80" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5 text-white/80" />
+                  )}
+                </div>
+              </button>
+
+              {anexosAbierto && (
+                <div className="border-l border-white/20 ml-4 pl-2 space-y-1 pt-0.5 pb-1">
+                  {hijosPermitidos.map((sub) => {
+                    const SubIcono = sub.icono
+                    return (
+                      <NavLink
+                        key={sub.ruta}
+                        to={sub.ruta}
+                        onClick={() => setMenuAbierto(false)}
+                        className={({ isActive }) =>
+                          cn(
+                            'flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150',
+                            isActive
+                              ? 'bg-white text-[#3484A5] font-semibold shadow-sm'
+                              : 'text-white/80 hover:bg-white/10 hover:text-white',
+                          )
+                        }
+                      >
+                        <SubIcono className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{sub.etiqueta}</span>
+                      </NavLink>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        }
+
+        // Ítem regular directo
         return (
           <NavLink
             key={item.ruta}
-            to={item.ruta}
+            to={item.ruta!}
             end={item.ruta === '/'}
             onClick={() => setMenuAbierto(false)}
             className={({ isActive }) =>
