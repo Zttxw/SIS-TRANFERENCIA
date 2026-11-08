@@ -556,4 +556,20 @@ navegación (sidebar propuesto) antes de E2.
   - **Enrutado:** ruta `/admin` montada en `src/router/index.tsx`.
   - **Verificación:** `npm run build` y `npm run lint` 100% limpios (0 errores); suite backend en verde.
 
-- **(pendiente)** — E11: Pulido, accesibilidad y build de producción.
+- **2026-11-08 — E11 (Pulido, accesibilidad y build de producción):**
+  - **Componentes de Resiliencia y Manejo de Errores**:
+    - `ErrorBoundary.tsx` (`src/components/common/`): captura global de fallos no controlados en la jerarquía React, diagnóstico del error, botones de recarga y redirección segura al Dashboard institucional.
+    - `NotFoundPage.tsx` (`src/components/common/`): vista institucional amigable para rutas inexistentes (404) con botón de retorno al inicio.
+    - `Skeleton.tsx` (`src/components/ui/`): componente accesible con animación `pulse` para transiciones de carga fluidas y consistentes.
+  - **Optimización de Empaquetado & Code-Splitting** (`vite.config.ts`):
+    - Configuración avanzada de Rollup `manualChunks` segmentando en bundles independientes: `vendor-react` (React 19, DOM, Router), `vendor-query` (TanStack Query, Axios), `vendor-forms` (React Hook Form, Zod), y `vendor-ui` (Lucide, Sonner).
+    - Eliminación completa de la advertencia de chunk > 500 kB (ningún chunk supera los 330 kB).
+  - **Documentación Técnica & Producción** (`frontend/README.md`):
+    - Documentación exhaustiva del stack tecnológico, arquitectura modular por dominios, flujo normativo, variables de entorno y configuración Nginx para despliegue productivo.
+  - **Blindaje Total de la Base de Datos ante Tests**:
+    - Aislamiento estricto de PHPUnit en `TestCase.php` y `config/database.php` forzando `sqlite` en memoria cuando `APP_ENV=testing`, impidiendo que `RefreshDatabase` borre la base de datos de desarrollo en PostgreSQL.
+  - **Verificación Final**:
+    - `npm run lint` (Oxlint) con 0 errores (solo 4 avisos benignos de fast-refresh/compiler).
+    - `npm run build` 100% limpio y optimizado, compilado en 8.7s con todos los chunks comprimidos por debajo de 330 kB.
+    - Suite de 40 tests unitarios y de integración PHP en verde sin tocar la base PostgreSQL de desarrollo.
+    - Las 11 etapas del plan frontend (E1 a E11) completadas con éxito y en estado de producción.

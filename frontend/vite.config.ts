@@ -26,4 +26,27 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'vendor-react'
+            }
+            if (id.includes('@tanstack') || id.includes('axios')) {
+              return 'vendor-query'
+            }
+            if (id.includes('lucide-react') || id.includes('sonner')) {
+              return 'vendor-ui'
+            }
+            if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
+              return 'vendor-forms'
+            }
+          }
+        },
+      },
+    },
+  },
 })

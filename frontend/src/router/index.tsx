@@ -1,7 +1,8 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { createBrowserRouter } from 'react-router-dom'
 
 import { DependenciaProvider } from '@/auth/DependenciaProvider'
 import { RutaProtegida } from '@/auth/RutaProtegida'
+import { NotFoundPage } from '@/components/common/NotFoundPage'
 import { AcervoPage } from '@/features/acervo/AcervoPage'
 import { ActaPage } from '@/features/acta/ActaPage'
 import { AdminPage } from '@/features/admin/AdminPage'
@@ -43,7 +44,7 @@ export const router = createBrowserRouter([
           { path: 'entregas', element: <EntregasPage /> },
           { path: 'acta', element: <ActaPage /> },
           { path: 'admin', element: <AdminPage /> },
-          { path: '*', element: <Navigate to="/" replace /> },
+          { path: '*', element: <NotFoundPage /> },
         ],
       },
     ],

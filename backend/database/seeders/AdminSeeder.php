@@ -50,5 +50,12 @@ class AdminSeeder extends Seeder
             'dependencia_id' => null,
             'rol' => Rol::ADMINISTRADOR->value,
         ]);
+
+        AsignacionRol::firstOrCreate([
+            'proceso_transferencia_id' => $proceso->id,
+            'user_id' => $admin->id,
+            'dependencia_id' => null,
+            'rol' => Rol::ETTS->value,
+        ]);
     }
 }
