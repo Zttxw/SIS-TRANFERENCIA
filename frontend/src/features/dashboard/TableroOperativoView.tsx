@@ -165,10 +165,10 @@ export function TableroOperativoView({ onSeleccionarDependencia }: TableroOperat
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-extrabold text-foreground">
+              <span className="text-cifra-lg font-semibold text-foreground">
                 {metricas.consolidadas}
               </span>
-              <span className="text-xs font-semibold text-emerald-600">
+              <span className="text-cifra text-emerald-600">
                 {metricas.porcentaje_avance}%
               </span>
             </div>
@@ -194,10 +194,10 @@ export function TableroOperativoView({ onSeleccionarDependencia }: TableroOperat
               <Send className="h-4 w-4 text-sky-600" />
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-extrabold text-foreground">
+              <span className="text-cifra-lg font-semibold text-foreground">
                 {metricas.remitidas}
               </span>
-              <span className="text-xs font-semibold text-sky-600">
+              <span className="text-cifra text-sky-600">
                 {metricas.total_dependencias > 0 ? Math.round((metricas.remitidas / metricas.total_dependencias) * 100) : 0}%
               </span>
             </div>
@@ -223,10 +223,10 @@ export function TableroOperativoView({ onSeleccionarDependencia }: TableroOperat
               <AlertTriangle className="h-4 w-4 text-amber-600" />
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-extrabold text-foreground">
+              <span className="text-cifra-lg font-semibold text-foreground">
                 {metricas.observadas}
               </span>
-              <span className="text-xs font-semibold text-amber-600">
+              <span className="text-cifra text-amber-600">
                 {metricas.total_dependencias > 0 ? Math.round((metricas.observadas / metricas.total_dependencias) * 100) : 0}%
               </span>
             </div>
@@ -252,10 +252,10 @@ export function TableroOperativoView({ onSeleccionarDependencia }: TableroOperat
               <Clock className="h-4 w-4 text-slate-500" />
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-extrabold text-foreground">
+              <span className="text-cifra-lg font-semibold text-foreground">
                 {metricas.borrador}
               </span>
-              <span className="text-xs font-semibold text-slate-500">
+              <span className="text-cifra text-slate-500">
                 {metricas.total_dependencias > 0 ? Math.round((metricas.borrador / metricas.total_dependencias) * 100) : 0}%
               </span>
             </div>
@@ -349,25 +349,25 @@ export function TableroOperativoView({ onSeleccionarDependencia }: TableroOperat
         {/* Resumen Patrimonial (Anexo 04) */}
         <Card className="border shadow-xs">
           <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+            <CardTitle className="text-etiqueta flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <Package className="h-3.5 w-3.5 text-[#3484A5]" />
                 Inventario Físico (SIGA)
               </span>
-              <span className="text-[11px] text-[#3484A5] font-bold">
+              <span className="text-microdato text-[#3484A5] font-bold">
                 {metricas.patrimonio.porcentaje}% verificado
               </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4 space-y-2.5">
             <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-bold text-foreground">
+              <span className="text-cifra-lg font-semibold text-foreground">
                 {metricas.patrimonio.verificados.toLocaleString('es-PE')}
-                <span className="text-xs text-muted-foreground font-normal ml-1">
+                <span className="text-dato text-muted-foreground ml-1">
                   / {metricas.patrimonio.total_bienes.toLocaleString('es-PE')} bienes
                 </span>
               </span>
-              <span className="text-xs text-slate-500 font-medium">
+              <span className="text-cifra text-slate-600">
                 S/ {(metricas.patrimonio.valor_total / 1000000).toFixed(2)}M
               </span>
             </div>

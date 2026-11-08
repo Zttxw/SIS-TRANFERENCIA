@@ -124,7 +124,7 @@ export function AppLayout() {
   )
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-foreground">
+    <div className="flex min-h-screen bg-background text-foreground">
       {/* Barra lateral de navegación (Sidebar desktop) con color institucional #3484A5 */}
       <aside className="hidden w-64 shrink-0 flex-col bg-[#3484A5] text-white shadow-sm md:flex">
         {/* Encabezado con Escudo Blanco Oficial */}

@@ -1,10 +1,13 @@
 @import 'tailwindcss';
 
 /*
- * Design tokens — espejo de la convención shadcn/ui adaptada a Tailwind v4
- * (configuración CSS-first). Las variables viven en :root (tema claro) y
- * .dark (tema oscuro). El tema se expone a Tailwind con @theme inline para que
- * utilidades como bg-background, text-foreground, border-border funcionen.
+ * Design tokens institucionales (SICOP - MDSJ)
+ * Adaptados a Tailwind CSS v4 y shadcn/ui.
+ * Paleta oficial:
+ * - Azul Institucional (Primario): #3484A5 (Pantone 6797 C)
+ * - Verde / Turquesa (Secundario): #2CA792 (Pantone 7473 C)
+ * - Amarillo (Acento / Alerta): #F0C84F (Pantone 141 C)
+ * - Blanco / Hielo Institucional: hsl(198 35% 96%)
  */
 
 @custom-variant dark (&:is(.dark *));
@@ -12,42 +15,44 @@
 :root {
   --radius: 0.625rem;
 
-  --background: oklch(1 0 0);
+  --background: hsl(198 35% 98%);
   --foreground: oklch(0.145 0 0);
 
-  --card: oklch(1 0 0);
+  --card: #ffffff;
   --card-foreground: oklch(0.145 0 0);
 
-  --popover: oklch(1 0 0);
+  --popover: #ffffff;
   --popover-foreground: oklch(0.145 0 0);
 
-  --primary: oklch(0.41 0.15 258);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: #3484a5;
+  --primary-foreground: #ffffff;
 
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+  --secondary: #2ca792;
+  --secondary-foreground: #ffffff;
 
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  --muted: hsl(198 25% 95%);
+  --muted-foreground: oklch(0.48 0 0);
 
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --accent: hsl(198 35% 94%);
+  --accent-foreground: #3484a5;
 
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
+  --destructive-foreground: #ffffff;
 
-  --success: oklch(0.6 0.15 150);
-  --warning: oklch(0.75 0.16 75);
+  --success: #2ca792;
+  --warning: #f0c84f;
 
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.41 0.15 258);
+  --border: oklch(0.91 0 0);
+  --input: oklch(0.91 0 0);
+  --ring: #3484a5;
 
   --sidebar: #3484a5;
   --sidebar-foreground: #ffffff;
   --sidebar-border: rgba(255, 255, 255, 0.15);
   --sidebar-accent: rgba(255, 255, 255, 0.15);
   --sidebar-accent-foreground: #ffffff;
+
+  --hielo-institucional: hsl(198 35% 96%);
 }
 
 .dark {
@@ -60,33 +65,35 @@
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
 
-  --primary: oklch(0.7 0.14 258);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: #3484a5;
+  --primary-foreground: #ffffff;
 
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
+  --secondary: #2ca792;
+  --secondary-foreground: #ffffff;
 
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
 
   --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --accent-foreground: #3484a5;
 
   --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
+  --destructive-foreground: #ffffff;
 
-  --success: oklch(0.7 0.14 150);
-  --warning: oklch(0.8 0.15 75);
+  --success: #2ca792;
+  --warning: #f0c84f;
 
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.7 0.14 258);
+  --ring: #3484a5;
 
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
+
+  --hielo-institucional: oklch(0.22 0 0);
 }
 
 @theme inline {
@@ -116,13 +123,58 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-hielo: var(--hielo-institucional);
 
-  --font-sans: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* ========================================================
+   ESCALA TIPOGRÁFICA PREDEFINIDA (SICOP - MDSJ)
+   ======================================================== */
+@utility text-cifra-lg {
+  font-family: var(--font-mono);
+  font-size: 1.5rem; /* 24px */
+  line-height: 2rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+}
+
+@utility text-cifra {
+  font-family: var(--font-mono);
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.25rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility text-dato {
+  font-family: var(--font-sans);
+  font-size: 0.75rem; /* 12px */
+  line-height: 1rem;
+}
+
+@utility text-etiqueta {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem; /* 11px */
+  line-height: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@utility text-microdato {
+  font-family: var(--font-mono);
+  font-size: 0.59375rem; /* 9.5px */
+  line-height: 0.75rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 @layer base {
@@ -134,15 +186,14 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    letter-spacing: -0.011em;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    letter-spacing: -0.02em;
+    font-family: var(--font-sans);
+    letter-spacing: -0.015em;
     font-weight: 600;
   }
 }
