@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, LogOut, Menu, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, FolderTree, LogOut, Menu, Users, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 
@@ -8,6 +8,30 @@ import { DependenciaSelector } from '@/features/organization/DependenciaSelector
 import { cn } from '@/lib/utils'
 
 import { ITEMS_NAV } from './navegacion'
+
+function getInfoEstructura(usuario: ReturnType<typeof useAuth>['usuario']) {
+  if (usuario?.es_global) {
+    return { etiqueta: 'Estructura Orgánica', icono: FolderTree }
+  }
+
+  const nombreDep = usuario?.servidor?.dependencia?.nombre || ''
+  if (/TECNOLOG[IÍ]AS DE LA INFORMACI[OÓ]N/i.test(nombreDep)) {
+    return { etiqueta: 'Trabajadores de OTI', icono: Users }
+  }
+  if (/ABASTECIMIENTO/i.test(nombreDep)) {
+    return { etiqueta: 'Trabajadores de Abastecimiento', icono: Users }
+  }
+  if (/CONTABILIDAD/i.test(nombreDep)) {
+    return { etiqueta: 'Trabajadores de Contabilidad', icono: Users }
+  }
+  if (/TESORER[IÍ]A/i.test(nombreDep)) {
+    return { etiqueta: 'Trabajadores de Tesorería', icono: Users }
+  }
+  if (/RECURSOS HUMANOS/i.test(nombreDep)) {
+    return { etiqueta: 'Trabajadores de RRHH', icono: Users }
+  }
+  return { etiqueta: 'Personal de la Oficina', icono: Users }
+}
 
 /**
  * Layout base autenticado: barra lateral de navegación (sidebar) con identidad
@@ -30,12 +54,14 @@ export function AppLayout() {
   const estaEnAnexo = rutasAnexos.some((r) => location.pathname.startsWith(r))
   const [anexosAbierto, setAnexosAbierto] = useState(true)
 
+  const infoEstructura = getInfoEstructura(usuario)
   const items = ITEMS_NAV.filter((item) => permisos.has(item.permiso))
 
   const nav = (
     <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2 text-xs">
       {items.map((item) => {
-        const Icono = item.icono
+        const Icono = item.ruta === '/organigrama' ? infoEstructura.icono : item.icono
+        const etiquetaEfectiva = item.ruta === '/organigrama' ? infoEstructura.etiqueta : item.etiqueta
 
         // Si es un módulo contenedor con submódulos hijos (ej. "Anexos de Transferencia")
         if (item.hijos && item.hijos.length > 0) {
@@ -48,7 +74,7 @@ export function AppLayout() {
                 type="button"
                 onClick={() => setAnexosAbierto((prev) => !prev)}
                 className={cn(
-                  'w-full flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium transition-all duration-150',
+                  'w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-medium transition-all duration-150',
                   estaEnAnexo
                     ? 'bg-white/20 text-white font-semibold'
                     : 'text-white/80 hover:bg-white/10 hover:text-white',
@@ -81,7 +107,7 @@ export function AppLayout() {
                         onClick={() => setMenuAbierto(false)}
                         className={({ isActive }) =>
                           cn(
-                            'flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150',
+                            'flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-xs font-medium transition-all duration-150',
                             isActive
                               ? 'bg-white text-[#3484A5] font-semibold shadow-sm'
                               : 'text-white/80 hover:bg-white/10 hover:text-white',
@@ -108,7 +134,7 @@ export function AppLayout() {
             onClick={() => setMenuAbierto(false)}
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition-all duration-150',
+                'flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium transition-all duration-150',
                 isActive
                   ? 'bg-white text-[#3484A5] font-semibold shadow-sm'
                   : 'text-white/80 hover:bg-white/10 hover:text-white',
@@ -116,7 +142,7 @@ export function AppLayout() {
             }
           >
             <Icono className="h-4 w-4 shrink-0" />
-            <span className="truncate">{item.etiqueta}</span>
+            <span className="truncate">{etiquetaEfectiva}</span>
           </NavLink>
         )
       })}
@@ -214,19 +240,24 @@ export function AppLayout() {
 
           <div className="ml-auto flex items-center gap-3">
             <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium leading-tight">
+              <p className="text-xs font-semibold leading-tight text-slate-800 uppercase tracking-tight">
                 {usuario?.nombre}
               </p>
-              <p className="text-xs text-muted-foreground">
-                DNI {usuario?.dni}
+              <p className="text-[11px] text-muted-foreground flex items-center justify-end gap-1.5 mt-0.5">
+                <span className="font-mono">DNI {usuario?.dni}</span>
+                <span>·</span>
+                <span className="font-medium text-[#3484A5]">
+                  {usuario?.servidor?.cargo || (usuario?.es_global ? 'Administrador' : 'Servidor Público')}
+                </span>
               </p>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => void cerrarSesion()}
+              className="text-xs gap-1.5 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Salir</span>
             </Button>
           </div>

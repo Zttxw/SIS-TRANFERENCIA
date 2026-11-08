@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { useDependenciaActiva } from '@/auth/hooks'
+import { useAuth, useDependenciaActiva } from '@/auth/hooks'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,8 +25,22 @@ import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { construirArbol, filtrarArbol, type NodoArbol } from '@/features/entregas/arbol-utils'
 import { useCatalogoDependencias } from '@/features/entregas/use-entregas'
+import { DespachoPersonalView } from './DespachoPersonalView'
 
 export function EstructuraOrganicaPage() {
+  const { usuario } = useAuth()
+  const esGlobal = usuario?.es_global === true
+
+  // Si el usuario no tiene visión global (es Jefe de Oficina o Servidor),
+  // se le presenta directamente la vista operativa de su despacho y sus trabajadores.
+  if (!esGlobal) {
+    return <DespachoPersonalView />
+  }
+
+  return <ArbolOrganicoAdminView />
+}
+
+function ArbolOrganicoAdminView() {
   const navigate = useNavigate()
   const { dependenciaId, setDependenciaId } = useDependenciaActiva()
   const { data: dependencias, isLoading, isError, refetch } = useCatalogoDependencias()

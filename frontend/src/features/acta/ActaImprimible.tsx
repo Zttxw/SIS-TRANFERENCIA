@@ -1,9 +1,10 @@
 import type { ActaTransferencia } from '@/types/acta'
 import type { Dependencia } from '@/types/auth'
+import type { DependenciaResumen } from '@/types/transferencia'
 
 interface ActaImprimibleProps {
   acta: ActaTransferencia
-  dependencia: Dependencia
+  dependencia: Dependencia | DependenciaResumen
 }
 
 export function ActaImprimible({ acta, dependencia }: ActaImprimibleProps) {

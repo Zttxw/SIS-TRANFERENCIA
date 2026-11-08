@@ -36,18 +36,55 @@ export function DependenciaProvider({ children }: { children: React.ReactNode })
   const [override, setOverride] = useState<Override>(() => leerPersistida())
 
   const propia = usuario?.servidor?.dependencia_id ?? null
-  const dependenciaId =
-    override === undefined ? propia : override === 'all' ? null : override
+  const esGlobal = usuario?.es_global === true
+  const ambito = useMemo(
+    () => usuario?.dependencias_ambito ?? (propia ? [propia] : []),
+    [usuario?.dependencias_ambito, propia],
+  )
 
-  const setDependenciaId = useCallback((id: number | null) => {
-    const nuevo: Override = id === null ? 'all' : id
-    setOverride(nuevo)
-    try {
-      localStorage.setItem(STORAGE_KEY, String(nuevo))
-    } catch {
-      /* no-op */
+  // Derivación del dependenciaId según jerarquía y ámbito del usuario
+  let dependenciaId: number | null
+  if (!usuario) {
+    dependenciaId = null
+  } else if (esGlobal) {
+    // Superjefe / Admin / ETTS: puede ver tablero global (null) o cualquier dependencia
+    dependenciaId =
+      override === undefined ? null : override === 'all' ? null : override
+  } else if (ambito.length > 0) {
+    // Jefe o Servidor con ámbito restringido a su dependencia o subárbol
+    if (ambito.length === 1) {
+      dependenciaId = ambito[0]
+    } else if (typeof override === 'number' && ambito.includes(override)) {
+      dependenciaId = override
+    } else {
+      dependenciaId = propia && ambito.includes(propia) ? propia : ambito[0]
     }
-  }, [])
+  } else {
+    dependenciaId = propia
+  }
+
+  const setDependenciaId = useCallback(
+    (id: number | null) => {
+      if (!esGlobal && id === null) {
+        // Los usuarios no globales no pueden seleccionar la vista global del pliego
+        return
+      }
+
+      if (!esGlobal && typeof id === 'number' && ambito.length > 0 && !ambito.includes(id)) {
+        // No puede seleccionar dependencias fuera de su ámbito
+        return
+      }
+
+      const nuevo: Override = id === null ? 'all' : id
+      setOverride(nuevo)
+      try {
+        localStorage.setItem(STORAGE_KEY, String(nuevo))
+      } catch {
+        /* no-op */
+      }
+    },
+    [esGlobal, ambito],
+  )
 
   const value = useMemo(
     () => ({ dependenciaId, setDependenciaId }),

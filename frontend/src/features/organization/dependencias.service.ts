@@ -13,3 +13,8 @@ export async function listarDependencias(search?: string): Promise<Dependencia[]
   })
   return data.data
 }
+
+export async function obtenerDependencia(id: number): Promise<Dependencia> {
+  const { data } = await api.get<ApiSuccess<Dependencia>>(`/dependencias/${id}`)
+  return data.data
+}

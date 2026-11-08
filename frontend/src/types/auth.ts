@@ -12,6 +12,10 @@ export interface Dependencia {
   nombre: string
   nivel: number
   parent_id?: number | null
+  padre?: Dependencia | null
+  hijas?: Dependencia[]
+  encargado?: Servidor | null
+  servidores?: Servidor[]
 }
 
 export interface AsignacionRol {
@@ -37,6 +41,8 @@ export interface Usuario {
   nombre: string
   email: string | null
   activo: boolean
+  es_global?: boolean
+  dependencias_ambito?: number[] | null
   roles: AsignacionRol[]
   servidor: Servidor | null
 }

@@ -6,23 +6,37 @@ namespace App\Modules\Organization\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Organization\Models\Dependencia;
+use App\Support\Concerns\AutorizaAmbito;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DependenciaController extends Controller
 {
+    use AutorizaAmbito;
+
     /**
-     * Lista dependencias / centros de costo disponibles para el proceso de transferencia.
+     * Lista dependencias / centros de costo acotados al ámbito del usuario autenticado.
      */
     public function index(Request $request): JsonResponse
     {
         $query = Dependencia::query()
-            ->with(['encargado:id,dni,nombres,apellidos,cargo'])
+            ->with([
+                'encargado:id,dni,nombres,apellidos,cargo',
+                'servidores:id,dependencia_id,dni,nombres,apellidos,cargo,es_responsable',
+            ])
             ->orderBy('codigo');
 
         if ($request->boolean('solo_activas', true)) {
             $query->where('activa', true);
+        }
+
+        // Si el usuario no tiene ámbito global (admin/ETTS), acotar a su dependencia o subárbol
+        if ($request->user()) {
+            $idsAmbito = $this->idsDependenciaEnAmbito($request->user());
+            if ($idsAmbito !== null) {
+                $query->whereIn('id', $idsAmbito);
+            }
         }
 
         if ($request->filled('search')) {
@@ -48,11 +62,19 @@ class DependenciaController extends Controller
     /**
      * Muestra el detalle de una dependencia específica.
      */
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
-        $dependencia = Dependencia::with(['padre', 'hijas', 'encargado'])->findOrFail($id);
+        if ($request->user()) {
+            $this->autorizarDependencia($request->user(), $id);
+        }
+
+        $dependencia = Dependencia::with([
+            'padre',
+            'hijas',
+            'encargado',
+            'servidores:id,dependencia_id,dni,nombres,apellidos,cargo,es_responsable',
+        ])->findOrFail($id);
 
         return ApiResponse::success($dependencia, 'Dependencia encontrada.');
     }
 }
-

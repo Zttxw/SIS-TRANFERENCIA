@@ -18,7 +18,7 @@ import {
   Users,
 } from 'lucide-react'
 
-import { useDependenciaActiva } from '@/auth/hooks'
+import { useAuth, useDependenciaActiva } from '@/auth/hooks'
 import { Can } from '@/auth/Can'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
@@ -76,7 +76,10 @@ function renderBadgeEstado(estado: EstadoEntrega | null) {
 }
 
 export function DashboardPage() {
+  const { usuario } = useAuth()
   const { dependenciaId, setDependenciaId } = useDependenciaActiva()
+  const esGlobal = usuario?.es_global === true
+
   const { data: estadoData, isLoading, error } = useEstadoEntrega(dependenciaId)
   const { data: resumenDocs } = useResumenDocumentos(dependenciaId)
 
@@ -85,6 +88,13 @@ export function DashboardPage() {
 
   // Si no hay una dependencia concreta seleccionada (visión global de admin / ETTS)
   if (!dependenciaId) {
+    if (!esGlobal) {
+      return (
+        <div className="flex min-h-[400px] items-center justify-center">
+          <Spinner className="h-8 w-8 text-primary" />
+        </div>
+      )
+    }
     return <TableroOperativoView onSeleccionarDependencia={(id) => setDependenciaId(id)} />
   }
 
@@ -115,24 +125,26 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Barra de Retorno al Tablero Global */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[#3484A5]/10 border border-[#3484A5]/25 rounded-xl p-3 sm:px-4">
-        <div className="flex items-center gap-2.5">
-          <Building2 className="h-4 w-4 text-[#3484A5] shrink-0" />
-          <span className="text-xs sm:text-sm font-semibold text-slate-800">
-            Despacho activo: <span className="font-mono text-[#3484A5]">[{dependencia.codigo}]</span> {dependencia.nombre}
-          </span>
+      {/* Barra de Retorno al Tablero Global (Exclusiva para Administrador / ETTS) */}
+      {esGlobal && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[#3484A5]/10 border border-[#3484A5]/25 rounded-xl p-3 sm:px-4">
+          <div className="flex items-center gap-2.5">
+            <Building2 className="h-4 w-4 text-[#3484A5] shrink-0" />
+            <span className="text-xs sm:text-sm font-semibold text-slate-800">
+              Despacho en inspección: <span className="font-mono text-[#3484A5]">[{dependencia.codigo}]</span> {dependencia.nombre}
+            </span>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setDependenciaId(null)}
+            className="h-7 text-xs gap-1.5 self-start sm:self-auto border-[#3484A5]/40 hover:bg-[#3484A5]/15 cursor-pointer"
+          >
+            <BarChart3 className="h-3.5 w-3.5 text-[#3484A5]" />
+            <span>Volver al Tablero Global</span>
+          </Button>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setDependenciaId(null)}
-          className="h-7 text-xs gap-1.5 self-start sm:self-auto border-[#3484A5]/40 hover:bg-[#3484A5]/15 cursor-pointer"
-        >
-          <BarChart3 className="h-3.5 w-3.5 text-[#3484A5]" />
-          <span>Volver al Tablero Global</span>
-        </Button>
-      </div>
+      )}
       {/* Cabecera del Dashboard */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
