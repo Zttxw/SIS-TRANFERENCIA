@@ -67,12 +67,20 @@ export function LoginPage() {
           PANEL IZQUIERDO INSTITUCIONAL (#3484A5 ULTRA MINIMALISTA)
           ======================================================== */}
       <section className="hidden md:flex md:w-1/2 lg:w-[48%] flex-col justify-between bg-[#3484A5] text-white p-8 lg:p-12">
-        <header>
+        <header className="flex items-center gap-2.5">
           <img
-            src="/brand/mdsj-blanco.png"
-            alt="Municipalidad Distrital de San Jerónimo"
-            className="h-11 lg:h-12 w-auto object-contain"
+            src="/brand/escudo-blanco.png"
+            alt="Escudo Oficial de San Jerónimo"
+            className="h-10 w-10 object-contain shrink-0"
           />
+          <div>
+            <div className="text-xs sm:text-sm font-semibold text-white leading-tight">
+              Municipalidad Distrital de San Jerónimo
+            </div>
+            <div className="text-[10px] sm:text-[11px] text-white/70 leading-tight">
+              Cusco, Perú
+            </div>
+          </div>
         </header>
 
         <div className="my-auto py-6 space-y-4 max-w-sm">
@@ -100,12 +108,20 @@ export function LoginPage() {
       </section>
 
       {/* Vista móvil: Encabezado compacto */}
-      <header className="md:hidden flex bg-[#3484A5] text-white p-4 justify-center">
+      <header className="md:hidden flex bg-[#3484A5] text-white p-4 justify-center items-center gap-2.5">
         <img
-          src="/brand/mdsj-blanco.png"
-          alt="Municipalidad Distrital de San Jerónimo"
-          className="h-9 w-auto object-contain"
+          src="/brand/escudo-blanco.png"
+          alt="Escudo Oficial de San Jerónimo"
+          className="h-8 w-8 object-contain shrink-0"
         />
+        <div>
+          <div className="text-xs font-semibold text-white leading-tight">
+            Municipalidad Distrital de San Jerónimo
+          </div>
+          <div className="text-[10px] text-white/70 leading-tight">
+            Cusco, Perú
+          </div>
+        </div>
       </header>
 
       {/* ========================================================
