@@ -266,7 +266,7 @@ class TransferenciaService
         ]);
         $acta->save();
 
-        return $acta;
+        return $acta->load(['evidencias.subidoPor', 'generadaPor', 'dependencia']);
     }
 
     /**

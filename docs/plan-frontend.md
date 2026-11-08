@@ -520,4 +520,23 @@ navegación (sidebar propuesto) antes de E2.
   - **Enrutado:** ruta `/entregas` montada en `src/router/index.tsx`.
   - **Verificación:** `npm run build` y `npm run lint` 100% limpios y suite de tests PHP (40 tests) en verde.
 
-- **(pendiente)** — E9: Acta (Anexo 07) y expediente (§7.10).
+- **2026-11-07 — E9 (Acta Anexo 07 y Expediente de Evidencias Digitales):**
+  - **Backend Support** (`TransferenciaService.php`):
+    - Eager-loading de relaciones probatorias `evidencias.subidoPor`, `generadaPor` y `dependencia` en `obtenerActa()` para enriquecer la trazabilidad institucional.
+  - **Tipos y modelos** (`src/types/acta.ts`):
+    - Interfaces para `ActaTransferencia`, `IntervinientesActa`, `AnexosEntregadosMap`, `EvidenciaItem`, `SubirEvidenciaPayload`.
+    - Ampliación de `Dependencia` en `src/types/auth.ts` con `parent_id?: number | null`.
+  - **Servicios y hooks** (`features/acta/`):
+    - `actaService.obtenerActa(dependenciaId)` conectando con `GET /api/transferencia/acta`.
+    - `actaService.subirEvidencia()` conectando con `POST /api/evidencias` (multipart/form-data).
+    - `actaService.descargarEvidencia(id, nombreArchivo)` con streaming seguro autenticado mediante Blob y Sanctum Bearer token.
+    - TanStack Query hooks `useActa`, `useSubirEvidencia`, `useDescargarEvidencia` con captura amigable de 409 Conflict.
+  - **Componentes y Vistas**:
+    - `ActaImprimible.tsx`: documento oficial según formato normativo de la Directiva N.° 001-2026-MDSJ/A, preámbulo legal, relación fidedigna de anexos entregados (Anexo 01 al 06), observaciones de consolidación y bloques de firma de entrega y recepción. Apto para exportación/impresión (`window.print()`).
+    - `FirmaDigitalSeamModal.tsx`: seam técnico institucional para firma digital y carga del PDF suscrito con advertencia normativa y hashing seguro SHA-256.
+    - `SubirEvidenciaModal.tsx`: incorporación de archivos de sustento (PDF, imágenes, hojas de cálculo) custodiados en el storage seguro del expediente.
+    - `ActaPage.tsx`: pantalla principal con gating por `actas.generar`, tratamiento contextual del error 409 (entrega no consolidada), resumen de control, navegación por pestañas (`Formato Oficial del Acta` vs `Expediente de Evidencias Digitales`), visualizador de cadena de custodia probatoria, copia de hash SHA-256 y descarga segura.
+  - **Enrutado:** ruta `/acta` montada en `src/router/index.tsx`.
+  - **Verificación:** `npm run build` y `npm run lint` 100% limpios; suite completa de 40 tests PHP en verde (73 assertions).
+
+- **(pendiente)** — E10: Administración (activación de cuentas) (§5, §6 Etapa 2).

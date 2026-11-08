@@ -4,6 +4,7 @@ import { DependenciaProvider } from '@/auth/DependenciaProvider'
 import { RutaProtegida } from '@/auth/RutaProtegida'
 import { EnDesarrolloPage } from '@/components/common/EnDesarrolloPage'
 import { AcervoPage } from '@/features/acervo/AcervoPage'
+import { ActaPage } from '@/features/acta/ActaPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DocumentosPage } from '@/features/documentos/DocumentosPage'
@@ -40,16 +41,7 @@ export const router = createBrowserRouter([
           { path: 'patrimonio', element: <PatrimonioPage /> },
           { path: 'observaciones', element: <ObservacionesPage /> },
           { path: 'entregas', element: <EntregasPage /> },
-          {
-            path: 'acta',
-            element: (
-              <EnDesarrolloPage
-                titulo="Anexo 07 · Acta de Transferencia"
-                modulo="Emisión de Actas de Transferencia Institucional"
-                etapa="E8"
-              />
-            ),
-          },
+          { path: 'acta', element: <ActaPage /> },
           {
             path: 'admin',
             element: (

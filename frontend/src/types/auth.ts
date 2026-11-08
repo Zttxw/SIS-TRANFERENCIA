@@ -11,6 +11,7 @@ export interface Dependencia {
   codigo: string
   nombre: string
   nivel: number
+  parent_id?: number | null
 }
 
 export interface AsignacionRol {
