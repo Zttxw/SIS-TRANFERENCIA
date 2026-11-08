@@ -16,6 +16,7 @@ import { NoPatrimonialPage } from '@/features/nopatrimonial/NoPatrimonialPage'
 import { ObservacionesPage } from '@/features/observaciones/ObservacionesPage'
 import { PatrimonioPage } from '@/features/patrimonio/PatrimonioPage'
 import { PersonalPage } from '@/features/personal/PersonalPage'
+import { ReportesPage } from '@/features/reportes/ReportesPage'
 import { AppLayout } from '@/layouts/AppLayout'
 
 /**
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([
           { path: 'observaciones', element: <ObservacionesPage /> },
           { path: 'entregas', element: <EntregasPage /> },
           { path: 'acta', element: <ActaPage /> },
+          { path: 'reportes', element: <ReportesPage /> },
           { path: 'usuarios', element: <AdminPage /> },
           { path: 'admin', element: <Navigate to="/usuarios" replace /> },
           { path: '*', element: <NotFoundPage /> },

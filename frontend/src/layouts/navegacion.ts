@@ -1,5 +1,6 @@
 import {
   Archive,
+  BarChart3,
   ClipboardList,
   FileCheck2,
   Files,
@@ -44,6 +45,12 @@ export const ITEMS_NAV: ItemNav[] = [
     ruta: '/organigrama',
     icono: FolderTree,
     permiso: PERMISOS.VerAnexos,
+  },
+  {
+    etiqueta: 'Usuarios y Servidores',
+    ruta: '/usuarios',
+    icono: UserCog,
+    permiso: PERMISOS.GestionarUsuarios,
   },
   {
     etiqueta: 'Anexos de Transferencia',
@@ -107,9 +114,9 @@ export const ITEMS_NAV: ItemNav[] = [
     permiso: PERMISOS.GenerarActas,
   },
   {
-    etiqueta: 'Usuarios y Servidores',
-    ruta: '/usuarios',
-    icono: UserCog,
-    permiso: PERMISOS.GestionarUsuarios,
+    etiqueta: 'Reportes',
+    ruta: '/reportes',
+    icono: BarChart3,
+    permiso: PERMISOS.VerAnexos,
   },
 ]
