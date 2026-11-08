@@ -58,9 +58,9 @@ export const ITEMS_NAV: ItemNav[] = [
     permiso: PERMISOS.VerAnexos,
     hijos: [
       {
-        etiqueta: 'Anexo 01 · Documentos',
-        ruta: '/documentos',
-        icono: FileText,
+        etiqueta: 'Anexo 01 · Organigrama',
+        ruta: '/organigrama',
+        icono: FolderTree,
         permiso: PERMISOS.VerAnexos,
       },
       {
@@ -93,7 +93,19 @@ export const ITEMS_NAV: ItemNav[] = [
         icono: PackageOpen,
         permiso: PERMISOS.VerAnexos,
       },
+      {
+        etiqueta: 'Anexo 07 · Acta',
+        ruta: '/acta',
+        icono: FileCheck2,
+        permiso: PERMISOS.VerAnexos,
+      },
     ],
+  },
+  {
+    etiqueta: 'Documentos SGD',
+    ruta: '/documentos',
+    icono: FileText,
+    permiso: PERMISOS.VerAnexos,
   },
   {
     etiqueta: 'Observaciones',
@@ -106,12 +118,6 @@ export const ITEMS_NAV: ItemNav[] = [
     ruta: '/entregas',
     icono: Send,
     permiso: PERMISOS.VerAnexos,
-  },
-  {
-    etiqueta: 'Acta',
-    ruta: '/acta',
-    icono: FileCheck2,
-    permiso: PERMISOS.GenerarActas,
   },
   {
     etiqueta: 'Reportes',

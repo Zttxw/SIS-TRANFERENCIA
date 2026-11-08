@@ -12,6 +12,7 @@ import {
   Clock,
   FileCheck2,
   FileText,
+  FolderTree,
   History,
   Lock,
   Package,
@@ -148,20 +149,22 @@ export function DashboardPage() {
     ? 'Equipo de Transferencia del Titular Saliente (ETTS Institucional)'
     : 'su superior jerárquico inmediato'
 
-  // Lista consolidada de los 7 Anexos para renderizado compacto tipo tabla
+  // Lista oficial de los 7 Anexos normativos según Directiva N.° 001-2026-MDSJ/GM
   const filasAnexos = [
     {
       id: 'anexo01',
       codigo: 'Anexo 01',
-      nombre: 'Asuntos y Documentos Pendientes',
-      icono: FileText,
-      fuente: 'SGD',
-      colorFuente: 'bg-blue-50 text-blue-700 border-blue-200',
-      resumen: `${resumenDocs?.total_pendientes ?? 0} expedientes pendientes de trámite`,
-      detalle: 'Trámites documentarios no resueltos al corte',
-      ruta: '/documentos',
-      accion: 'Ver / Completar',
-      completado: (resumenDocs?.total_pendientes ?? 0) === 0,
+      nombre: 'Estructura Orgánica y Centros de Costo',
+      icono: FolderTree,
+      fuente: 'SGD / ROF',
+      colorFuente: 'bg-sky-50 text-sky-700 border-sky-200',
+      resumen: dependencia.parent_id
+        ? `Nivel ${dependencia.nivel} · Dependencia subordinada`
+        : `Nivel ${dependencia.nivel} · Órgano de primer nivel`,
+      detalle: 'Carga oficial del organigrama y centros de costo institucionales',
+      ruta: '/organigrama',
+      accion: 'Ver Organigrama',
+      completado: true,
     },
     {
       id: 'anexo02',
@@ -173,7 +176,7 @@ export function DashboardPage() {
       resumen: anexo02_gestion.existe
         ? 'Informe registrado y formulado'
         : 'Pendiente de formulación',
-      detalle: 'Memoria, funciones, logros y dificultades',
+      detalle: 'Memoria, funciones, logros y dificultades de la unidad',
       ruta: '/gestion',
       accion: 'Ver / Completar',
       completado: anexo02_gestion.existe,
@@ -209,12 +212,12 @@ export function DashboardPage() {
     {
       id: 'anexo05',
       codigo: 'Anexo 05',
-      nombre: 'Personal Asignado',
+      nombre: 'Personal de la Dependencia',
       icono: Users,
       fuente: 'SGD',
       colorFuente: 'bg-teal-50 text-teal-700 border-teal-200',
       resumen: `${anexo05_personal.total_personal} servidores en padrón operativo`,
-      detalle: 'Régimen laboral y situación contractual',
+      detalle: 'Relación de servidores, régimen y situación contractual',
       ruta: '/personal',
       accion: 'Ver / Completar',
       completado: anexo05_personal.total_personal > 0,
@@ -248,7 +251,7 @@ export function DashboardPage() {
           : 'Requiere consolidación previa de la entrega',
       detalle: 'Acta formal de cierre y entrega de cargo',
       ruta: '/acta',
-      accion: estadoEntrega === 'consolidada' ? 'Ver / Firmar' : 'Ver Requisitos',
+      accion: estadoEntrega === 'consolidada' ? 'Ver / Firmar' : 'Ver / Completar / Enviar',
       completado: estadoEntrega === 'consolidada',
     },
   ]
@@ -415,6 +418,43 @@ export function DashboardPage() {
                   </div>
                 )
               })}
+            </CardContent>
+          </Card>
+
+          {/* Módulo Operativo: Documentos SGD (Asuntos Pendientes) */}
+          <Card className="border shadow-xs overflow-hidden">
+            <CardHeader className="py-2.5 px-4 border-b border-border bg-slate-50/70">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-[#3484A5]" />
+                  <span>Documentos SGD · Reporte de Asuntos Pendientes</span>
+                </CardTitle>
+                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-semibold border bg-sky-50 text-sky-700 border-sky-200">
+                  Fuente: SGD
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="space-y-1">
+                <p className="font-semibold text-slate-800">
+                  {resumenDocs?.total_pendientes ?? 0} expedientes o documentos pendientes precargados
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Información precargada del SGD para verificar trámites no concluidos antes de remitir la entrega.
+                </p>
+              </div>
+              <Link
+                to="/documentos"
+                className={buttonVariants({
+                  variant: 'outline',
+                  size: 'sm',
+                  className:
+                    'h-7 text-xs px-2.5 font-medium border-[#3484A5]/30 text-[#3484A5] hover:bg-[#3484A5]/10 gap-1 shrink-0 cursor-pointer',
+                })}
+              >
+                <span>Ver Asuntos Pendientes</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
             </CardContent>
           </Card>
         </div>

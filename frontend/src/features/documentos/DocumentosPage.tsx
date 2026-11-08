@@ -93,7 +93,7 @@ export function DocumentosPage() {
     return (
       <div className="mx-auto max-w-5xl space-y-6">
         <AnexoHeader
-          numeroAnexo="Anexo 01"
+          numeroAnexo="SGD"
           titulo="Reporte de Asuntos y Documentos Pendientes"
           subtitulo="Seleccione un centro de costo en la barra superior para visualizar los documentos pendientes."
         />
@@ -114,7 +114,7 @@ export function DocumentosPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <AnexoHeader
-        numeroAnexo="Anexo 01"
+        numeroAnexo="SGD"
         titulo="Reporte de Asuntos y Documentos Pendientes"
         subtitulo="Relación de expedientes, solicitudes y trámites en curso que requieren atención de la gestión entrante (Directiva N.° 001-2026-MDSJ/A §7.7)"
         dependenciaCodigo={dependencia?.codigo}

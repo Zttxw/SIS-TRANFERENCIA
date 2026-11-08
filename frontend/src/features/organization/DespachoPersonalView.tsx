@@ -6,7 +6,6 @@ import {
   ArrowRight,
   Boxes,
   Building2,
-  FileText,
   Package,
   Search,
   ShieldCheck,
@@ -96,7 +95,10 @@ export function DespachoPersonalView() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-bold bg-[#3484A5]/10 text-[#3484A5] px-2.5 py-0.5 rounded">
+            <span className="font-mono text-xs font-bold text-[#3484A5] bg-[#3484A5]/10 px-2.5 py-0.5 rounded">
+              Anexo 01
+            </span>
+            <span className="font-mono text-xs font-bold bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded">
               [{dep.codigo}]
             </span>
             <Badge
@@ -348,24 +350,24 @@ export function DespachoPersonalView() {
           </CardContent>
         </Card>
 
-        {/* Anexo 01 */}
+        {/* Anexo 05 */}
         <Card
-          onClick={() => navigate('/documentos')}
+          onClick={() => navigate('/personal')}
           className="border shadow-xs hover:border-[#3484A5]/50 transition-all cursor-pointer group"
         >
           <CardContent className="p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                <FileText className="h-5 w-5" />
+              <div className="h-10 w-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:bg-teal-600 group-hover:text-white transition-colors">
+                <Users className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-800">Anexo 01 · Asuntos Pendientes</p>
+                <p className="text-xs font-bold text-slate-800">Anexo 05 · Personal Asignado</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Expedientes y documentos del SGD
+                  Padrón de servidores y situación contractual
                 </p>
               </div>
             </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-amber-600 transition-colors" />
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-teal-600 transition-colors" />
           </CardContent>
         </Card>
 

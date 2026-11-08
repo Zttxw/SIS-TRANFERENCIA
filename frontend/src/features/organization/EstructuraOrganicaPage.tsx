@@ -134,15 +134,18 @@ function ArbolOrganicoAdminView() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-4">
         <div>
           <div className="flex items-center gap-2">
+            <span className="font-mono text-xs font-bold text-[#3484A5] bg-[#3484A5]/10 px-2.5 py-0.5 rounded">
+              Anexo 01
+            </span>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-              Estructura Orgánica y Centros de Costo
+              Relación de Centros de Costo y Estructura Orgánica
             </h1>
             <Badge variant="outline" className="text-xs font-semibold border-[#3484A5]/30 text-[#3484A5] bg-[#3484A5]/5">
               {dependencias.length} Unidades
             </Badge>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Organigrama municipal institucional · Visualización jerárquica estilo carpetas
+            Carga y homologación del organigrama municipal · Directiva N.° 001-2026-MDSJ/GM
           </p>
         </div>
 

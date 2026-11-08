@@ -9,28 +9,35 @@ import { cn } from '@/lib/utils'
 
 import { ITEMS_NAV } from './navegacion'
 
-function getInfoEstructura(usuario: ReturnType<typeof useAuth>['usuario']) {
+function getInfoEstructura(
+  usuario: ReturnType<typeof useAuth>['usuario'],
+  esSubmenu = false,
+) {
   if (usuario?.es_global) {
-    return { etiqueta: 'Estructura Orgánica', icono: FolderTree }
+    return {
+      etiqueta: esSubmenu ? 'Anexo 01 · Organigrama' : 'Estructura Orgánica',
+      icono: FolderTree,
+    }
   }
 
   const nombreDep = usuario?.servidor?.dependencia?.nombre || ''
+  let sufijo = 'Personal del Despacho'
   if (/TECNOLOG[IÍ]AS DE LA INFORMACI[OÓ]N/i.test(nombreDep)) {
-    return { etiqueta: 'Trabajadores de OTI', icono: Users }
+    sufijo = 'Trabajadores de OTI'
+  } else if (/ABASTECIMIENTO/i.test(nombreDep)) {
+    sufijo = 'Trabajadores de Abastecimiento'
+  } else if (/CONTABILIDAD/i.test(nombreDep)) {
+    sufijo = 'Trabajadores de Contabilidad'
+  } else if (/TESORER[IÍ]A/i.test(nombreDep)) {
+    sufijo = 'Trabajadores de Tesorería'
+  } else if (/RECURSOS HUMANOS/i.test(nombreDep)) {
+    sufijo = 'Trabajadores de RRHH'
   }
-  if (/ABASTECIMIENTO/i.test(nombreDep)) {
-    return { etiqueta: 'Trabajadores de Abastecimiento', icono: Users }
+
+  return {
+    etiqueta: esSubmenu ? `Anexo 01 · ${sufijo}` : sufijo,
+    icono: Users,
   }
-  if (/CONTABILIDAD/i.test(nombreDep)) {
-    return { etiqueta: 'Trabajadores de Contabilidad', icono: Users }
-  }
-  if (/TESORER[IÍ]A/i.test(nombreDep)) {
-    return { etiqueta: 'Trabajadores de Tesorería', icono: Users }
-  }
-  if (/RECURSOS HUMANOS/i.test(nombreDep)) {
-    return { etiqueta: 'Trabajadores de RRHH', icono: Users }
-  }
-  return { etiqueta: 'Personal de la Oficina', icono: Users }
 }
 
 /**
@@ -42,19 +49,21 @@ export function AppLayout() {
   const location = useLocation()
   const [menuAbierto, setMenuAbierto] = useState(false)
 
-  // Rutas de anexos para detectar estado activo
+  // Rutas de anexos para detectar estado activo (Anexos 01 al 07)
   const rutasAnexos = [
-    '/documentos',
+    '/organigrama',
     '/gestion',
     '/acervo',
     '/patrimonio',
     '/personal',
     '/nopatrimonial',
+    '/acta',
   ]
   const estaEnAnexo = rutasAnexos.some((r) => location.pathname.startsWith(r))
   const [anexosAbierto, setAnexosAbierto] = useState(true)
 
-  const infoEstructura = getInfoEstructura(usuario)
+  const infoEstructura = getInfoEstructura(usuario, false)
+  const infoEstructuraSubmenu = getInfoEstructura(usuario, true)
   const items = ITEMS_NAV.filter((item) => permisos.has(item.permiso))
 
   const nav = (
@@ -109,7 +118,10 @@ export function AppLayout() {
               {anexosAbierto && (
                 <div className="border-l border-white/20 ml-4 pl-2 space-y-1 pt-0.5 pb-1">
                   {hijosPermitidos.map((sub) => {
-                    const SubIcono = sub.icono
+                    const SubIcono =
+                      sub.ruta === '/organigrama' ? infoEstructuraSubmenu.icono : sub.icono
+                    const subEtiqueta =
+                      sub.ruta === '/organigrama' ? infoEstructuraSubmenu.etiqueta : sub.etiqueta
                     return (
                       <NavLink
                         key={sub.ruta}
@@ -125,7 +137,7 @@ export function AppLayout() {
                         }
                       >
                         <SubIcono className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{sub.etiqueta}</span>
+                        <span className="truncate">{subEtiqueta}</span>
                       </NavLink>
                     )
                   })}

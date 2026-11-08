@@ -69,10 +69,10 @@ export interface InfoAnexoObservable {
 export const ANEXOS_OBSERVABLES_CONFIG: Record<ClaveAnexoObservable, InfoAnexoObservable> = {
   documento: {
     clave: 'documento',
-    nombre: 'Anexo 01 · Asuntos y Documentos Pendientes',
-    nombreCorto: 'Anexo 01 (Documentos)',
+    nombre: 'Asuntos y Documentos Pendientes (SGD)',
+    nombreCorto: 'Documentos SGD',
     ruta: '/documentos',
-    numero: '01',
+    numero: 'SGD',
   },
   gestion: {
     clave: 'gestion',

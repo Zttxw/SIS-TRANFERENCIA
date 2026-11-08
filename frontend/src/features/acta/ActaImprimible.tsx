@@ -18,8 +18,8 @@ export function ActaImprimible({ acta, dependencia }: ActaImprimibleProps) {
   const anexosLista = [
     {
       codigo: 'Anexo 01',
-      nombre: 'Reporte de Asuntos y Documentos Pendientes de Atención (SGD)',
-      entregado: !!acta.anexos_entregados?.anexo_01,
+      nombre: 'Relación de Centros de Costo y Estructura Orgánica Institucional',
+      entregado: true,
     },
     {
       codigo: 'Anexo 02',
@@ -38,7 +38,7 @@ export function ActaImprimible({ acta, dependencia }: ActaImprimibleProps) {
     },
     {
       codigo: 'Anexo 05',
-      nombre: 'Padrón de Personal Asignado y Situación Contractual',
+      nombre: 'Información del Personal a cargo del Centro de Costo (Padrón de Servidores)',
       entregado: !!acta.anexos_entregados?.anexo_05,
     },
     {
