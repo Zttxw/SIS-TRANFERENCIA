@@ -43,11 +43,11 @@
   --input: oklch(0.922 0 0);
   --ring: oklch(0.41 0.15 258);
 
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar: #3484a5;
+  --sidebar-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.15);
+  --sidebar-accent: rgba(255, 255, 255, 0.15);
+  --sidebar-accent-foreground: #ffffff;
 }
 
 .dark {

@@ -1,4 +1,4 @@
-import { Building2, LogOut, Menu, X } from 'lucide-react'
+import { LogOut, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 
@@ -10,9 +10,8 @@ import { cn } from '@/lib/utils'
 import { ITEMS_NAV } from './navegacion'
 
 /**
- * Layout base autenticado (plan E2): sidebar plano por anexo (gating por
- * permiso), topbar con selector de dependencia + usuario + logout. Responsive:
- * en móvil el sidebar se despliega como overlay.
+ * Layout base autenticado: barra lateral de navegación (sidebar) con identidad
+ * institucional (#3484A5) y topbar con selector de dependencia + usuario + logout.
  */
 export function AppLayout() {
   const { usuario, permisos, cerrarSesion } = useAuth()
@@ -21,7 +20,7 @@ export function AppLayout() {
   const items = ITEMS_NAV.filter((item) => permisos.has(item.permiso))
 
   const nav = (
-    <nav className="flex-1 space-y-0.5 overflow-y-auto p-2 text-sm">
+    <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2 text-xs">
       {items.map((item) => {
         const Icono = item.icono
         return (
@@ -32,10 +31,10 @@ export function AppLayout() {
             onClick={() => setMenuAbierto(false)}
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 transition-colors',
+                'flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition-all duration-150',
                 isActive
-                  ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
-                  : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
+                  ? 'bg-white text-[#3484A5] font-semibold shadow-sm'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white',
               )
             }
           >
@@ -48,37 +47,64 @@ export function AppLayout() {
   )
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
-      {/* Sidebar desktop */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
-        <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
-          <Building2 className="h-5 w-5 text-primary" />
-          <span className="text-sm font-semibold leading-tight">
-            SIS-TRANSFERENCIA
-          </span>
+    <div className="flex min-h-screen bg-slate-50 text-foreground">
+      {/* Barra lateral de navegación (Sidebar desktop) con color institucional #3484A5 */}
+      <aside className="hidden w-64 shrink-0 flex-col bg-[#3484A5] text-white shadow-sm md:flex">
+        {/* Encabezado con Escudo Blanco Oficial */}
+        <div className="flex h-16 items-center gap-2.5 border-b border-white/15 px-4">
+          <img
+            src="/brand/escudo-blanco.png"
+            alt="Escudo de San Jerónimo"
+            className="h-9 w-9 object-contain shrink-0"
+          />
+          <div className="min-w-0">
+            <span className="block text-xs font-semibold leading-tight text-white truncate">
+              Muni San Jerónimo
+            </span>
+            <span className="block text-[10px] text-white/75 leading-tight truncate">
+              Sistema de Transferencia
+            </span>
+          </div>
         </div>
+
+        {/* Lista de navegación */}
         {nav}
-        <div className="border-t border-sidebar-border p-3 text-xs text-muted-foreground">
-          Municipalidad Distrital de San Jerónimo
+
+        {/* Pie institucional */}
+        <div className="border-t border-white/15 p-3 text-[11px] text-white/70 flex items-center justify-between">
+          <span>Gestión 2023 - 2026</span>
+          <span className="font-medium text-white/85">Elaborado por OTI</span>
         </div>
       </aside>
 
-      {/* Sidebar móvil (overlay) */}
+      {/* Barra lateral móvil (Sidebar móvil overlay) */}
       {menuAbierto && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-black/50 backdrop-blur-xs"
             onClick={() => setMenuAbierto(false)}
           />
-          <aside className="absolute left-0 top-0 flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-            <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
-              <span className="flex items-center gap-2 text-sm font-semibold">
-                <Building2 className="h-5 w-5 text-primary" />
-                SIS-TRANSFERENCIA
-              </span>
+          <aside className="absolute left-0 top-0 flex h-full w-64 flex-col bg-[#3484A5] text-white shadow-xl">
+            <div className="flex h-16 items-center justify-between border-b border-white/15 px-4">
+              <div className="flex items-center gap-2.5">
+                <img
+                  src="/brand/escudo-blanco.png"
+                  alt="Escudo de San Jerónimo"
+                  className="h-8 w-8 object-contain shrink-0"
+                />
+                <div>
+                  <div className="text-xs font-semibold text-white leading-tight">
+                    Muni San Jerónimo
+                  </div>
+                  <div className="text-[10px] text-white/75 leading-tight">
+                    Sistema de Transferencia
+                  </div>
+                </div>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
+                className="text-white hover:bg-white/15 hover:text-white"
                 onClick={() => setMenuAbierto(false)}
                 aria-label="Cerrar menú"
               >
@@ -86,12 +112,17 @@ export function AppLayout() {
               </Button>
             </div>
             {nav}
+            <div className="border-t border-white/15 p-3 text-[11px] text-white/70 flex items-center justify-between">
+              <span>Gestión 2023 - 2026</span>
+              <span className="font-medium text-white/85">Elaborado por OTI</span>
+            </div>
           </aside>
         </div>
       )}
 
+      {/* Contenido principal y Topbar */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center gap-3 border-b border-border px-4">
+        <header className="flex h-16 items-center gap-3 border-b border-border bg-white px-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
           <Button
             variant="ghost"
             size="icon"
