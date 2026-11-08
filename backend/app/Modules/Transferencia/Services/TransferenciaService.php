@@ -18,12 +18,42 @@ use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Enums\EstadoEntrega;
 use App\Support\Enums\EstadoVerificacionBien;
 use App\Support\Http\ApiResponse;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class TransferenciaService
 {
+    /**
+     * Lista entregas acotadas al ámbito institucional (filtros: dependencia_id, estado, dependencia_ids).
+     *
+     * @param  array<string, mixed>  $filtros
+     */
+    public function listarEntregas(array $filtros = []): LengthAwarePaginator
+    {
+        $procesoId = $this->resolverProcesoActivoId();
+
+        $query = Entrega::query()
+            ->with(['dependencia', 'dependenciaDestino', 'emisor', 'receptor'])
+            ->where('proceso_transferencia_id', $procesoId)
+            ->orderByDesc('id');
+
+        if (! empty($filtros['estado'])) {
+            $query->where('estado', (string) $filtros['estado']);
+        }
+
+        if (! empty($filtros['dependencia_id'])) {
+            $query->where('dependencia_id', (int) $filtros['dependencia_id']);
+        } elseif (! empty($filtros['dependencia_ids'])) {
+            $query->whereIn('dependencia_id', $filtros['dependencia_ids']);
+        }
+
+        $perPage = min((int) ($filtros['per_page'] ?? 25), 100);
+
+        return $query->paginate($perPage);
+    }
+
     /**
      * Resumen del estado global de entrega de los anexos para una dependencia.
      */

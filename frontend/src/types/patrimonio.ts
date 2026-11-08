@@ -78,3 +78,4 @@ export interface FiltrosPatrimonio {
   per_page?: number
   page?: number
 }
+

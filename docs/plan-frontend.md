@@ -500,4 +500,24 @@ navegación (sidebar propuesto) antes de E2.
   - **Enrutado:** ruta `/observaciones` montada en `src/router/index.tsx`.
   - **Verificación:** `npm run build` y `npm run lint` 100% limpios y validados.
 
-- **(pendiente)** — E8: Flujo jerárquico de entrega y revisión (§6 Etapas 3-4, §7.8).
+- **2026-11-07 — E8 (Flujo jerárquico de entrega y revisión):**
+  - **Backend API & Service** (`TransferenciaController.php`, `TransferenciaService.php`, `routes/api.php`):
+    - Endpoint `GET /api/transferencia/entregas` con acotación automática al ámbito institucional (`AutorizaAmbito`) y filtros por estado y dependencia.
+    - Método `TransferenciaService::listarEntregas()` con carga de relaciones `dependencia`, `dependenciaDestino`, `emisor` y `receptor`.
+  - **Tipos y modelos** (`src/types/transferencia.ts`):
+    - Estructura `EntregaItem` y `FiltrosEntregas`.
+  - **Servicios y hooks** (`features/entregas/`):
+    - `entregasService.listarEntregas()`, `obtenerEstadoEntrega()`, `remitirEntrega()`, `revisarEntrega()`, `listarCatalogoDependencias()`.
+    - TanStack Query hooks `useEntregas`, `useCatalogoDependencias`, `useEstadoEntrega`, `useRemitirEntrega`, `useRevisarEntrega`.
+  - **Utilidades del Árbol Jerárquico** (`features/entregas/arbol-utils.ts`):
+    - Función `construirArbol` con resolución de padres vía `parent_id` y segmentación de código decimal institucional (`01` -> `01.03` -> `01.03.07` -> `01.03.07.04`).
+    - Algoritmo recursivo `filtrarArbol` para búsqueda en tiempo real sobre los 107 centros de costo.
+  - **Vistas y Componentes**:
+    - `ArbolDependenciasView.tsx`: organigrama interactivo colapsable/expandible con insignias de nivel, encargado asignado, selector directo de centro de costo activo y visor de estado.
+    - `BandejaRevisorView.tsx`: bandeja de entregas recibidas del subárbol, tarjetas de estado (pendientes, consolidadas, observadas), filtrado por estado y buscador.
+    - `DetalleEntregaModal.tsx`: ficha modal institucional con resumen cuantitativo de los 6 anexos de la dependencia y botón para fijarla como despacho activo.
+    - `EntregasPage.tsx`: pantalla principal con navegación por pestañas (`Bandeja del Revisor`, `Árbol Municipal`, `Remisión de mi Despacho`), integración con modales de flujo (`RevisarModal`, `RemitirModal`).
+  - **Enrutado:** ruta `/entregas` montada en `src/router/index.tsx`.
+  - **Verificación:** `npm run build` y `npm run lint` 100% limpios y suite de tests PHP (40 tests) en verde.
+
+- **(pendiente)** — E9: Acta (Anexo 07) y expediente (§7.10).

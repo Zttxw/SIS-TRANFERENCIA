@@ -20,6 +20,21 @@ class TransferenciaController extends Controller
     ) {}
 
     /**
+     * Lista entregas de información acotadas al ámbito del usuario (plan §7.8, E8).
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $filtros = $this->acotarFiltrosAlAmbito(
+            $request->user(),
+            $request->only(['dependencia_id', 'estado', 'per_page'])
+        );
+
+        $entregas = $this->transferenciaService->listarEntregas($filtros);
+
+        return ApiResponse::paginated($entregas, 'Entregas recuperadas.');
+    }
+
+    /**
      * Resumen del estado global de entrega de los Anexos por dependencia.
      */
     public function estado(Request $request): JsonResponse

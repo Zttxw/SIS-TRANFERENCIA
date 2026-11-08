@@ -86,6 +86,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Anexo 07: Entrega Jerárquica y Acta de Transferencia (plan §7.8, §7.10).
     Route::prefix('transferencia')->group(function () {
+        Route::get('/entregas', [TransferenciaController::class, 'index'])->middleware('permiso:anexos.ver');
         Route::get('/estado', [TransferenciaController::class, 'estado'])->middleware('permiso:anexos.ver');
         Route::post('/remitir', [TransferenciaController::class, 'remitir'])->middleware('permiso:entregas.remitir');
         Route::post('/revisar', [TransferenciaController::class, 'revisar'])->middleware('permiso:entregas.revisar');

@@ -42,3 +42,4 @@ export const patrimonioService = {
     return res.data.data
   },
 }
+

@@ -7,6 +7,7 @@ import { AcervoPage } from '@/features/acervo/AcervoPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DocumentosPage } from '@/features/documentos/DocumentosPage'
+import { EntregasPage } from '@/features/entregas/EntregasPage'
 import { InformeGestionPage } from '@/features/gestion/InformeGestionPage'
 import { NoPatrimonialPage } from '@/features/nopatrimonial/NoPatrimonialPage'
 import { ObservacionesPage } from '@/features/observaciones/ObservacionesPage'
@@ -38,16 +39,7 @@ export const router = createBrowserRouter([
           { path: 'nopatrimonial', element: <NoPatrimonialPage /> },
           { path: 'patrimonio', element: <PatrimonioPage /> },
           { path: 'observaciones', element: <ObservacionesPage /> },
-          {
-            path: 'entregas',
-            element: (
-              <EnDesarrolloPage
-                titulo="Monitoreo Jerárquico de Entregas"
-                modulo="Seguimiento Institucional de Entregas por Nivel"
-                etapa="E7"
-              />
-            ),
-          },
+          { path: 'entregas', element: <EntregasPage /> },
           {
             path: 'acta',
             element: (
