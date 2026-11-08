@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom'
 import {
   AlertCircle,
   ArrowRight,
+  BarChart3,
   Boxes,
+  Building2,
   Clock,
   FileCheck,
   FileSpreadsheet,
@@ -30,6 +32,7 @@ import { Spinner } from '@/components/ui/spinner'
 import type { EstadoEntrega } from '@/types/transferencia'
 import { RemitirModal } from './RemitirModal'
 import { RevisarModal } from './RevisarModal'
+import { TableroOperativoView } from './TableroOperativoView'
 import { useEstadoEntrega, useResumenDocumentos } from './use-dashboard'
 
 function renderBadgeEstado(estado: EstadoEntrega | null) {
@@ -73,34 +76,16 @@ function renderBadgeEstado(estado: EstadoEntrega | null) {
 }
 
 export function DashboardPage() {
-  const { dependenciaId } = useDependenciaActiva()
+  const { dependenciaId, setDependenciaId } = useDependenciaActiva()
   const { data: estadoData, isLoading, error } = useEstadoEntrega(dependenciaId)
   const { data: resumenDocs } = useResumenDocumentos(dependenciaId)
 
   const [modalRemitir, setModalRemitir] = useState(false)
   const [modalRevisar, setModalRevisar] = useState(false)
 
+  // Si no hay una dependencia concreta seleccionada (visión global de admin / ETTS)
   if (!dependenciaId) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Panel de Transferencia de Gestión 2026</h1>
-          <p className="text-sm text-muted-foreground">
-            Municipalidad Distrital de San Jerónimo · Sistema Institucional de Transferencia
-          </p>
-        </div>
-
-        <Card className="border-dashed bg-muted/30 p-12 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <Boxes className="h-8 w-8" />
-          </div>
-          <h2 className="mt-4 text-lg font-semibold">Seleccione una Dependencia Institucional</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-            Su cuenta tiene ámbito global. Utilice el selector de la barra superior para elegir la unidad orgánica y visualizar el estado de entrega y sus anexos correspondientes.
-          </p>
-        </Card>
-      </div>
-    )
+    return <TableroOperativoView onSeleccionarDependencia={(id) => setDependenciaId(id)} />
   }
 
   if (isLoading) {
@@ -130,6 +115,24 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Barra de Retorno al Tablero Global */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[#3484A5]/10 border border-[#3484A5]/25 rounded-xl p-3 sm:px-4">
+        <div className="flex items-center gap-2.5">
+          <Building2 className="h-4 w-4 text-[#3484A5] shrink-0" />
+          <span className="text-xs sm:text-sm font-semibold text-slate-800">
+            Despacho activo: <span className="font-mono text-[#3484A5]">[{dependencia.codigo}]</span> {dependencia.nombre}
+          </span>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setDependenciaId(null)}
+          className="h-7 text-xs gap-1.5 self-start sm:self-auto border-[#3484A5]/40 hover:bg-[#3484A5]/15 cursor-pointer"
+        >
+          <BarChart3 className="h-3.5 w-3.5 text-[#3484A5]" />
+          <span>Volver al Tablero Global</span>
+        </Button>
+      </div>
       {/* Cabecera del Dashboard */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>

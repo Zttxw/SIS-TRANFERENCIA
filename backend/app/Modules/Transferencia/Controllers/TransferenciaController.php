@@ -35,6 +35,17 @@ class TransferenciaController extends Controller
     }
 
     /**
+     * Tablero operativo global de transferencia para monitoreo gerencial y toma de decisiones.
+     */
+    public function tablero(Request $request): JsonResponse
+    {
+        $dependenciaIds = $this->idsDependenciaEnAmbito($request->user());
+        $tablero = $this->transferenciaService->obtenerTableroOperativo($dependenciaIds);
+
+        return ApiResponse::success($tablero, 'Tablero operativo recuperado con éxito.');
+    }
+
+    /**
      * Resumen del estado global de entrega de los Anexos por dependencia.
      */
     public function estado(Request $request): JsonResponse

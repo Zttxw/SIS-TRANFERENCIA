@@ -10,6 +10,7 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DocumentosPage } from '@/features/documentos/DocumentosPage'
 import { EntregasPage } from '@/features/entregas/EntregasPage'
+import { EstructuraOrganicaPage } from '@/features/organization/EstructuraOrganicaPage'
 import { InformeGestionPage } from '@/features/gestion/InformeGestionPage'
 import { NoPatrimonialPage } from '@/features/nopatrimonial/NoPatrimonialPage'
 import { ObservacionesPage } from '@/features/observaciones/ObservacionesPage'
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
         ),
         children: [
           { index: true, element: <DashboardPage /> },
+          { path: 'organigrama', element: <EstructuraOrganicaPage /> },
           { path: 'documentos', element: <DocumentosPage /> },
           { path: 'gestion', element: <InformeGestionPage /> },
           { path: 'acervo', element: <AcervoPage /> },

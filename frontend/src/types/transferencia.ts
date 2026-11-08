@@ -115,3 +115,45 @@ export interface FiltrosEntregas {
   per_page?: number
   page?: number
 }
+
+export interface DependenciaSemaforoItem {
+  id: number
+  codigo: string
+  nombre: string
+  nivel: number
+  parent_id: number | null
+  encargado: {
+    id: number
+    nombres: string
+    apellidos: string
+    cargo: string | null
+  } | null
+  estado_entrega: EstadoEntrega | 'sin_iniciar'
+  observaciones_abiertas: number
+  patrimonio_total: number
+  patrimonio_confirmados: number
+  patrimonio_porcentaje: number
+  remitida_en: string | null
+  consolidada_en: string | null
+}
+
+export interface MetricasTablero {
+  total_dependencias: number
+  consolidadas: number
+  remitidas: number
+  observadas: number
+  borrador: number
+  porcentaje_avance: number
+  patrimonio: {
+    total_bienes: number
+    verificados: number
+    pendientes: number
+    porcentaje: number
+    valor_total: number
+  }
+}
+
+export interface TableroOperativoData {
+  metricas: MetricasTablero
+  dependencias: DependenciaSemaforoItem[]
+}

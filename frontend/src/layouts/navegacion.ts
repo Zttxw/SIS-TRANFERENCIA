@@ -3,6 +3,7 @@ import {
   ClipboardList,
   FileCheck2,
   FileText,
+  FolderTree,
   LayoutDashboard,
   type LucideIcon,
   MessageSquareWarning,
@@ -33,6 +34,12 @@ export const ITEMS_NAV: ItemNav[] = [
     etiqueta: 'Dashboard',
     ruta: '/',
     icono: LayoutDashboard,
+    permiso: PERMISOS.VerAnexos,
+  },
+  {
+    etiqueta: 'Estructura Orgánica',
+    ruta: '/organigrama',
+    icono: FolderTree,
     permiso: PERMISOS.VerAnexos,
   },
   {

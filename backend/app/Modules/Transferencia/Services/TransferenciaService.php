@@ -14,8 +14,10 @@ use App\Modules\Patrimonio\Models\BienPatrimonial;
 use App\Modules\Personal\Models\Personal;
 use App\Modules\Transferencia\Models\ActaTransferencia;
 use App\Modules\Transferencia\Models\Entrega;
+use App\Modules\Transferencia\Models\Observacion;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Enums\EstadoEntrega;
+use App\Support\Enums\EstadoObservacion;
 use App\Support\Enums\EstadoVerificacionBien;
 use App\Support\Http\ApiResponse;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -52,6 +54,145 @@ class TransferenciaService
         $perPage = min((int) ($filtros['per_page'] ?? 25), 100);
 
         return $query->paginate($perPage);
+    }
+
+    /**
+     * Tablero operativo global de transferencia para monitoreo gerencial y toma de decisiones.
+     *
+     * @param  list<int>|null  $dependenciaIds
+     * @return array<string, mixed>
+     */
+    public function obtenerTableroOperativo(?array $dependenciaIds = null, ?int $procesoId = null): array
+    {
+        $procesoId = $procesoId ?? $this->resolverProcesoActivoId();
+
+        $query = Dependencia::query()
+            ->with(['encargado'])
+            ->where('proceso_transferencia_id', $procesoId);
+
+        if ($dependenciaIds !== null) {
+            $query->whereIn('id', $dependenciaIds);
+        }
+
+        $dependencias = $query->orderBy('codigo')->get();
+        $ids = $dependencias->pluck('id')->all();
+
+        // Entregas más recientes por dependencia
+        $entregas = Entrega::query()
+            ->where('proceso_transferencia_id', $procesoId)
+            ->whereIn('dependencia_id', $ids)
+            ->latest('id')
+            ->get()
+            ->unique('dependencia_id')
+            ->keyBy('dependencia_id');
+
+        // Observaciones abiertas por dependencia
+        $observacionesAbiertas = [];
+        $observacionesList = Observacion::query()
+            ->where('proceso_transferencia_id', $procesoId)
+            ->where('estado', EstadoObservacion::ABIERTA->value)
+            ->get(['id', 'observable_type', 'observable_id']);
+
+        foreach ($observacionesList as $obs) {
+            $modelo = $obs->observable_type;
+            if (class_exists($modelo)) {
+                $depId = $modelo::where('id', $obs->observable_id)->value('dependencia_id');
+                if ($depId) {
+                    $observacionesAbiertas[$depId] = ($observacionesAbiertas[$depId] ?? 0) + 1;
+                }
+            }
+        }
+
+        // Bienes patrimoniales asignados
+        $bienesTotals = BienPatrimonial::query()
+            ->where('proceso_transferencia_id', $procesoId)
+            ->whereIn('dependencia_id', $ids)
+            ->selectRaw('dependencia_id, count(*) as total')
+            ->groupBy('dependencia_id')
+            ->pluck('total', 'dependencia_id');
+
+        // Bienes patrimoniales confirmados
+        $bienesConfirmados = BienPatrimonial::query()
+            ->where('proceso_transferencia_id', $procesoId)
+            ->whereIn('dependencia_id', $ids)
+            ->whereHas('verificacion', fn ($q) => $q->where('estado', EstadoVerificacionBien::CONFIRMADO->value))
+            ->selectRaw('dependencia_id, count(*) as total')
+            ->groupBy('dependencia_id')
+            ->pluck('total', 'dependencia_id');
+
+        $total = $dependencias->count();
+        $consolidadas = 0;
+        $remitidas = 0;
+        $observadas = 0;
+        $borrador = 0;
+
+        $items = $dependencias->map(function ($dep) use ($entregas, $observacionesAbiertas, $bienesTotals, $bienesConfirmados, &$consolidadas, &$remitidas, &$observadas, &$borrador) {
+            $entrega = $entregas->get($dep->id);
+            $estado = $entrega ? $entrega->estado->value : 'borrador';
+
+            if ($estado === 'consolidada') {
+                $consolidadas++;
+            } elseif ($estado === 'remitida') {
+                $remitidas++;
+            } elseif ($estado === 'observada') {
+                $observadas++;
+            } else {
+                $borrador++;
+            }
+
+            $totalBienes = (int) ($bienesTotals->get($dep->id) ?? 0);
+            $confirmados = (int) ($bienesConfirmados->get($dep->id) ?? 0);
+            $porcPatrimonio = $totalBienes > 0 ? round(($confirmados / $totalBienes) * 100, 1) : 100.0;
+
+            return [
+                'id' => $dep->id,
+                'codigo' => $dep->codigo,
+                'nombre' => $dep->nombre,
+                'nivel' => $dep->nivel,
+                'parent_id' => $dep->parent_id,
+                'encargado' => $dep->encargado ? [
+                    'id' => $dep->encargado->id,
+                    'nombres' => $dep->encargado->nombres,
+                    'apellidos' => $dep->encargado->apellidos,
+                    'cargo' => $dep->encargado->cargo,
+                ] : null,
+                'estado_entrega' => $estado,
+                'observaciones_abiertas' => (int) ($observacionesAbiertas[$dep->id] ?? 0),
+                'patrimonio_total' => $totalBienes,
+                'patrimonio_confirmados' => $confirmados,
+                'patrimonio_porcentaje' => $porcPatrimonio,
+                'remitida_en' => $entrega?->remitida_en?->toIso8601String(),
+                'consolidada_en' => $entrega?->consolidada_en?->toIso8601String(),
+            ];
+        });
+
+        // Totales patrimoniales del ámbito
+        $patrimonioQuery = BienPatrimonial::query()->where('proceso_transferencia_id', $procesoId);
+        if ($dependenciaIds !== null) {
+            $patrimonioQuery->whereIn('dependencia_id', $dependenciaIds);
+        }
+        $patTotal = (int) (clone $patrimonioQuery)->count();
+        $patVerificados = (int) (clone $patrimonioQuery)->whereHas('verificacion', fn ($q) => $q->where('estado', EstadoVerificacionBien::CONFIRMADO->value))->count();
+        $patValor = (float) (clone $patrimonioQuery)->sum('valor');
+
+        return [
+            'metricas' => [
+                'total_dependencias' => $total,
+                'consolidadas' => $consolidadas,
+                'remitidas' => $remitidas,
+                'observadas' => $observadas,
+                'borrador' => $borrador,
+                'porcentaje_avance' => $total > 0 ? round(($consolidadas / $total) * 100, 1) : 0,
+                'patrimonio' => [
+                    'total_bienes' => $patTotal,
+                    'verificados' => $patVerificados,
+                    'pendientes' => max(0, $patTotal - $patVerificados),
+                    'porcentaje' => $patTotal > 0 ? round(($patVerificados / $patTotal) * 100, 1) : 0,
+                    'valor_total' => $patValor,
+                ],
+            ],
+            'dependencias' => $items->values()->all(),
+        ];
     }
 
     /**

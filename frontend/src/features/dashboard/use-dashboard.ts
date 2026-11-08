@@ -4,6 +4,14 @@ import { toast } from 'sonner'
 import * as dashboardService from './dashboard.service'
 import type { RemitirEntregaPayload, RevisarEntregaPayload } from '@/types/transferencia'
 
+export function useTableroOperativo() {
+  return useQuery({
+    queryKey: ['transferencia', 'tablero'],
+    queryFn: () => dashboardService.obtenerTableroOperativo(),
+    refetchInterval: 60000,
+  })
+}
+
 export function useEstadoEntrega(dependenciaId: number | null) {
   return useQuery({
     queryKey: ['transferencia', 'estado', dependenciaId],

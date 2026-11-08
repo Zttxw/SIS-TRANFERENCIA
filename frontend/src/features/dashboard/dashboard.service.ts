@@ -10,7 +10,15 @@ import type {
   RemitirEntregaPayload,
   ResumenDocumentosResponse,
   RevisarEntregaPayload,
+  TableroOperativoData,
 } from '@/types/transferencia'
+
+export async function obtenerTableroOperativo(): Promise<TableroOperativoData> {
+  const { data } = await api.get<ApiSuccess<TableroOperativoData>>(
+    '/transferencia/tablero',
+  )
+  return data.data
+}
 
 export async function obtenerEstadoEntrega(
   dependenciaId: number,
