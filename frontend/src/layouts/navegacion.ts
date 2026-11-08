@@ -11,7 +11,7 @@ import {
   Package,
   PackageOpen,
   Send,
-  Settings,
+  UserCog,
   Users,
 } from 'lucide-react'
 
@@ -107,9 +107,9 @@ export const ITEMS_NAV: ItemNav[] = [
     permiso: PERMISOS.GenerarActas,
   },
   {
-    etiqueta: 'Administración',
-    ruta: '/admin',
-    icono: Settings,
+    etiqueta: 'Usuarios y Servidores',
+    ruta: '/usuarios',
+    icono: UserCog,
     permiso: PERMISOS.GestionarUsuarios,
   },
 ]

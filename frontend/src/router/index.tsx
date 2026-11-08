@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 import { DependenciaProvider } from '@/auth/DependenciaProvider'
 import { RutaProtegida } from '@/auth/RutaProtegida'
@@ -45,7 +45,8 @@ export const router = createBrowserRouter([
           { path: 'observaciones', element: <ObservacionesPage /> },
           { path: 'entregas', element: <EntregasPage /> },
           { path: 'acta', element: <ActaPage /> },
-          { path: 'admin', element: <AdminPage /> },
+          { path: 'usuarios', element: <AdminPage /> },
+          { path: 'admin', element: <Navigate to="/usuarios" replace /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },
