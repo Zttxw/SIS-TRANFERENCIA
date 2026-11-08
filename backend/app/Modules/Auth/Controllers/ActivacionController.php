@@ -46,7 +46,7 @@ class ActivacionController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        return ApiResponse::success($servidores);
+        return ApiResponse::paginated($servidores, 'Padrón de servidores recuperado con éxito.');
     }
 
     /**

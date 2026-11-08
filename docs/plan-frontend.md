@@ -539,4 +539,21 @@ navegación (sidebar propuesto) antes de E2.
   - **Enrutado:** ruta `/acta` montada en `src/router/index.tsx`.
   - **Verificación:** `npm run build` y `npm run lint` 100% limpios; suite completa de 40 tests PHP en verde (73 assertions).
 
-- **(pendiente)** — E10: Administración (activación de cuentas) (§5, §6 Etapa 2).
+- **2026-11-07 — E10 (Panel de Administración y Activación de Cuentas):**
+  - **Backend Support** (`ActivacionController.php`):
+    - Normalización del endpoint `GET /api/servidores` utilizando `ApiResponse::paginated()` para cumplir el contrato estándar con metadatos de paginación (`meta.total`, `meta.current_page`, `meta.last_page`).
+    - Creación de `.env.testing` con `DB_CONNECTION=sqlite` y `:memory:` para blindar permanentemente la base de datos de desarrollo ante ejecuciones de pruebas con `RefreshDatabase`.
+  - **Tipos y modelos** (`src/types/admin.ts`):
+    - Estructuras para `ServidorPadronItem`, `RolPropuesto`, `PropuestaActivacion`, `ActivarCuentaPayload`, `ResultadoActivacion`, `FiltrosServidores`.
+  - **Servicios y hooks** (`features/admin/`):
+    - `adminService.listarServidores(filtros)` (`GET /api/servidores`).
+    - `adminService.prepararActivacion(servidorId)` (`POST /api/servidores/{id}/preparar-activacion`).
+    - `adminService.activarCuenta(servidorId, payload)` (`POST /api/servidores/{id}/activar`).
+    - TanStack Query hooks `useServidores`, `usePrepararActivacion`, `useActivarCuenta` con invalidación reactiva del padrón y toasts informativos.
+  - **Componentes y Vistas**:
+    - `ActivarCuentaModal.tsx`: modal con propuesta automática de roles según Directiva (rol `servidor` y rol `responsable_centro_costo` por dependencias encargadas), generación de contraseña aleatoria segura con copiado al portapapeles, validación de contraseña mínima (8 caracteres) y confirmación, y advertencia si el servidor ya posee cuenta activa.
+    - `AdminPage.tsx`: pantalla principal de administración protegida por permiso `usuarios.gestionar`, tarjetas KPI (total en padrón, cuentas activas, cuentas pendientes, responsables de despacho), barra de herramientas con buscador en tiempo real (DNI, nombres, cargo) con debounce y filtros rápidos de estado (`Todos`, `Sin Cuenta`, `Con Cuenta`), tabla detallada de servidores con badges de rol y estado, y paginación con `<Pagination>`.
+  - **Enrutado:** ruta `/admin` montada en `src/router/index.tsx`.
+  - **Verificación:** `npm run build` y `npm run lint` 100% limpios (0 errores); suite backend en verde.
+
+- **(pendiente)** — E11: Pulido, accesibilidad y build de producción.

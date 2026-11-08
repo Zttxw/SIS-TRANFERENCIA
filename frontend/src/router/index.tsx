@@ -2,9 +2,9 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 import { DependenciaProvider } from '@/auth/DependenciaProvider'
 import { RutaProtegida } from '@/auth/RutaProtegida'
-import { EnDesarrolloPage } from '@/components/common/EnDesarrolloPage'
 import { AcervoPage } from '@/features/acervo/AcervoPage'
 import { ActaPage } from '@/features/acta/ActaPage'
+import { AdminPage } from '@/features/admin/AdminPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DocumentosPage } from '@/features/documentos/DocumentosPage'
@@ -42,16 +42,7 @@ export const router = createBrowserRouter([
           { path: 'observaciones', element: <ObservacionesPage /> },
           { path: 'entregas', element: <EntregasPage /> },
           { path: 'acta', element: <ActaPage /> },
-          {
-            path: 'admin',
-            element: (
-              <EnDesarrolloPage
-                titulo="Panel de Administración"
-                modulo="Padrón de Servidores y Activación de Cuentas"
-                etapa="E9"
-              />
-            ),
-          },
+          { path: 'admin', element: <AdminPage /> },
           { path: '*', element: <Navigate to="/" replace /> },
         ],
       },
