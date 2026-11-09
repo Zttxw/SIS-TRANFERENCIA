@@ -8,7 +8,6 @@ export function useBienesPatrimoniales(filtros: FiltrosPatrimonio = {}) {
   return useQuery({
     queryKey: ['bienes-patrimoniales', filtros],
     queryFn: () => patrimonioService.listarBienes(filtros),
-    enabled: Boolean(filtros.dependencia_id),
     staleTime: 1000 * 30,
   })
 }
@@ -17,7 +16,6 @@ export function useResumenPatrimonial(dependenciaId?: number | null) {
   return useQuery({
     queryKey: ['patrimonio-resumen', dependenciaId],
     queryFn: () => patrimonioService.obtenerResumen(dependenciaId),
-    enabled: Boolean(dependenciaId),
     staleTime: 1000 * 30,
   })
 }
