@@ -42,19 +42,44 @@ class IngestaPatrimonioSiga
 
         $extraidoEn = Carbon::now();
 
-        // 1. Obtener centros de costo y asegurar dependencias
+        // 1. Obtener centros de costo y resolver a qué dependencia pertenece cada uno.
+        //
+        // El SIGA y el SGD usan llaves de código distintas para la misma unidad
+        // (SGD: ID interno "00025"; SIGA: jerárquico "01.03.07.04"). El empate se
+        // materializa en `dependencias.codigo_siga` (MapeoDependenciasSigaSeeder).
+        // Por eso NO creamos una dependencia por centro de costo: buscamos la
+        // dependencia maestra (SGD) cuyo `codigo_siga` coincide y colgamos de ella
+        // los bienes. Solo si no hay empate creamos una dependencia propia marcada
+        // como SIGA (centro de costo sin equivalente en el SGD).
         $centrosCosto = $this->sigaConnector->obtenerCentrosCosto();
         $mapaDependencias = [];
 
-        DB::transaction(function () use ($proceso, $centrosCosto, &$mapaDependencias, $extraidoEn) {
+        $dependenciasPorCodigoSiga = Dependencia::withTrashed()
+            ->where('proceso_transferencia_id', $proceso->id)
+            ->whereNotNull('codigo_siga')
+            ->pluck('id', 'codigo_siga');
+
+        DB::transaction(function () use ($proceso, $centrosCosto, $dependenciasPorCodigoSiga, &$mapaDependencias, $extraidoEn) {
             foreach ($centrosCosto as $cc) {
+                $codigoSiga = $cc['codigo'];
+
+                // a) Empate con la dependencia maestra del SGD por codigo_siga.
+                if ($dependenciasPorCodigoSiga->has($codigoSiga)) {
+                    $mapaDependencias[$codigoSiga] = $dependenciasPorCodigoSiga->get($codigoSiga);
+
+                    continue;
+                }
+
+                // b) Sin equivalente en el SGD: crear/actualizar dependencia propia
+                //    SIGA (identificada por su código de centro de costo).
                 $dep = Dependencia::withTrashed()->updateOrCreate(
                     [
                         'proceso_transferencia_id' => $proceso->id,
-                        'codigo' => $cc['codigo'],
+                        'codigo' => $codigoSiga,
                     ],
                     [
-                        'nombre' => $cc['nombre'] ?: "Centro de Costo {$cc['codigo']}",
+                        'codigo_siga' => $codigoSiga,
+                        'nombre' => $cc['nombre'] ?: "Centro de Costo {$codigoSiga}",
                         'nivel' => 2,
                         'activa' => true,
                         'fuente' => FuenteDato::SIGA->value,
@@ -64,7 +89,7 @@ class IngestaPatrimonioSiga
                 if ($dep->trashed()) {
                     $dep->restore();
                 }
-                $mapaDependencias[$cc['codigo']] = $dep->id;
+                $mapaDependencias[$codigoSiga] = $dep->id;
             }
         });
 

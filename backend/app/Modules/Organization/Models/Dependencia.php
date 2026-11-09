@@ -43,6 +43,7 @@ class Dependencia extends BaseModel
         'parent_id',
         'codigo',
         'codigo_sgd',
+        'codigo_siga',
         'nombre',
         'tipo',
         'nivel',
