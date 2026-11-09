@@ -11,7 +11,7 @@ import {
   XCircle,
 } from 'lucide-react'
 
-import { useDependenciaActiva } from '@/auth/hooks'
+import { useAuth, useDependenciaActiva } from '@/auth/hooks'
 import { Can } from '@/auth/Can'
 import { AlertaBloqueoEntrega } from '@/components/anexos/AlertaBloqueoEntrega'
 import { AnexoHeader } from '@/components/anexos/AnexoHeader'
@@ -68,7 +68,10 @@ function renderEstadoBadge(estado?: EstadoVerificacionBien | null) {
 }
 
 export function PatrimonioPage() {
+  const { usuario } = useAuth()
   const { dependenciaId } = useDependenciaActiva()
+  const esGlobal = usuario?.es_global === true
+
   const [pagina, setPagina] = useState(1)
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<EstadoVerificacionBien | ''>('')
@@ -107,7 +110,7 @@ export function PatrimonioPage() {
     )
   }
 
-  if (!dependenciaId) {
+  if (!dependenciaId && !esGlobal) {
     return (
       <div className="mx-auto max-w-5xl space-y-6">
         <AnexoHeader
@@ -134,12 +137,16 @@ export function PatrimonioPage() {
       <AnexoHeader
         numeroAnexo="Anexo 04"
         titulo="Inventario Físico de Bienes Patrimoniales (SIGA-MEF)"
-        subtitulo="Cotejo de existencia física, estado de conservación y conciliación de activos (Directiva N.° 001-2026-MDSJ/A §7.4)"
+        subtitulo={
+          dependencia
+            ? "Cotejo de existencia física, estado de conservación y conciliación de activos (Directiva N.° 001-2026-MDSJ/A §7.4)"
+            : "Inventario consolidado institucional de los bienes patrimoniales catalogados en el SIGA. Seleccione un centro de costo en el selector superior para acotar la verificación a un despacho."
+        }
         dependenciaCodigo={dependencia?.codigo}
-        dependenciaNombre={dependencia?.nombre}
+        dependenciaNombre={dependencia?.nombre ?? (esGlobal ? 'Municipalidad Distrital de San Jerónimo (Visión Global)' : undefined)}
       />
 
-      <AlertaBloqueoEntrega estadoEntrega={estadoEntrega} />
+      {dependenciaId && <AlertaBloqueoEntrega estadoEntrega={estadoEntrega} />}
 
       {/* Tarjetas de Resumen y Avance */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -269,6 +276,7 @@ export function PatrimonioPage() {
               <tr>
                 <th className="p-3">Cód. Patrimonial</th>
                 <th className="p-3">Denominación del Bien (SIGA)</th>
+                {!dependenciaId && <th className="p-3">Centro de Costo</th>}
                 <th className="p-3">Marca / Modelo / Serie</th>
                 <th className="p-3">Valor (S/.)</th>
                 <th className="p-3">Custodio Asignado</th>
@@ -280,16 +288,18 @@ export function PatrimonioPage() {
             <tbody className="divide-y">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-muted-foreground">
+                  <td colSpan={!dependenciaId ? 9 : 8} className="py-12 text-center text-muted-foreground">
                     <Spinner className="mx-auto h-6 w-6 text-primary" />
                     <p className="mt-2">Cargando bienes patrimoniales...</p>
                   </td>
                 </tr>
               ) : bienes.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center text-muted-foreground">
+                  <td colSpan={!dependenciaId ? 9 : 8} className="py-10 text-center text-muted-foreground">
                     <Package className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
-                    No se encontraron bienes patrimoniales registrados en esta dependencia.
+                    {!dependenciaId
+                      ? 'No se encontraron bienes patrimoniales registrados en el pliego.'
+                      : 'No se encontraron bienes patrimoniales registrados en esta dependencia.'}
                   </td>
                 </tr>
               ) : (
@@ -305,6 +315,14 @@ export function PatrimonioPage() {
                       <td className="p-3 max-w-xs font-medium text-foreground">
                         <p className="line-clamp-2">{bien.denominacion}</p>
                       </td>
+                      {!dependenciaId && (
+                        <td className="p-3 max-w-[200px] text-[11px] text-muted-foreground truncate">
+                          <span className="font-mono text-[#3484A5] font-semibold block">
+                            [{bien.dependencia?.codigo}]
+                          </span>
+                          <span className="truncate block">{bien.dependencia?.nombre}</span>
+                        </td>
+                      )}
                       <td className="p-3 whitespace-nowrap text-muted-foreground">
                         <div>{bien.marca ? `${bien.marca}` : 'S/M'}</div>
                         <div className="text-[10px] text-muted-foreground/80">
