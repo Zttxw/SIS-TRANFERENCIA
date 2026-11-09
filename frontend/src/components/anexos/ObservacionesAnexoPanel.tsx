@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { useConfirm } from '@/components/ui/confirm-dialog'
 import { Dialog } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -43,6 +44,7 @@ export function ObservacionesAnexoPanel({
   dependenciaId,
   esModificable = true,
 }: ObservacionesAnexoPanelProps) {
+  const confirmar = useConfirm()
   const [expandido, setExpandido] = useState(true)
   const [modalRegistroAbierto, setModalRegistroAbierto] = useState(false)
   const [descripcionNueva, setDescripcionNueva] = useState('')
@@ -106,18 +108,18 @@ export function ObservacionesAnexoPanel({
       <CardHeader className="bg-muted/15 pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning-soft text-warning-fg">
               <MessageSquare className="h-4 w-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <CardTitle className="text-base">Observaciones y Subsanaciones</CardTitle>
                 {abiertas > 0 ? (
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                  <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-semibold text-warning-fg">
                     {abiertas} pendiente{abiertas !== 1 ? 's' : ''}
                   </span>
                 ) : observaciones.length > 0 ? (
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                  <span className="rounded-full bg-success-soft px-2 py-0.5 text-xs font-semibold text-success-fg">
                     {subsanadas} resuelta{subsanadas !== 1 ? 's' : ''}
                   </span>
                 ) : null}
@@ -164,7 +166,7 @@ export function ObservacionesAnexoPanel({
             </div>
           ) : observaciones.length === 0 ? (
             <div className="rounded-lg border border-dashed py-8 text-center text-xs text-muted-foreground">
-              <CheckCircle2 className="mx-auto mb-1.5 h-6 w-6 text-emerald-500 opacity-80" />
+              <CheckCircle2 className="mx-auto mb-1.5 h-6 w-6 text-success opacity-80" />
               <p className="font-medium text-foreground">Sin observaciones</p>
               <p className="mt-0.5">No se registran observaciones formuladas para este anexo.</p>
             </div>
@@ -180,26 +182,26 @@ export function ObservacionesAnexoPanel({
                     key={obs.id}
                     className={`rounded-lg border p-4 text-xs transition-colors ${
                       esAbierta
-                        ? 'border-amber-300 bg-amber-50/50 dark:border-amber-900/60 dark:bg-amber-950/20'
+                        ? 'border-warning-border bg-warning-soft'
                         : esSubsanada
-                          ? 'border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/40 dark:bg-emerald-950/10'
+                          ? 'border-success-border bg-success-soft'
                           : 'border-muted bg-muted/20 opacity-70'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        {esAbierta && <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />}
-                        {esSubsanada && <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />}
+                        {esAbierta && <AlertCircle className="h-4 w-4 text-warning-fg shrink-0" />}
+                        {esSubsanada && <CheckCircle2 className="h-4 w-4 text-success-fg shrink-0" />}
                         {esDesestimada && <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />}
                         <span className="font-semibold text-foreground">
                           Observación #{obs.id}
                         </span>
                         <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-medium uppercase ${
+                          className={`rounded px-1.5 py-0.5 text-microdato font-medium uppercase ${
                             esAbierta
-                              ? 'bg-amber-200 text-amber-900 dark:bg-amber-900 dark:text-amber-200'
+                              ? 'bg-warning-soft text-warning-fg'
                               : esSubsanada
-                                ? 'bg-emerald-200 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-200'
+                                ? 'bg-success-soft text-success-fg'
                                 : 'bg-muted text-muted-foreground'
                           }`}
                         >
@@ -207,7 +209,7 @@ export function ObservacionesAnexoPanel({
                         </span>
                       </div>
 
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-nota text-muted-foreground">
                         {new Date(obs.created_at).toLocaleDateString()}
                       </span>
                     </div>
@@ -217,27 +219,27 @@ export function ObservacionesAnexoPanel({
                     </p>
 
                     {obs.autor && (
-                      <p className="mt-1 text-[11px] text-muted-foreground">
+                      <p className="mt-1 text-nota text-muted-foreground">
                         Formulado por: <span className="font-medium text-foreground">{obs.autor.name}</span>
                       </p>
                     )}
 
                     {/* Respuesta de subsanación */}
                     {esSubsanada && obs.respuesta_subsanacion && (
-                      <div className="mt-3 rounded border border-emerald-300/70 bg-emerald-100/50 p-2.5 dark:border-emerald-800 dark:bg-emerald-950/40">
-                        <div className="flex items-center justify-between text-[11px] font-semibold text-emerald-900 dark:text-emerald-300">
+                      <div className="mt-3 rounded border border-success-border bg-success-soft p-2.5">
+                        <div className="flex items-center justify-between text-nota font-semibold text-success-fg">
                           <span>Sustento de Subsanación:</span>
                           {obs.subsanada_en && (
-                            <span className="font-normal text-muted-foreground text-[10px]">
+                            <span className="font-normal text-muted-foreground text-microdato">
                               {new Date(obs.subsanada_en).toLocaleDateString()}
                             </span>
                           )}
                         </div>
-                        <p className="mt-1 text-emerald-950 dark:text-emerald-200 whitespace-pre-wrap">
+                        <p className="mt-1 text-success-fg whitespace-pre-wrap">
                           {obs.respuesta_subsanacion}
                         </p>
                         {obs.responsable && (
-                          <p className="mt-1 text-[10px] text-emerald-800/80 dark:text-emerald-400">
+                          <p className="mt-1 text-microdato text-success-fg/80">
                             Subsanado por: {obs.responsable.name}
                           </p>
                         )}
@@ -253,10 +255,15 @@ export function ObservacionesAnexoPanel({
                             variant="ghost"
                             className="h-7 text-xs text-destructive hover:bg-destructive/10"
                             disabled={desestimarMut.isPending}
-                            onClick={() => {
-                              if (confirm('¿Está seguro de desestimar esta observación?')) {
-                                desestimarMut.mutate(obs.id)
-                              }
+                            onClick={async () => {
+                              const ok = await confirmar({
+                                title: 'Desestimar observación',
+                                description:
+                                  'La observación quedará marcada como desestimada y dejará de requerir subsanación. Esta acción no se puede deshacer.',
+                                confirmText: 'Desestimar',
+                                variant: 'destructive',
+                              })
+                              if (ok) desestimarMut.mutate(obs.id)
                             }}
                           >
                             Desestimar
@@ -269,7 +276,7 @@ export function ObservacionesAnexoPanel({
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 gap-1 text-xs text-amber-700 border-amber-300 hover:bg-amber-100 dark:text-amber-300"
+                            className="h-7 gap-1 text-xs text-warning-fg border-warning-border hover:bg-warning-soft"
                             onClick={() => {
                               setObservacionASubsanar(obs)
                               setRespuestaSubsanacion('')
@@ -307,7 +314,7 @@ export function ObservacionesAnexoPanel({
               onChange={(e) => setDescripcionNueva(e.target.value)}
               required
             />
-            <p className="text-[11px] text-muted-foreground">Mínimo 5 caracteres.</p>
+            <p className="text-nota text-muted-foreground">Mínimo 5 caracteres.</p>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2 border-t">
@@ -354,7 +361,7 @@ export function ObservacionesAnexoPanel({
               onChange={(e) => setRespuestaSubsanacion(e.target.value)}
               required
             />
-            <p className="text-[11px] text-muted-foreground">Mínimo 5 caracteres.</p>
+            <p className="text-nota text-muted-foreground">Mínimo 5 caracteres.</p>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2 border-t">

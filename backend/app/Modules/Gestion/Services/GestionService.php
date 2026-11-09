@@ -43,13 +43,38 @@ class GestionService
             [
                 'servidor_responsable_id' => $datos['servidor_responsable_id'] ?? null,
                 'elaborado_por_id' => $usuario->id,
-                'principales_funciones' => $datos['principales_funciones'],
-                'logros' => $datos['logros'],
-                'dificultades' => $datos['dificultades'] ?? null,
-                'asuntos_pendientes' => $datos['asuntos_pendientes'] ?? null,
+                'nivel_organizacional' => $datos['nivel_organizacional'] ?? null,
+                'cargo_periodo' => $datos['cargo_periodo'] ?? null,
+                'funciones' => $this->numerarFilas($datos['funciones'] ?? []),
+                'logros_items' => $this->numerarFilas($datos['logros_items'] ?? []),
+                'dificultades_items' => $this->numerarFilas($datos['dificultades_items'] ?? []),
+                'pendientes_items' => $this->numerarFilas($datos['pendientes_items'] ?? []),
                 'estado' => $datos['estado'] ?? 'borrador',
             ]
         );
+    }
+
+    /**
+     * Reasigna el número de orden (`n`) de cada fila de forma secuencial (1..N),
+     * preservando el orden de llegada. Devuelve null si no hay filas.
+     *
+     * @param  array<int, array<string, mixed>>  $filas
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function numerarFilas(array $filas): ?array
+    {
+        if ($filas === []) {
+            return null;
+        }
+
+        $numeradas = [];
+        $n = 1;
+        foreach (array_values($filas) as $fila) {
+            $fila['n'] = $n++;
+            $numeradas[] = $fila;
+        }
+
+        return $numeradas;
     }
 
     private function resolverProcesoActivoId(): int

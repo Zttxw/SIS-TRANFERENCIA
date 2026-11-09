@@ -118,14 +118,14 @@ export function ActaPage() {
           dependenciaNombre={estadoData?.dependencia.nombre}
         />
 
-        <Card className="border-amber-500/40 bg-amber-500/5 shadow-sm">
+        <Card className="border-warning-border bg-warning-soft shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning-soft text-warning-fg">
                 <AlertTriangle className="h-6 w-6" />
               </div>
               <div>
-                <CardTitle className="text-lg text-amber-700 dark:text-amber-400">
+                <CardTitle className="text-lg text-warning-fg">
                   Acta No Emisible · Requiere Entrega Consolidada
                 </CardTitle>
                 <CardDescription className="text-xs">
@@ -139,7 +139,7 @@ export function ActaPage() {
               Conforme al marco normativo municipal, el <strong>Acta de Transferencia de Cargo (Anexo 07)</strong> refleja
               la constancia fidedigna de los bienes, documentos, personal e informe de gestión efectivamente
               recibidos y verificados. Para generarla, la entrega del centro de costo debe encontrarse en estado{' '}
-              <span className="font-semibold text-emerald-700 dark:text-emerald-400">CONSOLIDADA</span> por el revisor
+              <span className="font-semibold text-success-fg">CONSOLIDADA</span> por el revisor
               jerárquico o la comisión ETTS.
             </p>
 
@@ -153,7 +153,7 @@ export function ActaPage() {
                 </div>
                 <div>
                   <span className="text-muted-foreground block">Estado Actual de la Entrega:</span>
-                  <span className="font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                  <span className="font-bold uppercase tracking-wide text-warning-fg">
                     {estadoEntregaActual}
                   </span>
                 </div>
@@ -253,7 +253,7 @@ export function ActaPage() {
                 onClick={() => setModalFirma(true)}
                 className="gap-2 border shadow-sm"
               >
-                <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                <ShieldCheck className="h-4 w-4 text-success-fg" />
                 Firma Digital / Suscripción
               </Button>
             </Can>
@@ -288,7 +288,7 @@ export function ActaPage() {
           </div>
           <div>
             <span className="text-muted-foreground block">Estado del Acta:</span>
-            <span className="inline-flex items-center gap-1 mt-0.5 rounded-full bg-emerald-500/15 px-2.5 py-0.5 font-semibold text-emerald-700 dark:text-emerald-400">
+            <span className="inline-flex items-center gap-1 mt-0.5 rounded-full bg-success-soft px-2.5 py-0.5 font-semibold text-success-fg">
               <ShieldCheck className="h-3.5 w-3.5" />
               {tienePdfSuscrito ? 'Suscrita con Evidencia' : 'Generada (Lista para Suscripción)'}
             </span>
@@ -338,7 +338,7 @@ export function ActaPage() {
             <span>
               Vista previa conforme a las especificaciones formales de la Directiva Municipal N.° 001-2026-MDSJ/A.
             </span>
-            <span className="font-mono text-[11px] text-foreground font-medium">
+            <span className="font-mono text-nota text-foreground font-medium">
               Hash Documental: {acta.id.toString(16).padStart(8, '0')}
             </span>
           </div>
@@ -377,7 +377,7 @@ export function ActaPage() {
               </p>
               <div className="mt-4 flex justify-center gap-2">
                 <Button size="sm" onClick={() => setModalFirma(true)} variant="secondary" className="gap-2">
-                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                  <ShieldCheck className="h-4 w-4 text-success-fg" />
                   Adjuntar Acta Suscrita
                 </Button>
                 <Button size="sm" onClick={() => setModalEvidencia(true)} className="gap-2">
@@ -394,9 +394,9 @@ export function ActaPage() {
                     <div className="flex items-start gap-3">
                       <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                         {evidencia.mime_type.includes('pdf') ? (
-                          <FileText className="h-5 w-5 text-red-500" />
+                          <FileText className="h-5 w-5 text-danger" />
                         ) : evidencia.mime_type.includes('sheet') || evidencia.mime_type.includes('excel') ? (
-                          <FileSpreadsheet className="h-5 w-5 text-emerald-600" />
+                          <FileSpreadsheet className="h-5 w-5 text-success-fg" />
                         ) : (
                           <Paperclip className="h-5 w-5" />
                         )}
@@ -406,14 +406,14 @@ export function ActaPage() {
                           <h4 className="text-xs font-semibold text-foreground">
                             {evidencia.nombre_original}
                           </h4>
-                          <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-secondary-foreground">
+                          <span className="rounded bg-secondary px-1.5 py-0.5 text-mini font-medium text-secondary-foreground">
                             {formatearTamano(evidencia.tamano_bytes)}
                           </span>
                         </div>
                         {evidencia.descripcion && (
                           <p className="text-xs text-muted-foreground">{evidencia.descripcion}</p>
                         )}
-                        <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-[10px] text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-mini text-muted-foreground">
                           <span className="flex items-center gap-1">
                             SHA-256: {evidencia.hash.substring(0, 16)}...
                             <button

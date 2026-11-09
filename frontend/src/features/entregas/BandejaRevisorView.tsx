@@ -73,34 +73,34 @@ export function BandejaRevisorView({ onRevisar, onVerDetalle }: BandejaRevisorVi
     switch (estado) {
       case 'borrador':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground dark:bg-foreground dark:text-muted-foreground">
             Borrador
           </span>
         )
       case 'remitida':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+          <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-fg">
             <Clock className="h-3 w-3" />
             Remitida (Pendiente)
           </span>
         )
       case 'en_revision':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+          <span className="inline-flex items-center gap-1 rounded-full bg-info-soft px-2.5 py-0.5 text-xs font-semibold text-info-fg">
             <RefreshCw className="h-3 w-3" />
             En Revisión
           </span>
         )
       case 'observada':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
+          <span className="inline-flex items-center gap-1 rounded-full bg-danger-soft px-2.5 py-0.5 text-xs font-semibold text-danger-fg">
             <AlertCircle className="h-3 w-3" />
             Observada
           </span>
         )
       case 'consolidada':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+          <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-semibold text-success-fg">
             <CheckCircle2 className="h-3 w-3" />
             Consolidada
           </span>
@@ -119,49 +119,49 @@ export function BandejaRevisorView({ onRevisar, onVerDetalle }: BandejaRevisorVi
             <CardDescription className="text-xs font-medium">Total en Ámbito</CardDescription>
             <CardTitle className="text-2xl font-bold">{totalEntregas}</CardTitle>
           </CardHeader>
-          <CardContent className="pb-4 pt-0 text-[11px] text-muted-foreground">
+          <CardContent className="pb-4 pt-0 text-nota text-muted-foreground">
             Entregas del subárbol asignado
           </CardContent>
         </Card>
 
-        <Card className="border border-amber-500/20 bg-amber-500/5 shadow-xs">
+        <Card className="border border-warning-border bg-warning-soft shadow-xs">
           <CardHeader className="pb-1 pt-4">
-            <CardDescription className="text-xs font-medium text-amber-700 dark:text-amber-400">
+            <CardDescription className="text-xs font-medium text-warning-fg">
               Pendientes de Revisar
             </CardDescription>
-            <CardTitle className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+            <CardTitle className="text-2xl font-bold text-warning-fg">
               {pendientesCount}
             </CardTitle>
           </CardHeader>
-          <CardContent className="pb-4 pt-0 text-[11px] text-amber-600/80 dark:text-amber-400/80">
+          <CardContent className="pb-4 pt-0 text-nota text-warning-fg">
             Remitidas para su dictamen
           </CardContent>
         </Card>
 
-        <Card className="border border-emerald-500/20 bg-emerald-500/5 shadow-xs">
+        <Card className="border border-success-border bg-success-soft shadow-xs">
           <CardHeader className="pb-1 pt-4">
-            <CardDescription className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+            <CardDescription className="text-xs font-medium text-success-fg">
               Consolidadas
             </CardDescription>
-            <CardTitle className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+            <CardTitle className="text-2xl font-bold text-success-fg">
               {consolidadasCount}
             </CardTitle>
           </CardHeader>
-          <CardContent className="pb-4 pt-0 text-[11px] text-emerald-600/80 dark:text-emerald-400/80">
+          <CardContent className="pb-4 pt-0 text-nota text-success-fg">
             Aprobadas e integradas
           </CardContent>
         </Card>
 
-        <Card className="border border-rose-500/20 bg-rose-500/5 shadow-xs">
+        <Card className="border border-danger-border bg-danger-soft shadow-xs">
           <CardHeader className="pb-1 pt-4">
-            <CardDescription className="text-xs font-medium text-rose-700 dark:text-rose-400">
+            <CardDescription className="text-xs font-medium text-danger-fg">
               Observadas
             </CardDescription>
-            <CardTitle className="text-2xl font-bold text-rose-700 dark:text-rose-400">
+            <CardTitle className="text-2xl font-bold text-danger-fg">
               {observadasCount}
             </CardTitle>
           </CardHeader>
-          <CardContent className="pb-4 pt-0 text-[11px] text-rose-600/80 dark:text-rose-400/80">
+          <CardContent className="pb-4 pt-0 text-nota text-danger-fg">
             En subsanación por el emisor
           </CardContent>
         </Card>
@@ -233,7 +233,7 @@ export function BandejaRevisorView({ onRevisar, onVerDetalle }: BandejaRevisorVi
       ) : entregasFiltradas.length === 0 ? (
         <Card className="border-dashed p-12 text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground mb-3">
-            <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+            <CheckCircle2 className="h-6 w-6 text-success-fg" />
           </div>
           <h3 className="text-base font-semibold">Sin entregas pendientes en bandeja</h3>
           <p className="mt-1 text-sm text-muted-foreground max-w-md mx-auto">
@@ -259,7 +259,7 @@ export function BandejaRevisorView({ onRevisar, onVerDetalle }: BandejaRevisorVi
               <Card
                 key={entrega.id}
                 className={`border transition-shadow hover:shadow-xs ${
-                  puedeRevisar ? 'border-amber-500/30 bg-card' : 'bg-muted/15'
+                  puedeRevisar ? 'border-warning-border bg-card' : 'bg-muted/15'
                 }`}
               >
                 <CardContent className="p-4 sm:p-5">
@@ -342,7 +342,7 @@ export function BandejaRevisorView({ onRevisar, onVerDetalle }: BandejaRevisorVi
                             <Button
                               size="sm"
                               onClick={() => onRevisar(entrega)}
-                              className="h-8 gap-1.5 text-xs bg-amber-600 hover:bg-amber-700 text-white"
+                              className="h-8 gap-1.5 text-xs bg-warning-soft hover:bg-warning-soft/90 text-warning-fg"
                             >
                               <FileCheck2 className="h-3.5 w-3.5" />
                               Dictaminar / Revisar

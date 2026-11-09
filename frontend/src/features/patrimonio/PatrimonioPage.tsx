@@ -38,28 +38,28 @@ function renderEstadoBadge(estado?: EstadoVerificacionBien | null) {
   switch (estado) {
     case 'confirmado':
       return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+        <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2.5 py-0.5 text-mini font-semibold text-success-fg">
           <CheckCircle2 className="h-3 w-3" />
           Confirmado
         </span>
       )
     case 'con_observacion':
       return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+        <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2.5 py-0.5 text-mini font-semibold text-warning-fg">
           <AlertCircle className="h-3 w-3" />
           Con observación
         </span>
       )
     case 'no_ubicado':
       return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-0.5 text-[10px] font-semibold text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
+        <span className="inline-flex items-center gap-1 rounded-full bg-danger-soft px-2.5 py-0.5 text-mini font-semibold text-danger-fg">
           <XCircle className="h-3 w-3" />
           No ubicado
         </span>
       )
     default:
       return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-mini font-medium text-muted-foreground">
           <HelpCircle className="h-3 w-3" />
           Pendiente
         </span>
@@ -158,55 +158,55 @@ export function PatrimonioPage() {
             <div className="text-2xl font-bold text-foreground">
               {resumen?.total_bienes ?? 0}
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-nota text-muted-foreground">
               Valorizado: S/. {(resumen?.valor_total ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-emerald-500/5 border-emerald-500/20">
+        <Card className="bg-success-soft border-success-border">
           <CardHeader className="p-4 pb-1">
-            <span className="text-xs font-medium text-emerald-800 dark:text-emerald-300">
+            <span className="text-xs font-medium text-success-fg">
               Confirmados en Campo
             </span>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+            <div className="text-2xl font-bold text-success-fg">
               {resumen?.confirmados ?? 0}
             </div>
-            <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80">
+            <p className="text-nota text-success-fg">
               {resumen?.porcentaje_avance ?? 0}% de avance
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-amber-500/5 border-amber-500/20">
+        <Card className="bg-warning-soft border-warning-border">
           <CardHeader className="p-4 pb-1">
-            <span className="text-xs font-medium text-amber-800 dark:text-amber-300">
+            <span className="text-xs font-medium text-warning-fg">
               Pendientes de Verificación
             </span>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+            <div className="text-2xl font-bold text-warning-fg">
               {resumen?.pendientes ?? 0}
             </div>
-            <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80">
+            <p className="text-nota text-warning-fg">
               Por cotejar en campo
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-rose-500/5 border-rose-500/20">
+        <Card className="bg-danger-soft border-danger-border">
           <CardHeader className="p-4 pb-1">
-            <span className="text-xs font-medium text-rose-800 dark:text-rose-300">
+            <span className="text-xs font-medium text-danger-fg">
               Observados o No Ubicados
             </span>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="text-2xl font-bold text-rose-700 dark:text-rose-400">
+            <div className="text-2xl font-bold text-danger-fg">
               {(resumen?.no_ubicados ?? 0) + (resumen?.con_observacion ?? 0)}
             </div>
-            <p className="text-[11px] text-rose-700/80 dark:text-rose-400/80">
+            <p className="text-nota text-danger-fg">
               {resumen?.no_ubicados ?? 0} no ubicados · {resumen?.con_observacion ?? 0} observados
             </p>
           </CardContent>
@@ -316,8 +316,8 @@ export function PatrimonioPage() {
                         <p className="line-clamp-2">{bien.denominacion}</p>
                       </td>
                       {!dependenciaId && (
-                        <td className="p-3 max-w-[200px] text-[11px] text-muted-foreground truncate">
-                          <span className="font-mono text-[#3484A5] font-semibold block">
+                        <td className="p-3 max-w-[200px] text-nota text-muted-foreground truncate">
+                          <span className="font-mono text-primary font-semibold block">
                             [{bien.dependencia?.codigo}]
                           </span>
                           <span className="truncate block">{bien.dependencia?.nombre}</span>
@@ -325,7 +325,7 @@ export function PatrimonioPage() {
                       )}
                       <td className="p-3 whitespace-nowrap text-muted-foreground">
                         <div>{bien.marca ? `${bien.marca}` : 'S/M'}</div>
-                        <div className="text-[10px] text-muted-foreground/80">
+                        <div className="text-mini text-muted-foreground/80">
                           {bien.modelo ? `Mod: ${bien.modelo}` : ''} {bien.serie ? `· S/N: ${bien.serie}` : ''}
                         </div>
                       </td>

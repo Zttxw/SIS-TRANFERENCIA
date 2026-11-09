@@ -77,7 +77,7 @@ export function FirmaDigitalSeamModal({
       <Card className="relative w-full max-w-xl border-border bg-card shadow-2xl">
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-success-soft text-success-fg">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
@@ -99,9 +99,9 @@ export function FirmaDigitalSeamModal({
 
         <form onSubmit={handleSubmit} className="space-y-4 p-6">
           {/* Seam de Firma Digital - Nota Institucional */}
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-xs text-muted-foreground">
+          <div className="rounded-lg border border-warning-border bg-warning-soft p-4 text-xs text-muted-foreground">
             <div className="flex items-start gap-2.5">
-              <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+              <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning-fg" />
               <div className="space-y-1">
                 <span className="font-semibold text-foreground">
                   Seam de Integración PKI / Firma Digital (Directiva N.° 001-2026-MDSJ/A §7.10)
@@ -125,7 +125,7 @@ export function FirmaDigitalSeamModal({
               <p className="mt-2 text-xs font-medium text-foreground">
                 {archivo ? archivo.name : 'Haga clic para examinar o arrastre el archivo aquí'}
               </p>
-              <p className="text-[11px] text-muted-foreground">Formato PDF hasta 25 MB</p>
+              <p className="text-nota text-muted-foreground">Formato PDF hasta 25 MB</p>
               <Input
                 id="archivo-pdf"
                 type="file"

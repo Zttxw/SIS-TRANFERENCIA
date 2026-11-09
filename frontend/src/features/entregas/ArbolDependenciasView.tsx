@@ -192,13 +192,13 @@ function ItemNodoArbol({
     const segmentos = codigo.split('.').length
     switch (segmentos) {
       case 1:
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+        return 'bg-info-soft text-info-fg'
       case 2:
         return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300'
       case 3:
         return 'bg-violet-100 text-violet-800 dark:bg-violet-950/60 dark:text-violet-300'
       default:
-        return 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300'
+        return 'bg-muted text-foreground dark:bg-foreground dark:text-muted-foreground'
     }
   }
 
@@ -232,7 +232,7 @@ function ItemNodoArbol({
           )}
 
           <span
-            className={`font-mono text-[11px] font-semibold px-1.5 py-0.5 rounded ${getBadgeNivel(
+            className={`font-mono text-nota font-semibold px-1.5 py-0.5 rounded ${getBadgeNivel(
               nodo.codigo,
             )}`}
           >
@@ -242,8 +242,8 @@ function ItemNodoArbol({
           <span className="truncate text-foreground font-medium">{nodo.nombre}</span>
 
           {nodo.encargado && (
-            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-              <UserCheck className="h-3 w-3 text-emerald-600" />
+            <span className="hidden sm:inline-flex items-center gap-1 text-nota text-muted-foreground">
+              <UserCheck className="h-3 w-3 text-success-fg" />
               {nodo.encargado.nombres} {nodo.encargado.apellidos}
             </span>
           )}
@@ -253,7 +253,7 @@ function ItemNodoArbol({
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 px-2 text-[11px] gap-1 text-muted-foreground hover:text-foreground"
+            className="h-7 px-2 text-nota gap-1 text-muted-foreground hover:text-foreground"
             onClick={() => onVerDetalle(nodo)}
           >
             <Eye className="h-3 w-3" />
@@ -263,7 +263,7 @@ function ItemNodoArbol({
           <Button
             size="sm"
             variant={esActiva ? 'default' : 'outline'}
-            className="h-7 px-2 text-[11px] gap-1"
+            className="h-7 px-2 text-nota gap-1"
             onClick={() => onSeleccionar(nodo)}
           >
             <Building2 className="h-3 w-3" />

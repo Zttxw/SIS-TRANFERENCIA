@@ -149,7 +149,7 @@ export function DocumentosPage() {
             <div className="text-2xl font-bold text-foreground">
               {resumen?.total_pendientes ?? 0}
             </div>
-            <p className="text-[11px] text-muted-foreground">Expedientes registrados</p>
+            <p className="text-nota text-muted-foreground">Expedientes registrados</p>
           </CardContent>
         </Card>
 
@@ -162,7 +162,7 @@ export function DocumentosPage() {
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <div className="text-2xl font-bold text-foreground">{cantidad}</div>
-              <p className="text-[11px] text-muted-foreground">En este estado</p>
+              <p className="text-nota text-muted-foreground">En este estado</p>
             </CardContent>
           </Card>
         ))}
@@ -264,7 +264,7 @@ export function DocumentosPage() {
                         )}
                       </td>
                       <td className="p-3 whitespace-nowrap">
-                        <span className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-secondary-foreground uppercase">
+                        <span className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-mini font-semibold text-secondary-foreground uppercase">
                           {doc.estado_atencion ?? 'PENDIENTE'}
                         </span>
                       </td>
@@ -273,11 +273,11 @@ export function DocumentosPage() {
                       </td>
                       <td className="p-3 whitespace-nowrap">
                         {esSgd ? (
-                          <span className="inline-flex rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                          <span className="inline-flex rounded border border-info-border bg-info-soft px-1.5 py-0.5 text-mini font-medium text-info-fg">
                             SGD Oficial
                           </span>
                         ) : (
-                          <span className="inline-flex rounded border border-muted bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          <span className="inline-flex rounded border border-muted bg-muted px-1.5 py-0.5 text-mini font-medium text-muted-foreground">
                             Manual
                           </span>
                         )}

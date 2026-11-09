@@ -55,7 +55,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </div>
 
               {this.state.error && (
-                <div className="rounded-lg bg-muted/40 p-3 text-left font-mono text-[11px] text-muted-foreground break-words max-h-32 overflow-y-auto">
+                <div className="rounded-lg bg-muted/40 p-3 text-left font-mono text-nota text-muted-foreground break-words max-h-32 overflow-y-auto">
                   {this.state.error.message || 'Error desconocido en la aplicación.'}
                 </div>
               )}

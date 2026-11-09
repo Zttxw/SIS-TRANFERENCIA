@@ -87,8 +87,8 @@ class AutorizacionAmbitoTest extends TestCase
         // El AnexoFormRequest rechaza la escritura fuera de ámbito (403).
         $this->postJson('/api/gestion/informe', [
             'dependencia_id' => $ajena->id,
-            'principales_funciones' => 'Funciones de prueba suficientes.',
-            'logros' => 'Logros de prueba suficientes.',
+            'funciones' => [['descripcion' => 'Funciones de prueba suficientes.']],
+            'logros_items' => [['actividad' => 'Logros de prueba suficientes.']],
         ])->assertForbidden();
     }
 
@@ -101,8 +101,8 @@ class AutorizacionAmbitoTest extends TestCase
 
         $this->postJson('/api/gestion/informe', [
             'dependencia_id' => $dep->id,
-            'principales_funciones' => 'Funciones del centro de costo.',
-            'logros' => 'Principales logros del periodo.',
+            'funciones' => [['descripcion' => 'Funciones del centro de costo.']],
+            'logros_items' => [['actividad' => 'Principales logros del periodo.']],
         ])->assertOk();
     }
 

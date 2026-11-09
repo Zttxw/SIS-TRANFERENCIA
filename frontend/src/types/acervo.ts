@@ -7,6 +7,9 @@ export interface AcervoDocumental {
   registrado_por_id: number
   tipo: TipoAcervo
   serie_documental: string
+  anio: number | null
+  desde_anio: number | null
+  hasta_anio: number | null
   periodo: string | null
   cantidad_unidades: number
   unidad_conservacion: string
@@ -27,6 +30,9 @@ export interface GuardarAcervoPayload {
   dependencia_id: number
   tipo: TipoAcervo
   serie_documental: string
+  anio?: number | null
+  desde_anio?: number | null
+  hasta_anio?: number | null
   periodo?: string | null
   cantidad_unidades: number
   unidad_conservacion: string

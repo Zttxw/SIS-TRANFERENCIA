@@ -43,21 +43,21 @@ function renderBadgeEstado(estado: EstadoEntrega | null) {
   switch (estado) {
     case 'consolidada':
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-semibold text-success-fg">
           <ShieldCheck className="h-3.5 w-3.5" />
           Consolidada
         </span>
       )
     case 'remitida':
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-info-soft px-2.5 py-0.5 text-xs font-semibold text-info-fg">
           <Clock className="h-3.5 w-3.5" />
           Remitida (En revisión)
         </span>
       )
     case 'observada':
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-danger-soft px-2.5 py-0.5 text-xs font-semibold text-danger-fg">
           <AlertCircle className="h-3.5 w-3.5" />
           Observada
         </span>
@@ -71,7 +71,7 @@ function renderBadgeEstado(estado: EstadoEntrega | null) {
       )
     default:
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-fg">
           <FileText className="h-3.5 w-3.5" />
           Borrador (En preparación)
         </span>
@@ -101,7 +101,7 @@ export function DashboardPage() {
     if (!esGlobal) {
       return (
         <div className="flex min-h-[400px] items-center justify-center">
-          <Spinner className="h-8 w-8 text-[#3484A5]" />
+          <Spinner className="h-8 w-8 text-primary" />
         </div>
       )
     }
@@ -111,7 +111,7 @@ export function DashboardPage() {
   if (isLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <Spinner className="h-8 w-8 text-[#3484A5]" />
+        <Spinner className="h-8 w-8 text-primary" />
       </div>
     )
   }
@@ -157,7 +157,7 @@ export function DashboardPage() {
       nombre: 'Estructura Orgánica y Centros de Costo',
       icono: FolderTree,
       fuente: 'SGD / ROF',
-      colorFuente: 'bg-sky-50 text-sky-700 border-sky-200',
+      colorFuente: 'bg-info-soft text-info-fg border-info-border',
       resumen: dependencia.parent_id
         ? `Nivel ${dependencia.nivel} · Dependencia subordinada`
         : `Nivel ${dependencia.nivel} · Órgano de primer nivel`,
@@ -172,7 +172,7 @@ export function DashboardPage() {
       nombre: 'Informe de Gestión',
       icono: ClipboardList,
       fuente: 'Manual',
-      colorFuente: 'bg-slate-100 text-slate-700 border-slate-200',
+      colorFuente: 'bg-muted text-foreground border-border',
       resumen: anexo02_gestion.existe
         ? 'Informe registrado y formulado'
         : 'Pendiente de formulación',
@@ -200,7 +200,7 @@ export function DashboardPage() {
       nombre: 'Bienes Patrimoniales',
       icono: Package,
       fuente: 'SIGA / Manual',
-      colorFuente: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      colorFuente: 'bg-success-soft text-success-fg border-success-border',
       resumen: `${anexo04_patrimonio.confirmados} de ${anexo04_patrimonio.total_bienes} verificados (${anexo04_patrimonio.porcentaje_avance}%)`,
       detalle: `${anexo04_patrimonio.pendientes} bienes muebles pendientes de cotejo físico`,
       ruta: '/patrimonio',
@@ -215,7 +215,7 @@ export function DashboardPage() {
       nombre: 'Personal de la Dependencia',
       icono: Users,
       fuente: 'SGD',
-      colorFuente: 'bg-teal-50 text-teal-700 border-teal-200',
+      colorFuente: 'bg-secondary/10 text-secondary border-secondary/30',
       resumen: `${anexo05_personal.total_personal} servidores en padrón operativo`,
       detalle: 'Relación de servidores, régimen y situación contractual',
       ruta: '/personal',
@@ -228,7 +228,7 @@ export function DashboardPage() {
       nombre: 'Bienes No Patrimoniales',
       icono: PackageOpen,
       fuente: 'Manual',
-      colorFuente: 'bg-slate-100 text-slate-700 border-slate-200',
+      colorFuente: 'bg-muted text-foreground border-border',
       resumen:
         anexo06_nopatrimonial.total_bienes > 0
           ? `${anexo06_nopatrimonial.total_bienes} bienes registrados`
@@ -262,31 +262,31 @@ export function DashboardPage() {
           BARRA DE CONTEXTO SUPERIOR Y PLAZOS INSTITUCIONALES
           ======================================================== */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs border-b border-border pb-3">
-        <div className="flex items-center gap-2 flex-wrap text-slate-600">
-          <span className="font-semibold text-slate-800 uppercase tracking-tight">
+        <div className="flex items-center gap-2 flex-wrap text-muted-foreground">
+          <span className="font-semibold text-foreground uppercase tracking-tight">
             {usuario?.servidor?.cargo || (esGlobal ? 'Administración Municipal' : 'Servidor Público')}
           </span>
-          <span className="text-slate-300">·</span>
-          <span className="font-mono text-[#3484A5] font-semibold">[{dependencia.codigo}]</span>
-          <span className="font-medium truncate max-w-sm text-slate-700">
+          <span className="text-muted-foreground">·</span>
+          <span className="font-mono text-primary font-semibold">[{dependencia.codigo}]</span>
+          <span className="font-medium truncate max-w-sm text-foreground">
             {dependencia.nombre}
           </span>
-          <span className="text-slate-300">·</span>
-          <span className="font-semibold text-[#3484A5]">Mi entrega</span>
+          <span className="text-muted-foreground">·</span>
+          <span className="font-semibold text-primary">Mi entrega</span>
         </div>
 
         {/* Fechas de corte y plazos estilo píldora */}
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 text-slate-700 font-mono text-[11px] font-medium border border-slate-200">
-            <Calendar className="h-3.5 w-3.5 text-slate-500" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-muted text-foreground font-mono text-nota font-medium border border-border">
+            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
             <span>
-              Fecha de corte: <strong className="text-slate-800">31/10/2026</strong>
+              Fecha de corte: <strong className="text-foreground">31/10/2026</strong>
             </span>
           </div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/15 text-amber-900 font-mono text-[11px] font-semibold border border-amber-300">
-            <Clock className="h-3.5 w-3.5 text-amber-700" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-warning-soft text-warning-fg font-mono text-nota font-semibold border border-warning-border">
+            <Clock className="h-3.5 w-3.5 text-warning-fg" />
             <span>
-              Plazo de entrega: <strong className="text-amber-950">07/11/2026</strong>
+              Plazo de entrega: <strong className="text-warning-fg">07/11/2026</strong>
             </span>
           </div>
         </div>
@@ -294,20 +294,20 @@ export function DashboardPage() {
 
       {/* Barra de Retorno al Tablero Global (Exclusiva para Administrador / ETTS) */}
       {esGlobal && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[#3484A5]/10 border border-[#3484A5]/25 rounded-xl p-3 sm:px-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-primary/10 border border-primary/25 rounded-xl p-3 sm:px-4">
           <div className="flex items-center gap-2.5">
-            <Building2 className="h-4 w-4 text-[#3484A5] shrink-0" />
-            <span className="text-xs sm:text-sm font-semibold text-slate-800">
-              Despacho en inspección: <span className="font-mono text-[#3484A5]">[{dependencia.codigo}]</span> {dependencia.nombre}
+            <Building2 className="h-4 w-4 text-primary shrink-0" />
+            <span className="text-xs sm:text-sm font-semibold text-foreground">
+              Despacho en inspección: <span className="font-mono text-primary">[{dependencia.codigo}]</span> {dependencia.nombre}
             </span>
           </div>
           <Button
             size="sm"
             variant="outline"
             onClick={() => setDependenciaId(null)}
-            className="h-7 text-xs gap-1.5 self-start sm:self-auto border-[#3484A5]/40 hover:bg-[#3484A5]/15 cursor-pointer"
+            className="h-7 text-xs gap-1.5 self-start sm:self-auto border-primary/40 hover:bg-primary/15 cursor-pointer"
           >
-            <BarChart3 className="h-3.5 w-3.5 text-[#3484A5]" />
+            <BarChart3 className="h-3.5 w-3.5 text-primary" />
             <span>Volver al Tablero Global</span>
           </Button>
         </div>
@@ -334,13 +334,13 @@ export function DashboardPage() {
             ======================================================== */}
         <div className="lg:col-span-8 space-y-4">
           <Card className="border shadow-xs overflow-hidden">
-            <CardHeader className="py-3 px-4 border-b border-border bg-slate-50/70">
+            <CardHeader className="py-3 px-4 border-b border-border bg-muted">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                  <ClipboardList className="h-4 w-4 text-[#3484A5]" />
+                <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4 text-primary" />
                   <span>Información a verificar y completar</span>
                 </CardTitle>
-                <span className="text-[11px] font-mono text-[#3484A5] font-semibold">
+                <span className="text-nota font-mono text-primary font-semibold">
                   7 Anexos Normativos
                 </span>
               </div>
@@ -352,20 +352,20 @@ export function DashboardPage() {
                 return (
                   <div
                     key={anexo.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 gap-3 hover:bg-slate-50/60 transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 gap-3 hover:bg-muted transition-colors"
                   >
                     {/* Identificación y Título */}
                     <div className="flex items-start gap-3 min-w-0 sm:w-[42%]">
-                      <div className="h-8 w-8 rounded-lg bg-[#3484A5]/10 flex items-center justify-center text-[#3484A5] shrink-0 mt-0.5">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0 mt-0.5">
                         <Icono className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-slate-800 hover:text-[#3484A5] transition-colors">
+                          <span className="font-semibold text-foreground hover:text-primary transition-colors">
                             {anexo.codigo} · {anexo.nombre}
                           </span>
                         </div>
-                        <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                        <p className="text-nota text-muted-foreground truncate mt-0.5">
                           {anexo.detalle}
                         </p>
                       </div>
@@ -374,7 +374,7 @@ export function DashboardPage() {
                     {/* Fuente de Datos */}
                     <div className="sm:w-[15%] shrink-0">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono font-semibold border ${anexo.colorFuente}`}
+                        className={`inline-block px-2 py-0.5 rounded text-mini font-mono font-semibold border ${anexo.colorFuente}`}
                       >
                         {anexo.fuente}
                       </span>
@@ -382,18 +382,18 @@ export function DashboardPage() {
 
                     {/* Resumen y Avance */}
                     <div className="sm:w-[25%] min-w-0">
-                      <p className="font-medium text-slate-700 text-xs truncate">
+                      <p className="font-medium text-foreground text-xs truncate">
                         {anexo.resumen}
                       </p>
                       {anexo.esPatrimonio && typeof anexo.avance === 'number' && (
                         <div className="mt-1 flex items-center gap-2">
-                          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-200">
+                          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
                             <div
-                              className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                              className="h-full bg-success rounded-full transition-all duration-300"
                               style={{ width: `${anexo.avance}%` }}
                             />
                           </div>
-                          <span className="text-[10px] font-mono font-bold text-emerald-700">
+                          <span className="text-mini font-mono font-bold text-success-fg">
                             {anexo.avance}%
                           </span>
                         </div>
@@ -408,7 +408,7 @@ export function DashboardPage() {
                           variant: 'outline',
                           size: 'sm',
                           className:
-                            'h-7 text-xs px-2.5 font-medium border-[#3484A5]/30 text-[#3484A5] hover:bg-[#3484A5]/10 gap-1 cursor-pointer',
+                            'h-7 text-xs px-2.5 font-medium border-primary/30 text-primary hover:bg-primary/10 gap-1 cursor-pointer',
                         })}
                       >
                         <span>{anexo.accion}</span>
@@ -423,23 +423,23 @@ export function DashboardPage() {
 
           {/* Módulo Operativo: Documentos SGD (Asuntos Pendientes) */}
           <Card className="border shadow-xs overflow-hidden">
-            <CardHeader className="py-2.5 px-4 border-b border-border bg-slate-50/70">
+            <CardHeader className="py-2.5 px-4 border-b border-border bg-muted">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-[#3484A5]" />
+                <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-primary" />
                   <span>Documentos SGD · Reporte de Asuntos Pendientes</span>
                 </CardTitle>
-                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-semibold border bg-sky-50 text-sky-700 border-sky-200">
+                <span className="inline-block px-2 py-0.5 rounded text-mini font-mono font-semibold border bg-info-soft text-info-fg border-info-border">
                   Fuente: SGD
                 </span>
               </div>
             </CardHeader>
             <CardContent className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <div className="space-y-1">
-                <p className="font-semibold text-slate-800">
+                <p className="font-semibold text-foreground">
                   {resumenDocs?.total_pendientes ?? 0} expedientes o documentos pendientes precargados
                 </p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-nota text-muted-foreground">
                   Información precargada del SGD para verificar trámites no concluidos antes de remitir la entrega.
                 </p>
               </div>
@@ -449,7 +449,7 @@ export function DashboardPage() {
                   variant: 'outline',
                   size: 'sm',
                   className:
-                    'h-7 text-xs px-2.5 font-medium border-[#3484A5]/30 text-[#3484A5] hover:bg-[#3484A5]/10 gap-1 shrink-0 cursor-pointer',
+                    'h-7 text-xs px-2.5 font-medium border-primary/30 text-primary hover:bg-primary/10 gap-1 shrink-0 cursor-pointer',
                 })}
               >
                 <span>Ver Asuntos Pendientes</span>
@@ -465,10 +465,10 @@ export function DashboardPage() {
         <div className="lg:col-span-4 space-y-4">
           {/* Tarjeta de Remisión */}
           <Card className="border shadow-xs">
-            <CardHeader className="py-3 px-4 border-b border-border bg-slate-50/70">
+            <CardHeader className="py-3 px-4 border-b border-border bg-muted">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                  <Send className="h-4 w-4 text-[#3484A5]" />
+                <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                  <Send className="h-4 w-4 text-primary" />
                   <span>Remitir mi entrega</span>
                 </CardTitle>
                 <div>{renderBadgeEstado(estadoEntrega)}</div>
@@ -478,40 +478,40 @@ export function DashboardPage() {
             <CardContent className="p-4 space-y-3.5 text-xs">
               <p className="text-muted-foreground leading-relaxed">
                 Al remitir, su información pasará a revisión formal de{' '}
-                <strong className="text-slate-800">{superiorRevisor}</strong>. Solo podrá
+                <strong className="text-foreground">{superiorRevisor}</strong>. Solo podrá
                 modificarla si se le solicita una corrección mediante observación.
               </p>
 
               {/* Alerta contextual según estado */}
               {esEditable ? (
-                <div className="rounded-lg bg-amber-500/10 border border-amber-300/80 p-3 text-amber-900 space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-amber-950">
-                    <AlertCircle className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+                <div className="rounded-lg bg-warning-soft border border-warning-border p-3 text-warning-fg space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-warning-fg">
+                    <AlertCircle className="h-3.5 w-3.5 text-warning-fg shrink-0" />
                     <span>Verificación obligatoria</span>
                   </div>
-                  <p className="text-[11px] text-amber-800 leading-normal">
+                  <p className="text-nota text-warning-fg leading-normal">
                     Asegúrese de haber revisado los bienes patrimoniales y el acervo documental
                     antes de remitir formalmente el paquete de entrega.
                   </p>
                 </div>
               ) : estadoEntrega === 'remitida' ? (
-                <div className="rounded-lg bg-blue-500/10 border border-blue-300/80 p-3 text-blue-900 space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-blue-950">
-                    <Clock className="h-3.5 w-3.5 text-blue-700 shrink-0" />
+                <div className="rounded-lg bg-info-soft border border-info-border p-3 text-info-fg space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-info-fg">
+                    <Clock className="h-3.5 w-3.5 text-info-fg shrink-0" />
                     <span>Entrega en revisión</span>
                   </div>
-                  <p className="text-[11px] text-blue-800 leading-normal">
+                  <p className="text-nota text-info-fg leading-normal">
                     La entrega se encuentra en custodia del superior jerárquico. La edición queda
                     bloqueada hasta su validación.
                   </p>
                 </div>
               ) : estadoEntrega === 'consolidada' ? (
-                <div className="rounded-lg bg-emerald-500/10 border border-emerald-300/80 p-3 text-emerald-900 space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-emerald-950">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
+                <div className="rounded-lg bg-success-soft border border-success-border p-3 text-success-fg space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-success-fg">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-success-fg shrink-0" />
                     <span>Entrega consolidada</span>
                   </div>
-                  <p className="text-[11px] text-emerald-800 leading-normal">
+                  <p className="text-nota text-success-fg leading-normal">
                     Su despacho ha completado formalmente el cierre de entrega de gestión.
                   </p>
                 </div>
@@ -523,7 +523,7 @@ export function DashboardPage() {
                   {esEditable && (
                     <Button
                       onClick={() => setModalRemitir(true)}
-                      className="w-full h-9 bg-[#3484A5] hover:bg-[#2b718d] text-white font-semibold text-xs gap-2 shadow-xs cursor-pointer"
+                      className="w-full h-9 bg-primary hover:bg-primary-hover text-white font-semibold text-xs gap-2 shadow-xs cursor-pointer"
                     >
                       <Send className="h-3.5 w-3.5" />
                       <span>Remitir mi entrega</span>
@@ -535,7 +535,7 @@ export function DashboardPage() {
                   {(estadoEntrega === 'remitida' || estadoEntrega === 'en_revision') && (
                     <Button
                       onClick={() => setModalRevisar(true)}
-                      className="w-full h-9 bg-[#2CA792] hover:bg-[#258b7a] text-white font-semibold text-xs gap-2 shadow-xs cursor-pointer"
+                      className="w-full h-9 bg-secondary hover:bg-secondary-hover text-white font-semibold text-xs gap-2 shadow-xs cursor-pointer"
                     >
                       <ShieldCheck className="h-4 w-4" />
                       <span>Revisar Entrega</span>
@@ -549,7 +549,7 @@ export function DashboardPage() {
                       to="/acta"
                       className={buttonVariants({
                         className:
-                          'w-full h-9 bg-[#3484A5] hover:bg-[#2b718d] text-white font-semibold text-xs gap-2 shadow-xs',
+                          'w-full h-9 bg-primary hover:bg-primary-hover text-white font-semibold text-xs gap-2 shadow-xs',
                       })}
                     >
                       <FileCheck2 className="h-4 w-4" />
@@ -574,9 +574,9 @@ export function DashboardPage() {
 
           {/* Tarjeta de Historial y Auditoría */}
           <Card className="border shadow-xs">
-            <CardHeader className="py-2.5 px-4 border-b border-border bg-slate-50/50">
-              <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <History className="h-3.5 w-3.5 text-[#3484A5]" />
+            <CardHeader className="py-2.5 px-4 border-b border-border bg-muted">
+              <CardTitle className="text-nota font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <History className="h-3.5 w-3.5 text-primary" />
                 <span>Trazabilidad y Cronograma</span>
               </CardTitle>
             </CardHeader>
@@ -584,12 +584,12 @@ export function DashboardPage() {
             <CardContent className="p-4 space-y-2.5 text-xs">
               <div className="flex justify-between items-center text-muted-foreground">
                 <span>Fecha de corte:</span>
-                <span className="font-mono font-semibold text-slate-800">31/10/2026</span>
+                <span className="font-mono font-semibold text-foreground">31/10/2026</span>
               </div>
 
               <div className="flex justify-between items-center text-muted-foreground">
                 <span>Fecha de remisión:</span>
-                <span className="font-mono text-slate-800">
+                <span className="font-mono text-foreground">
                   {entrega?.remitida_en
                     ? new Date(entrega.remitida_en).toLocaleString('es-PE', {
                         day: '2-digit',
@@ -604,7 +604,7 @@ export function DashboardPage() {
 
               <div className="flex justify-between items-center text-muted-foreground">
                 <span>Última revisión:</span>
-                <span className="font-mono text-slate-800">
+                <span className="font-mono text-foreground">
                   {entrega?.revisada_en
                     ? new Date(entrega.revisada_en).toLocaleString('es-PE', {
                         day: '2-digit',
@@ -619,17 +619,17 @@ export function DashboardPage() {
 
               <div className="flex justify-between items-center text-muted-foreground">
                 <span>Destino jerárquico:</span>
-                <span className="font-semibold text-slate-800">
+                <span className="font-semibold text-foreground">
                   {haciaEtts ? 'ETTS Institucional' : `Despacho Superior (ID ${dependencia.parent_id})`}
                 </span>
               </div>
 
               {entrega?.comentario && (
-                <div className="mt-2 rounded-lg bg-slate-100/80 p-2.5 text-[11px] border border-slate-200">
-                  <span className="font-semibold text-slate-800 block mb-0.5">
+                <div className="mt-2 rounded-lg bg-muted p-2.5 text-nota border border-border">
+                  <span className="font-semibold text-foreground block mb-0.5">
                     Nota de Remisión:
                   </span>
-                  <span className="text-slate-600">{entrega.comentario}</span>
+                  <span className="text-muted-foreground">{entrega.comentario}</span>
                 </div>
               )}
             </CardContent>

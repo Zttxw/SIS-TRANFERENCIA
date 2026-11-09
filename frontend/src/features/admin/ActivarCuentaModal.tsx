@@ -152,7 +152,7 @@ export function ActivarCuentaModal({
 
           {/* Estado de Cuenta Previa */}
           {tieneCuenta ? (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-700 dark:text-amber-400">
+            <div className="rounded-lg border border-warning-border bg-warning-soft p-3.5 text-xs text-warning-fg">
               <div className="flex items-start gap-2">
                 <ShieldAlert className="h-4 w-4 flex-shrink-0 mt-0.5" />
                 <div>
@@ -183,15 +183,15 @@ export function ActivarCuentaModal({
                     {propuesta.roles.map((rolItem, idx) => (
                       <div
                         key={idx}
-                        className="flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-2 text-xs"
+                        className="flex items-start gap-2 rounded-md border border-success-border bg-success-soft p-2 text-xs"
                       >
-                        <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                        <ShieldCheck className="h-4 w-4 text-success-fg flex-shrink-0 mt-0.5" />
                         <div>
-                          <span className="font-semibold text-emerald-800 dark:text-emerald-300">
+                          <span className="font-semibold text-success-fg">
                             {rolItem.etiqueta}
                           </span>
                           {rolItem.dependencia && (
-                            <span className="block text-[11px] text-muted-foreground">
+                            <span className="block text-nota text-muted-foreground">
                               Ámbito: {rolItem.dependencia}
                             </span>
                           )}
@@ -213,7 +213,7 @@ export function ActivarCuentaModal({
                     variant="ghost"
                     size="sm"
                     onClick={handleGenerarPassword}
-                    className="h-6 gap-1 text-[11px] text-primary"
+                    className="h-6 gap-1 text-nota text-primary"
                   >
                     <RefreshCw className="h-3 w-3" />
                     Generar aleatoria

@@ -62,11 +62,11 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-white selection:bg-[#3484A5]/20 selection:text-[#3484A5]">
+    <div className="min-h-screen flex flex-col md:flex-row bg-background selection:bg-primary/20 selection:text-primary">
       {/* ========================================================
-          PANEL IZQUIERDO INSTITUCIONAL (#3484A5 ULTRA MINIMALISTA)
+          PANEL IZQUIERDO INSTITUCIONAL (primary ULTRA MINIMALISTA)
           ======================================================== */}
-      <section className="hidden md:flex md:w-1/2 lg:w-[48%] flex-col justify-between bg-[#3484A5] text-white p-8 lg:p-12">
+      <section className="hidden md:flex md:w-1/2 lg:w-[48%] flex-col justify-between bg-primary text-white p-8 lg:p-12">
         <header className="flex items-center gap-2.5">
           <img
             src="/brand/escudo-blanco.png"
@@ -77,7 +77,7 @@ export function LoginPage() {
             <div className="text-xs sm:text-sm font-semibold text-white leading-tight">
               Municipalidad de San Jerónimo
             </div>
-            <div className="text-[10px] sm:text-[11px] text-white/70 leading-tight">
+            <div className="text-mini sm:text-nota text-white/70 leading-tight">
               Cusco, Perú
             </div>
           </div>
@@ -101,14 +101,14 @@ export function LoginPage() {
           </ul>
         </div>
 
-        <footer className="text-[11px] text-white/60 flex items-center justify-between border-t border-white/10 pt-3">
+        <footer className="text-nota text-white/60 flex items-center justify-between border-t border-white/10 pt-3">
           <span>Gestión 2023 - 2026</span>
           <span>Elaborado por OTI</span>
         </footer>
       </section>
 
       {/* Vista móvil: Encabezado compacto */}
-      <header className="md:hidden flex bg-[#3484A5] text-white p-4 justify-center items-center gap-2.5">
+      <header className="md:hidden flex bg-primary text-white p-4 justify-center items-center gap-2.5">
         <img
           src="/brand/escudo-blanco.png"
           alt="Escudo Oficial de San Jerónimo"
@@ -118,7 +118,7 @@ export function LoginPage() {
           <div className="text-xs font-semibold text-white leading-tight">
             Municipalidad de San Jerónimo
           </div>
-          <div className="text-[10px] text-white/70 leading-tight">
+          <div className="text-mini text-white/70 leading-tight">
             Cusco, Perú
           </div>
         </div>
@@ -127,14 +127,14 @@ export function LoginPage() {
       {/* ========================================================
           PANEL DERECHO: FORMULARIO COMPACTO ULTRA MINIMALISTA
           ======================================================== */}
-      <main className="flex-1 flex flex-col justify-center items-center p-6 sm:p-8 bg-white">
+      <main className="flex-1 flex flex-col justify-center items-center p-6 sm:p-8 bg-background">
         <div className="w-full max-w-[290px] sm:max-w-[310px] space-y-4">
           {/* Título simple y conciso */}
           <div className="space-y-0.5">
-            <h2 className="text-lg font-semibold tracking-tight text-slate-900">
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">
               Iniciar sesión
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               Ingresa tus credenciales para acceder al panel interno.
             </p>
           </div>
@@ -143,7 +143,7 @@ export function LoginPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-3" noValidate>
             {/* Campo DNI */}
             <div className="space-y-1">
-              <Label htmlFor="dni" className="text-xs font-normal text-slate-700">
+              <Label htmlFor="dni" className="text-xs font-normal text-foreground">
                 Usuario
               </Label>
               <Input
@@ -153,18 +153,18 @@ export function LoginPage() {
                 autoComplete="username"
                 maxLength={8}
                 placeholder="DNI (8 dígitos)"
-                className="h-[34px] px-2.5 text-xs bg-slate-50/60 border-slate-200 focus-visible:ring-[#3484A5] focus-visible:border-[#3484A5]"
+                className="h-[34px] px-2.5 text-xs bg-muted border-border focus-visible:ring-primary focus-visible:border-primary"
                 aria-invalid={!!errors.dni}
                 {...register('dni')}
               />
               {errors.dni && (
-                <p className="text-[11px] text-destructive">{errors.dni.message}</p>
+                <p className="text-nota text-destructive">{errors.dni.message}</p>
               )}
             </div>
 
             {/* Campo Contraseña */}
             <div className="space-y-1">
-              <Label htmlFor="password" className="text-xs font-normal text-slate-700">
+              <Label htmlFor="password" className="text-xs font-normal text-foreground">
                 Contraseña
               </Label>
               <div className="relative">
@@ -173,14 +173,14 @@ export function LoginPage() {
                   type={mostrarPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   placeholder="••••••••"
-                  className="h-[34px] pl-2.5 pr-8 text-xs bg-slate-50/60 border-slate-200 focus-visible:ring-[#3484A5] focus-visible:border-[#3484A5]"
+                  className="h-[34px] pl-2.5 pr-8 text-xs bg-muted border-border focus-visible:ring-primary focus-visible:border-primary"
                   aria-invalid={!!errors.password}
                   {...register('password')}
                 />
                 <button
                   type="button"
                   onClick={() => setMostrarPassword(!mostrarPassword)}
-                  className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-muted-foreground hover:text-muted-foreground transition-colors"
                   aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                 >
                   {mostrarPassword ? (
@@ -191,7 +191,7 @@ export function LoginPage() {
                 </button>
               </div>
               {errors.password && (
-                <p className="text-[11px] text-destructive">
+                <p className="text-nota text-destructive">
                   {errors.password.message}
                 </p>
               )}
@@ -211,7 +211,7 @@ export function LoginPage() {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full h-[34px] bg-[#3484A5] hover:bg-[#2b718d] text-white font-medium text-xs shadow-none transition-colors rounded-md cursor-pointer mt-1"
+              className="w-full h-[34px] bg-primary hover:bg-primary-hover text-white font-medium text-xs shadow-none transition-colors rounded-md cursor-pointer mt-1"
             >
               {isSubmitting ? 'Ingresando...' : 'Ingresar'}
             </Button>
@@ -219,7 +219,7 @@ export function LoginPage() {
 
           {/* Ayuda de acceso */}
           <div className="pt-1 text-center">
-            <p className="text-[11px] text-slate-400 leading-tight">
+            <p className="text-nota text-muted-foreground leading-tight">
               ¿Olvidaste tu contraseña? Contacta al administrador del sistema.
             </p>
           </div>

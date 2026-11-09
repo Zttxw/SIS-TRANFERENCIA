@@ -131,52 +131,52 @@ export function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{totalEnPadron}</div>
-            <p className="text-[11px] text-muted-foreground">Servidores registrados en el SGD/SIGA</p>
+            <p className="text-nota text-muted-foreground">Servidores registrados en el SGD/SIGA</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+            <CardTitle className="text-xs font-medium text-success-fg">
               Cuentas Habilitadas
             </CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <CheckCircle2 className="h-4 w-4 text-success-fg" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+            <div className="text-2xl font-bold text-success-fg">
               {cuentasActivas}
             </div>
-            <p className="text-[11px] text-muted-foreground">Con credenciales operativas</p>
+            <p className="text-nota text-muted-foreground">Con credenciales operativas</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-amber-700 dark:text-amber-400">
+            <CardTitle className="text-xs font-medium text-warning-fg">
               Cuentas Pendientes
             </CardTitle>
-            <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <Clock className="h-4 w-4 text-warning-fg" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+            <div className="text-2xl font-bold text-warning-fg">
               {cuentasPendientes}
             </div>
-            <p className="text-[11px] text-muted-foreground">Por activar en esta página</p>
+            <p className="text-nota text-muted-foreground">Por activar en esta página</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-blue-700 dark:text-blue-400">
+            <CardTitle className="text-xs font-medium text-info-fg">
               Responsables de Despacho
             </CardTitle>
-            <UserCog className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <UserCog className="h-4 w-4 text-info-fg" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">
+            <div className="text-2xl font-bold text-info-fg">
               {totalResponsables}
             </div>
-            <p className="text-[11px] text-muted-foreground">Encargados de centros de costo</p>
+            <p className="text-nota text-muted-foreground">Encargados de centros de costo</p>
           </CardContent>
         </Card>
       </div>
@@ -224,7 +224,7 @@ export function AdminPage() {
                 onClick={() => setFiltroEstado('sin_cuenta')}
                 className={`rounded-md px-3 py-1 font-medium transition-colors ${
                   filtroEstado === 'sin_cuenta'
-                    ? 'bg-background text-amber-700 dark:text-amber-400 shadow-sm'
+                    ? 'bg-background text-warning-fg shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -235,7 +235,7 @@ export function AdminPage() {
                 onClick={() => setFiltroEstado('con_cuenta')}
                 className={`rounded-md px-3 py-1 font-medium transition-colors ${
                   filtroEstado === 'con_cuenta'
-                    ? 'bg-background text-emerald-700 dark:text-emerald-400 shadow-sm'
+                    ? 'bg-background text-success-fg shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -294,7 +294,7 @@ export function AdminPage() {
                               {servidor.nombres} {servidor.apellidos}
                             </span>
                             {servidor.es_responsable && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-600 dark:text-blue-400">
+                              <span className="inline-flex items-center gap-1 text-mini font-semibold text-info-fg">
                                 <ShieldCheck className="h-3 w-3" />
                                 Responsable de Despacho
                               </span>
@@ -319,7 +319,7 @@ export function AdminPage() {
                           <div className="flex items-start gap-1">
                             <Building2 className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground mt-0.5" />
                             <span className="truncate" title={servidor.dependencia.nombre}>
-                              <span className="font-mono text-[11px] font-semibold text-foreground">
+                              <span className="font-mono text-nota font-semibold text-foreground">
                                 {servidor.dependencia.codigo}
                               </span>{' '}
                               · {servidor.dependencia.nombre}
@@ -333,12 +333,12 @@ export function AdminPage() {
                       {/* Estado Cuenta */}
                       <td className="py-3 px-4 text-center">
                         {tieneCuenta ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2.5 py-0.5 text-nota font-semibold text-success-fg">
                             <CheckCircle2 className="h-3.5 w-3.5" />
                             Activa
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2.5 py-0.5 text-nota font-semibold text-warning-fg">
                             <Clock className="h-3.5 w-3.5" />
                             Sin Cuenta
                           </span>

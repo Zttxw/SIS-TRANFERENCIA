@@ -64,8 +64,8 @@ class ObservacionesTest extends TestCase
         return InformeGestion::create([
             'proceso_transferencia_id' => $this->proceso->id,
             'dependencia_id' => $dep->id,
-            'principales_funciones' => 'Funciones de prueba del centro de costo.',
-            'logros' => 'Logros de prueba del periodo evaluado.',
+            'funciones' => [['n' => 1, 'descripcion' => 'Funciones de prueba del centro de costo.']],
+            'logros_items' => [['n' => 1, 'actividad' => 'Logros de prueba del periodo evaluado.']],
             'estado' => 'borrador',
         ]);
     }

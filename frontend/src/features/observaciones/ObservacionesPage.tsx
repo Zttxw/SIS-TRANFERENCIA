@@ -110,17 +110,17 @@ export function ObservacionesPage() {
   const renderIconoAnexo = (clave: ClaveAnexoObservable) => {
     switch (clave) {
       case 'documento':
-        return <FileText className="h-3.5 w-3.5 text-blue-600" />
+        return <FileText className="h-3.5 w-3.5 text-info-fg" />
       case 'gestion':
         return <AlertCircle className="h-3.5 w-3.5 text-indigo-600" />
       case 'acervo':
-        return <Archive className="h-3.5 w-3.5 text-amber-600" />
+        return <Archive className="h-3.5 w-3.5 text-warning-fg" />
       case 'patrimonio':
-        return <Package className="h-3.5 w-3.5 text-emerald-600" />
+        return <Package className="h-3.5 w-3.5 text-success-fg" />
       case 'personal':
         return <Users className="h-3.5 w-3.5 text-purple-600" />
       case 'nopatrimonial':
-        return <PackageOpen className="h-3.5 w-3.5 text-rose-600" />
+        return <PackageOpen className="h-3.5 w-3.5 text-danger-fg" />
       default:
         return <FileText className="h-3.5 w-3.5" />
     }
@@ -132,7 +132,7 @@ export function ObservacionesPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
+            <span className="inline-flex items-center rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-fg">
               Directiva N.° 001-2026-MDSJ/A · §7.9
             </span>
             <span className="text-xs text-muted-foreground">Ciclo de Control y Subsanación</span>
@@ -178,49 +178,49 @@ export function ObservacionesPage() {
             <CardDescription className="text-xs font-medium">Total en Bandeja</CardDescription>
             <CardTitle className="text-2xl font-bold">{totalObs}</CardTitle>
           </CardHeader>
-          <CardContent className="pb-4 pt-0 text-[11px] text-muted-foreground">
+          <CardContent className="pb-4 pt-0 text-nota text-muted-foreground">
             {filtrarPorDependenciaActiva ? 'En centro de costo activo' : 'Ámbito institucional'}
           </CardContent>
         </Card>
 
-        <Card className="border border-amber-500/20 bg-amber-500/5 shadow-xs">
+        <Card className="border border-warning-border bg-warning-soft shadow-xs">
           <CardHeader className="pb-1 pt-4">
-            <CardDescription className="text-xs font-medium text-amber-700 dark:text-amber-400">
+            <CardDescription className="text-xs font-medium text-warning-fg">
               Pendientes / Abiertas
             </CardDescription>
-            <CardTitle className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+            <CardTitle className="text-2xl font-bold text-warning-fg">
               {abiertasCount}
             </CardTitle>
           </CardHeader>
-          <CardContent className="pb-4 pt-0 text-[11px] text-amber-600/80 dark:text-amber-400/80">
+          <CardContent className="pb-4 pt-0 text-nota text-warning-fg">
             Requieren sustento de subsanación
           </CardContent>
         </Card>
 
-        <Card className="border border-emerald-500/20 bg-emerald-500/5 shadow-xs">
+        <Card className="border border-success-border bg-success-soft shadow-xs">
           <CardHeader className="pb-1 pt-4">
-            <CardDescription className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+            <CardDescription className="text-xs font-medium text-success-fg">
               Subsanadas
             </CardDescription>
-            <CardTitle className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+            <CardTitle className="text-2xl font-bold text-success-fg">
               {subsanadasCount}
             </CardTitle>
           </CardHeader>
-          <CardContent className="pb-4 pt-0 text-[11px] text-emerald-600/80 dark:text-emerald-400/80">
+          <CardContent className="pb-4 pt-0 text-nota text-success-fg">
             Con respuesta técnica aceptada
           </CardContent>
         </Card>
 
-        <Card className="border border-slate-500/20 bg-slate-500/5 shadow-xs">
+        <Card className="border border-border bg-muted shadow-xs">
           <CardHeader className="pb-1 pt-4">
-            <CardDescription className="text-xs font-medium text-slate-700 dark:text-slate-400">
+            <CardDescription className="text-xs font-medium text-foreground dark:text-muted-foreground">
               Desestimadas
             </CardDescription>
-            <CardTitle className="text-2xl font-bold text-slate-700 dark:text-slate-400">
+            <CardTitle className="text-2xl font-bold text-foreground dark:text-muted-foreground">
               {desestimadasCount}
             </CardTitle>
           </CardHeader>
-          <CardContent className="pb-4 pt-0 text-[11px] text-slate-600/80 dark:text-slate-400/80">
+          <CardContent className="pb-4 pt-0 text-nota text-muted-foreground/80 dark:text-muted-foreground/80">
             Cerradas sin subsanación
           </CardContent>
         </Card>
@@ -324,7 +324,7 @@ export function ObservacionesPage() {
       ) : observacionesFiltradas.length === 0 ? (
         <Card className="border-dashed p-12 text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground mb-3">
-            <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+            <CheckCircle2 className="h-6 w-6 text-success-fg" />
           </div>
           <h3 className="text-base font-semibold">Sin observaciones registradas</h3>
           <p className="mt-1 text-sm text-muted-foreground max-w-md mx-auto">
@@ -362,7 +362,7 @@ export function ObservacionesPage() {
               <Card
                 key={obs.id}
                 className={`border transition-shadow hover:shadow-xs ${
-                  esAbierta ? 'border-amber-500/30 bg-card' : 'bg-muted/15'
+                  esAbierta ? 'border-warning-border bg-card' : 'bg-muted/15'
                 }`}
               >
                 <CardContent className="p-4 sm:p-5">
@@ -383,25 +383,25 @@ export function ObservacionesPage() {
 
                         {/* Badge de Estado */}
                         {obs.estado === 'abierta' && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-fg">
                             <Clock className="h-3 w-3" />
                             Abierta / Pendiente
                           </span>
                         )}
                         {obs.estado === 'en_subsanacion' && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-info-soft px-2.5 py-0.5 text-xs font-semibold text-info-fg">
                             <RefreshCw className="h-3 w-3" />
                             En subsanación
                           </span>
                         )}
                         {obs.estado === 'subsanada' && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-semibold text-success-fg">
                             <CheckCircle2 className="h-3 w-3" />
                             Subsanada
                           </span>
                         )}
                         {obs.estado === 'desestimada' && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground dark:bg-foreground dark:text-muted-foreground">
                             <XCircle className="h-3 w-3" />
                             Desestimada
                           </span>
@@ -422,7 +422,7 @@ export function ObservacionesPage() {
                     {/* Cuerpo: Descripción de la Observación */}
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                        <MessageSquareWarning className="h-3.5 w-3.5 text-amber-600" />
+                        <MessageSquareWarning className="h-3.5 w-3.5 text-warning-fg" />
                         <span>Detalle de la Observación:</span>
                       </div>
                       <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed rounded-md bg-muted/30 p-3 border">
@@ -432,14 +432,14 @@ export function ObservacionesPage() {
 
                     {/* Si ya está subsanada: Sustento de subsanación */}
                     {obs.respuesta_subsanacion && (
-                      <div className="rounded-md border border-emerald-500/30 bg-emerald-50/50 p-3 text-xs dark:bg-emerald-950/20 dark:border-emerald-900/40">
-                        <div className="flex items-center justify-between font-semibold text-emerald-900 dark:text-emerald-300 mb-1">
+                      <div className="rounded-md border border-success-border bg-success-soft/50 p-3 text-xs">
+                        <div className="flex items-center justify-between font-semibold text-success-fg mb-1">
                           <span className="flex items-center gap-1.5">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                            <CheckCircle2 className="h-3.5 w-3.5 text-success-fg" />
                             Sustento de Subsanación:
                           </span>
                           {obs.subsanada_en && (
-                            <span className="text-[11px] font-normal text-muted-foreground">
+                            <span className="text-nota font-normal text-muted-foreground">
                               {format(new Date(obs.subsanada_en), "dd/MM/yyyy HH:mm", {
                                 locale: es,
                               })}
@@ -447,7 +447,7 @@ export function ObservacionesPage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-emerald-950 dark:text-emerald-200 whitespace-pre-wrap">
+                        <p className="text-success-fg whitespace-pre-wrap">
                           {obs.respuesta_subsanacion}
                         </p>
                       </div>
@@ -470,7 +470,7 @@ export function ObservacionesPage() {
                             <Button
                               size="sm"
                               onClick={() => setObservacionASubsanar(obs)}
-                              className="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                              className="h-8 gap-1.5 text-xs bg-secondary hover:bg-secondary-hover text-white"
                             >
                               <CheckCircle2 className="h-3.5 w-3.5" />
                               Subsanar

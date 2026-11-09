@@ -84,7 +84,7 @@ export function EntregasPage() {
           <Inbox className="h-4 w-4" />
           <span>Bandeja del Revisor</span>
           {pendientesCount > 0 && (
-            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+            <span className="rounded-full bg-warning-soft px-2 py-0.5 text-nota font-semibold text-warning-fg">
               {pendientesCount} pendiente{pendientesCount !== 1 ? 's' : ''}
             </span>
           )}
@@ -188,7 +188,7 @@ export function EntregasPage() {
                   {estadoMiDep?.entrega?.consolidada_en && (
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground font-medium">Consolidada en:</span>
-                      <span className="text-emerald-700 font-semibold dark:text-emerald-400">
+                      <span className="text-success-fg font-semibold">
                         {new Date(estadoMiDep.entrega.consolidada_en).toLocaleString('es-PE')}
                       </span>
                     </div>

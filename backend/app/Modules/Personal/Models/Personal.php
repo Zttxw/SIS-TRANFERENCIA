@@ -39,6 +39,7 @@ class Personal extends BaseModel
         'regimen_laboral',
         'modalidad_contractual',
         'situacion_laboral',
+        'observaciones',
         'validado',
         'validado_por_id',
         'fuente',

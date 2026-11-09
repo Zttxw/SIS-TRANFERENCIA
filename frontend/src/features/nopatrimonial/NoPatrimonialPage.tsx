@@ -35,25 +35,25 @@ function renderEstadoBadge(estado: string | null) {
   switch (estado) {
     case 'bueno':
       return (
-        <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+        <span className="inline-flex rounded-full bg-success-soft px-2 py-0.5 text-mini font-semibold text-success-fg">
           Bueno
         </span>
       )
     case 'regular':
       return (
-        <span className="inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+        <span className="inline-flex rounded-full bg-info-soft px-2 py-0.5 text-mini font-semibold text-info-fg">
           Regular
         </span>
       )
     case 'malo':
       return (
-        <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+        <span className="inline-flex rounded-full bg-warning-soft px-2 py-0.5 text-mini font-semibold text-warning-fg">
           Malo
         </span>
       )
     case 'inservible':
       return (
-        <span className="inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
+        <span className="inline-flex rounded-full bg-danger-soft px-2 py-0.5 text-mini font-semibold text-danger-fg">
           Inservible
         </span>
       )

@@ -26,9 +26,11 @@
 
   --primary: #3484a5;
   --primary-foreground: #ffffff;
+  --primary-hover: #2b718d;
 
   --secondary: #2ca792;
   --secondary-foreground: #ffffff;
+  --secondary-hover: #258b7a;
 
   --muted: hsl(198 25% 95%);
   --muted-foreground: oklch(0.48 0 0);
@@ -53,6 +55,40 @@
   --sidebar-accent-foreground: #ffffff;
 
   --hielo-institucional: hsl(198 35% 96%);
+
+  /* ----------------------------------------------------------
+   * Colores semánticos de ESTADO (claro)
+   * Convención: <nombre>        → tono sólido (íconos, acentos)
+   *             <nombre>-soft   → fondo tenue de alerta/chip
+   *             <nombre>-border → borde de alerta/chip
+   *             <nombre>-fg     → texto legible sobre -soft
+   * info    = remitida / informativo (azul institucional)
+   * warning = observada / atención (ámbar)
+   * success = consolidada / completo (turquesa institucional)
+   * danger  = error / destructivo (rojo)
+   * neutral = borrador / vacío (gris)
+   * -------------------------------------------------------- */
+  --info: #2563eb;
+  --info-soft: #eff6ff;
+  --info-border: #bfdbfe;
+  --info-fg: #1e3a8a;
+
+  --warning-soft: #fffbeb;
+  --warning-border: #fcd34d;
+  --warning-fg: #92400e;
+
+  --success-soft: #ecfdf5;
+  --success-border: #a7f3d0;
+  --success-fg: #065f46;
+
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --danger-border: #fecaca;
+  --danger-fg: #991b1b;
+
+  --neutral-soft: hsl(198 25% 95%);
+  --neutral-border: oklch(0.91 0 0);
+  --neutral-fg: oklch(0.48 0 0);
 }
 
 .dark {
@@ -67,9 +103,11 @@
 
   --primary: #3484a5;
   --primary-foreground: #ffffff;
+  --primary-hover: #2b718d;
 
   --secondary: #2ca792;
   --secondary-foreground: #ffffff;
+  --secondary-hover: #258b7a;
 
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
@@ -94,6 +132,29 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
 
   --hielo-institucional: oklch(0.22 0 0);
+
+  /* Colores semánticos de estado (oscuro): -soft translúcido, -fg claro */
+  --info: #60a5fa;
+  --info-soft: rgba(37, 99, 235, 0.16);
+  --info-border: rgba(96, 165, 250, 0.35);
+  --info-fg: #bfdbfe;
+
+  --warning-soft: rgba(217, 119, 6, 0.16);
+  --warning-border: rgba(251, 191, 36, 0.35);
+  --warning-fg: #fcd34d;
+
+  --success-soft: rgba(5, 150, 105, 0.16);
+  --success-border: rgba(16, 185, 129, 0.35);
+  --success-fg: #6ee7b7;
+
+  --danger: #f87171;
+  --danger-soft: rgba(220, 38, 38, 0.16);
+  --danger-border: rgba(248, 113, 113, 0.35);
+  --danger-fg: #fecaca;
+
+  --neutral-soft: oklch(0.269 0 0);
+  --neutral-border: oklch(1 0 0 / 10%);
+  --neutral-fg: oklch(0.708 0 0);
 }
 
 @theme inline {
@@ -105,8 +166,10 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary-hover: var(--secondary-hover);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
@@ -115,6 +178,29 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-warning: var(--warning);
+
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-border: var(--info-border);
+  --color-info-fg: var(--info-fg);
+
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-border: var(--warning-border);
+  --color-warning-fg: var(--warning-fg);
+
+  --color-success-soft: var(--success-soft);
+  --color-success-border: var(--success-border);
+  --color-success-fg: var(--success-fg);
+
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-border: var(--danger-border);
+  --color-danger-fg: var(--danger-fg);
+
+  --color-neutral-soft: var(--neutral-soft);
+  --color-neutral-border: var(--neutral-border);
+  --color-neutral-fg: var(--neutral-fg);
+
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -167,6 +253,20 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* Notas y textos auxiliares sans (sin transformación), reemplazan los
+   tamaños arbitrarios text-[11px] / text-[10px] dispersos por la app. */
+@utility text-nota {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem; /* 11px */
+  line-height: 1rem;
+}
+
+@utility text-mini {
+  font-family: var(--font-sans);
+  font-size: 0.625rem; /* 10px */
+  line-height: 0.875rem;
 }
 
 @utility text-microdato {

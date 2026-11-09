@@ -185,7 +185,7 @@ export function PersonalPage() {
                       </span>
                     </td>
                     <td className="p-3 whitespace-nowrap">
-                      <span className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-secondary-foreground">
+                      <span className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-mini font-semibold text-secondary-foreground">
                         {servidor.regimen_laboral}
                       </span>
                     </td>
@@ -193,7 +193,7 @@ export function PersonalPage() {
                       {servidor.modalidad_contractual ?? '-'}
                     </td>
                     <td className="p-3 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                      <span className="inline-flex items-center gap-1 rounded bg-success-soft px-1.5 py-0.5 text-mini font-medium text-success-fg">
                         <UserCheck className="h-3 w-3" />
                         {servidor.situacion_laboral ?? 'ACTIVO'}
                       </span>

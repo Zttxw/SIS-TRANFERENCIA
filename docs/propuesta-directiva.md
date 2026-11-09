@@ -244,537 +244,307 @@ Anexo 08. Diagrama de Flujo.
 
 Fuente: http://app.ceplan.gob.pe/POI2026/Maestro/CentroCosto/CentroCosto.aspx
 
-Anexo 02: Formato del Informe de Gestión
-
-Instrucciones: El presente formato debe ser completado por el funcionario o servidor público responsable del centro de costo. La información consignada debe ser clara, verificable, actualizada y, cuando corresponda, sustentada con documentos o registros institucionales. Añada filas cuando resulte necesario y consigne “No corresponde” cuando un campo no sea aplicable.
-
-I. IDENTIFICACIÓN DEL CENTRO DE COSTO Y PRINCIPALES FUNCIONES
-
-II. LOGROS Y RESULTADOS OBTENIDOS DURANTE EL PERIODO DE GESTIÓN
-
-III. PRINCIPALES DIFICULTADES AFRONTADAS
-
-IV. AGENDA PENDIENTE Y ASUNTOS QUE REQUIEREN ATENCIÓN
-
-V. DECLARACIÓN Y SUSCRIPCIÓN
-
-Declaro que la información consignada en el presente Informe de Gestión corresponde al ámbito de las funciones a mi cargo y ha sido elaborada de acuerdo con la documentación y los registros disponibles, sin perjuicio de las responsabilidades que correspondan conforme a la normativa vigente.
-
-Nota: El presente formato corresponde al procedimiento interno de transferencia administrativa y entrega de cargo de la Municipalidad Distrital de San Jerónimo y no sustituye los formatos ni los entregables exigidos para el proceso formal de transferencia de gestión conforme a la normativa de la Contraloría General de la República.
-
-Anexo 03. Formato para el registro del Acervo Documentario
-
-Anexo 04: Formato para el registro de los bienes patrimoniales
-
-Anexo 05: Formato para el registro de información del personal a cargo del Centro de Costo
-
-Anexo 06: Formato de bienes no patrimoniales.
-
-Anexo 07: FORMATO DE ACTA DE TRANSFERENCIA ADMINISTRATIVA DE GESTIÓN Y ENTREGA DE CARGO
-
-CENTRO DE COSTO: _____________________________________________________________________
-
-CLASIFICACIÓN: _____________________________________________________________________
-
-UNIDAD DE ORGANIZACIÓN DE LA CUAL DEPENDE: _____________________________________________________________________
-
-☐ Primer nivel organizacional ☐ Segundo nivel organizacional ☐ Tercer nivel organizacional ☐ Equipo de trabajo – Centro de Costo
-
-En el distrito de San Jerónimo de la ciudad de Cusco, a los _____ días del mes de __________________ del año 20____, siendo las ______ horas, en las instalaciones de la Municipalidad Distrital de San Jerónimo, se reúnen los responsables que intervienen en la Transferencia Administrativa de Gestión y Entrega de Cargo del Centro de Costo señalado precedentemente, en cumplimiento de las disposiciones establecidas en la presente Directiva.
-
-I. RESPONSABLE QUE EFECTÚA LA ENTREGA
-
-II. RESPONSABLE DE LA RECEPCIÓN / VERIFICACIÓN
-
-(*) Para los Centros de Costo de primer, segundo y tercer nivel organizacional interviene el coordinador acreditado por el ETTE. En el caso de los equipos de trabajo que constituyen Centros de Costo, interviene el responsable del Centro de Costo del cual dependan.
-
-III. INFORMACIÓN Y DOCUMENTACIÓN ENTREGADA
-
-IV. OBSERVACIONES
-
-Comentarios adicionales:
-
-______________________________________________________________________________________________________________________________________________________________________________________________________
-
-En constancia de lo señalado, los intervinientes suscriben la presente Acta de Transferencia Administrativa de Gestión y Entrega de Cargo.
-
-ANEXO N°8 DIAGRAMA DE FLUJO
-
-
-
-| DIRECTIVA N° XXXX-2026-MDSJ/GM |
-
-
-
-
-
-| VERSIÓN DE LA DIRECTIVA | VERSIÓN DE LA DIRECTIVA | 0.0 |
-
-| ROL | UNIDAD ORGÁNICA/ÓRGANO | FIRMA Y SELLO |
-
-| FORMULACIÓN/ / MODIFICACIÓN | /  /  / Oficina de Planeamiento y Modernización /  /  / |  |
-
-| FORMULACIÓN/ / MODIFICACIÓN | /  / Oficina General de Planeamiento y Presupuesto /  /  /  / |  |
-
-| REVISIÓN | /  /  / Oficina de Planeamiento y Modernización /  /  / |  |
-
-| REVISIÓN | /  /  / Oficina General de Asesoría Jurídica /  /  / |  |
-
-| APROBACIÓN | /  /  / Gerencia Municipal /  /  /  / |  |
-
-
-
-
-
-| N° | Actividad | Responsable | Plazo | Producto |
-
-| 1 | Acreditación de coordinadores para la revisión y verificación de la información de los centros de costo. | Responsable del ETTE. | De conformidad a la organización ETTE. | Relación de coordinadores acreditados. |
-
-| 2 | Reunión de coordinación y programación de las actividades de revisión y verificación. | Responsable del ETTE y coordinadores acreditados. | De conformidad a la organización ETTE. | Cronograma de coordinación y verificación. |
-
-| 3 | Presentación, revisión y verificación de la información y documentación de los centros de costo. | Responsables de los centros de costo y coordinadores acreditados, según corresponda | Hasta 2 días hábiles previos a los plazos establecidos por la CGR. | Anexos presentados y constancia de las verificaciones efectuadas. |
-
-| 4 | Suscripción del Acta de Transferencia Administrativa y Entrega de Cargo correspondiente al procedimiento interno. | Intervinientes establecidos en el numeral 7.7 de la presente Directiva | Hasta 2 días hábiles previos a los plazos establecidos por la CGR. | Anexo N° 07 suscrito. |
-
-
-
-
-
-| /  / | /  / | Anexo 01: Relación de Centros de Costo | Anexo 01: Relación de Centros de Costo | Anexo 01: Relación de Centros de Costo | Anexo 01: Relación de Centros de Costo |
-
-| Código | Descripción | Descripción | Nivel Organizacional | CC Padre | Estado |
-
-| 01 | ALCALDIA | ALCALDIA | 1 | 01 | Activo |
-
-| 02 | CONCEJO MUNICIPAL | CONCEJO MUNICIPAL | 1 | 02 | Activo |
-
-| 03 | GERENCIA MUNICIPAL | GERENCIA MUNICIPAL | 1 | 03 | Activo |
-
-| 03.01 | OFICINA DE IMAGEN INSTITUCIONAL Y COMUNICACIONES | OFICINA DE IMAGEN INSTITUCIONAL Y COMUNICACIONES | 3 | 03 | Activo |
-
-| 03.02 | OFICINA DE EJECUCIÓN COACTIVA | OFICINA DE EJECUCIÓN COACTIVA | 3 | 03 | Activo |
-
-| 03.03 | OFICINA DE GESTIÓN DE RIESGOS DE DESASTRES | OFICINA DE GESTIÓN DE RIESGOS DE DESASTRES | 3 | 03 | Activo |
-
-| 04 | ÓRGANO DE CONTROL INSTITUCIONAL | ÓRGANO DE CONTROL INSTITUCIONAL | 1 | 04 | Activo |
-
-| 05 | PROCURADURÍA PÚBLICA MUNICIPAL | PROCURADURÍA PÚBLICA MUNICIPAL | 1 | 05 | Activo |
-
-| 06 | OFICINA DE SECRETARÍA GENERAL Y GESTIÓN DOCUMENTARIA | OFICINA DE SECRETARÍA GENERAL Y GESTIÓN DOCUMENTARIA | 3 | 06 | Activo |
-
-| 06.01 | UNIDAD DE TRÁMITE DOCUMENTARIO | UNIDAD DE TRÁMITE DOCUMENTARIO | 3 | 06 | Activo |
-
-| 06.02 | UNIDAD DE ARCHIVO CENTRAL | UNIDAD DE ARCHIVO CENTRAL | 3 | 06 | Activo |
-
-| 07 | OFICINA GENERAL DE PLANEAMIENTO Y PRESUPUESTO | OFICINA GENERAL DE PLANEAMIENTO Y PRESUPUESTO | 2 | 07 | Activo |
-
-| 07.01 | OFICINA DE PRESUPUESTO | OFICINA DE PRESUPUESTO | 3 | 07 | Activo |
-
-| 07.02 | OFICINA DE PLANEAMIENTO Y MODERNIZACIÓN | OFICINA DE PLANEAMIENTO Y MODERNIZACIÓN | 3 | 07 | Activo |
-
-| 07.03 | OFICINA DE COOPERACIÓN TÉCNICA NACIONAL E INTERNACIONAL | OFICINA DE COOPERACIÓN TÉCNICA NACIONAL E INTERNACIONAL | 3 | 07 | Activo |
-
-| 07.04 | OFICINA DE PROGRAMACIÓN MULTIANUAL DE INVERSIONES | OFICINA DE PROGRAMACIÓN MULTIANUAL DE INVERSIONES | 3 | 07 | Activo |
-
-| 07.05 | OFICINA DE TECNOLOGÍAS DE INFORMACIÓN | OFICINA DE TECNOLOGÍAS DE INFORMACIÓN | 3 | 07 | Activo |
-
-| 08 | OFICINA GENERAL DE GESTIÓN DE INVERSIONES | OFICINA GENERAL DE GESTIÓN DE INVERSIONES | 2 | 08 | Activo |
-
-| 08.01 | OFICINA DE FORMULACIÓN Y EVALUACIÓN DE INVERSIONES | OFICINA DE FORMULACIÓN Y EVALUACIÓN DE INVERSIONES | 3 | 08 | Activo |
-
-| 08.02 | OFICINA DE ELABORACIÓN DE EXPEDIENTES TÉCNICOS | OFICINA DE ELABORACIÓN DE EXPEDIENTES TÉCNICOS | 3 | 08 | Activo |
-
-| 09 | OFICINA GENERAL DE SUPERVISIÓN Y LIQUIDACIÓN DE INVERSIONES | OFICINA GENERAL DE SUPERVISIÓN Y LIQUIDACIÓN DE INVERSIONES | 2 | 09 | Activo |
-
-| 10 | OFICINA GENERAL DE ASESORÍA JURÍDICA | OFICINA GENERAL DE ASESORÍA JURÍDICA | 2 | 10 | Activo |
-
-| 11 | OFICINA GENERAL DE ADMINISTRACIÓN | OFICINA GENERAL DE ADMINISTRACIÓN | 2 | 11 | Activo |
-
-| 11.01 | OFICINA DE TESORERÍA | OFICINA DE TESORERÍA | 3 | 11 | Activo |
-
-| 11.02 | OFICINA DE RECURSOS HUMANOS | OFICINA DE RECURSOS HUMANOS | 3 | 11 | Activo |
-
-| 11.02.01 | UNIDAD DE SEGURIDAD Y SALUD EN EL TRABAJO | UNIDAD DE SEGURIDAD Y SALUD EN EL TRABAJO | 3 | 11.02 | Activo |
-
-| 11.02.02 | SECRETARÍA TÉCNICA DEL PAD | SECRETARÍA TÉCNICA DEL PAD | 3 | 11.02 | Activo |
-
-| 11.03 | OFICINA DE CONTABILIDAD | OFICINA DE CONTABILIDAD | 3 | 11 | Activo |
-
-| 11.04 | OFICINA DE ABASTECIMIENTO | OFICINA DE ABASTECIMIENTO | 3 | 11 | Activo |
-
-| 11.04.01 | UNIDAD DE ALMACÉN | UNIDAD DE ALMACÉN | 3 | 11.04 | Activo |
-
-| 11.05 | OFICINA DE GESTIÓN PATRIMONIAL | OFICINA DE GESTIÓN PATRIMONIAL | 3 | 11 | Activo |
-
-| 12 | GERENCIA DE ADMINISTRACIÓN TRIBUTARIA | GERENCIA DE ADMINISTRACIÓN TRIBUTARIA | 2 | 12 | Activo |
-
-| 12.01 | SUBGERENCIA DE RENTAS | SUBGERENCIA DE RENTAS | 3 | 12 | Activo |
-
-| 12.02 | SUBGERENCIA DE FISCALIZACIÓN TRIBUTARIA | SUBGERENCIA DE FISCALIZACIÓN TRIBUTARIA | 3 | 12 | Activo |
-
-| 12.03 | SUBGERENCIA DE REGISTRO CIVIL Y CEMENTERIOS | SUBGERENCIA DE REGISTRO CIVIL Y CEMENTERIOS | 3 | 12 | Activo |
-
-| 13 | GERENCIA DE INFRAESTRUCTURA | GERENCIA DE INFRAESTRUCTURA | 2 | 13 | Activo |
-
-| 13.01 | SUBGERENCIA DE EJECUCIÓN DE INVERSIONES | SUBGERENCIA DE EJECUCIÓN DE INVERSIONES | 3 | 13 | Activo |
-
-| 13.02 | SUBGERENCIA DE MANTENIMIENTO | SUBGERENCIA DE MANTENIMIENTO | 3 | 13 | Activo |
-
-| 13.03 | SUBGERENCIA DE EQUIPO MECÁNICO | SUBGERENCIA DE EQUIPO MECÁNICO | 3 | 13 | Activo |
-
-| 14 | GERENCIA DE DESARROLLO URBANO Y RURAL | GERENCIA DE DESARROLLO URBANO Y RURAL | 2 | 14 | Activo |
-
-| 14.01 | SUBGERENCIA DE ORDENAMIENTO TERRITORIAL Y TRÁNSITO | SUBGERENCIA DE ORDENAMIENTO TERRITORIAL Y TRÁNSITO | 3 | 14 | Activo |
-
-| 14.01.01 | UNIDAD DE TRÁNSITO | UNIDAD DE TRÁNSITO | 3 | 14.01 | Activo |
-
-| 14.02 | SUBGERENCIA DE CATASTRO Y SANEAMIENTO FÍSICO LEGAL | SUBGERENCIA DE CATASTRO Y SANEAMIENTO FÍSICO LEGAL | 3 | 14 | Activo |
-
-| 14.02.01 | UNIDAD DE SANEAMIENTO FÍSICO LEGAL | UNIDAD DE SANEAMIENTO FÍSICO LEGAL | 3 | 14.02 | Activo |
-
-| 14.03 | SUBGERENCIA DE GESTIÓN DE EDIFICACIONES | SUBGERENCIA DE GESTIÓN DE EDIFICACIONES | 3 | 14 | Activo |
-
-| 15 | GERENCIA DE DESARROLLO SOCIAL | GERENCIA DE DESARROLLO SOCIAL | 2 | 15 | Activo |
-
-| 15.01 | SUBGERENCIA DE EDUCACIÓN, CULTURA Y DEPORTE | SUBGERENCIA DE EDUCACIÓN, CULTURA Y DEPORTE | 2 | 15 | Activo |
-
-| 15.02 | SUBGERENCIA DE PROGRAMAS SOCIALES Y PARTICIPACIÓN CIUDADANA | SUBGERENCIA DE PROGRAMAS SOCIALES Y PARTICIPACIÓN CIUDADANA | 3 | 15 | Activo |
-
-| 15.02.01 | UNIDAD LOCAL DE EMPADRONAMIENTO (SISFOH) | UNIDAD LOCAL DE EMPADRONAMIENTO (SISFOH) | 3 | 15.02 | Activo |
-
-| 15.02.02 | PROGRAMA VASO DE LECHE (PVL) | PROGRAMA VASO DE LECHE (PVL) | 3 | 15.02 | Activo |
-
-| 15.02.03 | OMAPED | OMAPED | 3 | 15.02 | Activo |
-
-| 15.02.04 | CIAM | CIAM | 3 | 15.02 | Activo |
-
-| 15.02.05 | DEMUNA | DEMUNA | 3 | 15.02 | Activo |
-
-| 16 | GERENCIA DE DESARROLLO ECONÓMICO LOCAL | GERENCIA DE DESARROLLO ECONÓMICO LOCAL | 2 | 16 | Activo |
-
-| 16.01 | SUBGERENCIA DE COMPETITIVIDAD EMPRESARIAL, AGRARIA Y TURISMO | SUBGERENCIA DE COMPETITIVIDAD EMPRESARIAL, AGRARIA Y TURISMO | 3 | 16 | Activo |
-
-| 16.02 | SUBGERENCIA DE COMERCIO, MERCADOS Y POLICÍA MUNICIPAL | SUBGERENCIA DE COMERCIO, MERCADOS Y POLICÍA MUNICIPAL | 3 | 16 | Activo |
-
-| 16.02.01 | ÁREA FUNCIONAL DE MERCADOS Y POLICÍA MUNICIPAL | ÁREA FUNCIONAL DE MERCADOS Y POLICÍA MUNICIPAL | 3 | 16.02 | Activo |
-
-| 16.03 | SUBGERENCIA DE CONTROL SANITARIO Y CAMAL MUNICIPAL | SUBGERENCIA DE CONTROL SANITARIO Y CAMAL MUNICIPAL | 3 | 16 | Activo |
-
-| 16.04 | SUBGERENCIA DE SEGURIDAD CIUDADANA | SUBGERENCIA DE SEGURIDAD CIUDADANA | 3 | 16 | Activo |
-
-| 17 | GERENCIA DE GESTIÓN AMBIENTAL | GERENCIA DE GESTIÓN AMBIENTAL | 2 | 17 | Activo |
-
-| 17.01 | SUBGERENCIA DE MEDIO AMBIENTE | SUBGERENCIA DE MEDIO AMBIENTE | 3 | 17 | Activo |
-
-| 17.02 | SUBGERENCIA DE SANEAMIENTO BÁSICO Y ÁREA TÉCNICA MUNICIPAL | SUBGERENCIA DE SANEAMIENTO BÁSICO Y ÁREA TÉCNICA MUNICIPAL | 3 | 17 | Activo |
-
-| 17.02.01 | ÁREA TÉCNICA MUNICIPAL | ÁREA TÉCNICA MUNICIPAL | 3 | 17.02 | Activo |
-
-| 17.03 | SUBGERENCIA DE GESTIÓN DE RESIDUOS SÓLIDOS | SUBGERENCIA DE GESTIÓN DE RESIDUOS SÓLIDOS | 3 | 17 | Activo |
-
-
-
-
-
-| /  / | Anexo 02: Formato del Informe de Gestión |
-
-
-
-
-
-| Entidad | Entidad | Municipalidad Distrital de San Jerónimo |
-
-| Órgano / unidad de organización | Órgano / unidad de organización |  |
-
-| Denominación del centro de costo | Denominación del centro de costo |  |
-
-| Nivel organizacional | Nivel organizacional | ☐ Primer nivel   ☐ Segundo nivel   ☐ Tercer nivel   ☐ Equipo de trabajo |
-
-| Nombre completo del responsable que efectúa la entrega | Nombre completo del responsable que efectúa la entrega |  |
-
-| Cargo / puesto y periodo de gestión | Cargo / puesto y periodo de gestión |  |
-
-| N° | Función principal | Función principal | Función principal |
-
+## Anexo 01: Relación de Centros de Costo
+
+|  |  | Anexo 01: Relación de Centros de Costo |  |  |  |
+| --- | --- | --- | --- | --- | --- |
+| Código | Descripción |  | Nivel Organizacional | CC Padre | Estado |
+| 01 | ALCALDIA |  | 1 | 01 | Activo |
+| 02 | CONCEJO MUNICIPAL |  | 1 | 02 | Activo |
+| 03 | GERENCIA MUNICIPAL |  | 1 | 03 | Activo |
+| 03.01 | OFICINA DE IMAGEN INSTITUCIONAL Y COMUNICACIONES |  | 3 | 03 | Activo |
+| 03.02 | OFICINA DE EJECUCIÓN COACTIVA |  | 3 | 03 | Activo |
+| 03.03 | OFICINA DE GESTIÓN DE RIESGOS DE DESASTRES |  | 3 | 03 | Activo |
+| 04 | ÓRGANO DE CONTROL INSTITUCIONAL |  | 1 | 04 | Activo |
+| 05 | PROCURADURÍA PÚBLICA MUNICIPAL |  | 1 | 05 | Activo |
+| 06 | OFICINA DE SECRETARÍA GENERAL Y GESTIÓN DOCUMENTARIA |  | 3 | 06 | Activo |
+| 06.01 | UNIDAD DE TRÁMITE DOCUMENTARIO |  | 3 | 06 | Activo |
+| 06.02 | UNIDAD DE ARCHIVO CENTRAL |  | 3 | 06 | Activo |
+| 07 | OFICINA GENERAL DE PLANEAMIENTO Y PRESUPUESTO |  | 2 | 07 | Activo |
+| 07.01 | OFICINA DE PRESUPUESTO |  | 3 | 07 | Activo |
+| 07.02 | OFICINA DE PLANEAMIENTO Y MODERNIZACIÓN |  | 3 | 07 | Activo |
+| 07.03 | OFICINA DE COOPERACIÓN TÉCNICA NACIONAL E INTERNACIONAL |  | 3 | 07 | Activo |
+| 07.04 | OFICINA DE PROGRAMACIÓN MULTIANUAL DE INVERSIONES |  | 3 | 07 | Activo |
+| 07.05 | OFICINA DE TECNOLOGÍAS DE INFORMACIÓN |  | 3 | 07 | Activo |
+| 08 | OFICINA GENERAL DE GESTIÓN DE INVERSIONES |  | 2 | 08 | Activo |
+| 08.01 | OFICINA DE FORMULACIÓN Y EVALUACIÓN DE INVERSIONES |  | 3 | 08 | Activo |
+| 08.02 | OFICINA DE ELABORACIÓN DE EXPEDIENTES TÉCNICOS |  | 3 | 08 | Activo |
+| 09 | OFICINA GENERAL DE SUPERVISIÓN Y LIQUIDACIÓN DE INVERSIONES |  | 2 | 09 | Activo |
+| 10 | OFICINA GENERAL DE ASESORÍA JURÍDICA |  | 2 | 10 | Activo |
+| 11 | OFICINA GENERAL DE ADMINISTRACIÓN |  | 2 | 11 | Activo |
+| 11.01 | OFICINA DE TESORERÍA |  | 3 | 11 | Activo |
+| 11.02 | OFICINA DE RECURSOS HUMANOS |  | 3 | 11 | Activo |
+| 11.02.01 | UNIDAD DE SEGURIDAD Y SALUD EN EL TRABAJO |  | 3 | 11.02 | Activo |
+| 11.02.02 | SECRETARÍA TÉCNICA DEL PAD |  | 3 | 11.02 | Activo |
+| 11.03 | OFICINA DE CONTABILIDAD |  | 3 | 11 | Activo |
+| 11.04 | OFICINA DE ABASTECIMIENTO |  | 3 | 11 | Activo |
+| 11.04.01 | UNIDAD DE ALMACÉN |  | 3 | 11.04 | Activo |
+| 11.05 | OFICINA DE GESTIÓN PATRIMONIAL |  | 3 | 11 | Activo |
+| 12 | GERENCIA DE ADMINISTRACIÓN TRIBUTARIA |  | 2 | 12 | Activo |
+| 12.01 | SUBGERENCIA DE RENTAS |  | 3 | 12 | Activo |
+| 12.02 | SUBGERENCIA DE FISCALIZACIÓN TRIBUTARIA |  | 3 | 12 | Activo |
+| 12.03 | SUBGERENCIA DE REGISTRO CIVIL Y CEMENTERIOS |  | 3 | 12 | Activo |
+| 13 | GERENCIA DE INFRAESTRUCTURA |  | 2 | 13 | Activo |
+| 13.01 | SUBGERENCIA DE EJECUCIÓN DE INVERSIONES |  | 3 | 13 | Activo |
+| 13.02 | SUBGERENCIA DE MANTENIMIENTO |  | 3 | 13 | Activo |
+| 13.03 | SUBGERENCIA DE EQUIPO MECÁNICO |  | 3 | 13 | Activo |
+| 14 | GERENCIA DE DESARROLLO URBANO Y RURAL |  | 2 | 14 | Activo |
+| 14.01 | SUBGERENCIA DE ORDENAMIENTO TERRITORIAL Y TRÁNSITO |  | 3 | 14 | Activo |
+| 14.01.01 | UNIDAD DE TRÁNSITO |  | 3 | 14.01 | Activo |
+| 14.02 | SUBGERENCIA DE CATASTRO Y SANEAMIENTO FÍSICO LEGAL |  | 3 | 14 | Activo |
+| 14.02.01 | UNIDAD DE SANEAMIENTO FÍSICO LEGAL |  | 3 | 14.02 | Activo |
+| 14.03 | SUBGERENCIA DE GESTIÓN DE EDIFICACIONES |  | 3 | 14 | Activo |
+| 15 | GERENCIA DE DESARROLLO SOCIAL |  | 2 | 15 | Activo |
+| 15.01 | SUBGERENCIA DE EDUCACIÓN, CULTURA Y DEPORTE |  | 2 | 15 | Activo |
+| 15.02 | SUBGERENCIA DE PROGRAMAS SOCIALES Y PARTICIPACIÓN CIUDADANA |  | 3 | 15 | Activo |
+| 15.02.01 | UNIDAD LOCAL DE EMPADRONAMIENTO (SISFOH) |  | 3 | 15.02 | Activo |
+| 15.02.02 | PROGRAMA VASO DE LECHE (PVL) |  | 3 | 15.02 | Activo |
+| 15.02.03 | OMAPED |  | 3 | 15.02 | Activo |
+| 15.02.04 | CIAM |  | 3 | 15.02 | Activo |
+| 15.02.05 | DEMUNA |  | 3 | 15.02 | Activo |
+| 16 | GERENCIA DE DESARROLLO ECONÓMICO LOCAL |  | 2 | 16 | Activo |
+| 16.01 | SUBGERENCIA DE COMPETITIVIDAD EMPRESARIAL, AGRARIA Y TURISMO |  | 3 | 16 | Activo |
+| 16.02 | SUBGERENCIA DE COMERCIO, MERCADOS Y POLICÍA MUNICIPAL |  | 3 | 16 | Activo |
+| 16.02.01 | ÁREA FUNCIONAL DE MERCADOS Y POLICÍA MUNICIPAL |  | 3 | 16.02 | Activo |
+| 16.03 | SUBGERENCIA DE CONTROL SANITARIO Y CAMAL MUNICIPAL |  | 3 | 16 | Activo |
+| 16.04 | SUBGERENCIA DE SEGURIDAD CIUDADANA |  | 3 | 16 | Activo |
+| 17 | GERENCIA DE GESTIÓN AMBIENTAL |  | 2 | 17 | Activo |
+| 17.01 | SUBGERENCIA DE MEDIO AMBIENTE |  | 3 | 17 | Activo |
+| 17.02 | SUBGERENCIA DE SANEAMIENTO BÁSICO Y ÁREA TÉCNICA MUNICIPAL |  | 3 | 17 | Activo |
+| 17.02.01 | ÁREA TÉCNICA MUNICIPAL |  | 3 | 17.02 | Activo |
+| 17.03 | SUBGERENCIA DE GESTIÓN DE RESIDUOS SÓLIDOS |  | 3 | 17 | Activo |
+
+
+## Anexo 02: Formato del Informe de Gestión
+
+**Instrucciones:** El presente formato debe ser completado por el funcionario o servidor público responsable del centro de costo. La información consignada debe ser clara, verificable, actualizada y, cuando corresponda, sustentada con documentos o registros institucionales. Añada filas cuando resulte necesario y consigne “No corresponde” cuando un campo no sea aplicable.
+
+### I. IDENTIFICACIÓN DEL CENTRO DE COSTO Y PRINCIPALES FUNCIONES
+
+| Entidad |  | Municipalidad Distrital de San Jerónimo |  |
+| --- | --- | --- | --- |
+| Órgano / unidad de organización |  |  |  |
+| Denominación del centro de costo |  |  |  |
+| Nivel organizacional |  | ☐ Primer nivel ☐ Segundo nivel ☐ Tercer nivel ☐ Equipo de trabajo |  |
+| Nombre completo del responsable que efectúa la entrega |  |  |  |
+| Cargo / puesto y periodo de gestión |  |  |  |
+| N° | Función principal |  |  |
 | 1 |  |  |  |
-
 | 2 |  |  |  |
-
 | 3 |  |  |  |
 
 
-
-
+### II. LOGROS Y RESULTADOS OBTENIDOS DURANTE EL PERIODO DE GESTIÓN
 
 | N° | Actividad / intervención | Resultado o logro obtenido | Indicador / meta y nivel de cumplimiento | Documento o medio de verificación |
-
+| --- | --- | --- | --- | --- |
 | 1 |  |  |  |  |
-
 | 2 |  |  |  |  |
-
 | 3 |  |  |  |  |
 
 
-
-
+### III. PRINCIPALES DIFICULTADES AFRONTADAS
 
 | N° | Dificultad identificada y causa | Efecto en la gestión / actividad afectada | Medida adoptada o recomendada |
-
+| --- | --- | --- | --- |
 | 1 |  |  |  |
-
 | 2 |  |  |  |
-
 | 3 |  |  |  |
 
 
-
-
+### IV. AGENDA PENDIENTE Y ASUNTOS QUE REQUIEREN ATENCIÓN
 
 | N° | Asunto pendiente / descripción | Estado situacional y acción requerida | Documento de referencia / expediente | Plazo o fecha relevante | Unidad o responsable competente |
-
+| --- | --- | --- | --- | --- | --- |
 | 1 |  |  |  |  |  |
-
 | 2 |  |  |  |  |  |
-
 | 3 |  |  |  |  |  |
 
 
+### V. DECLARACIÓN Y SUSCRIPCIÓN
 
-
+Declaro que la información consignada en el presente Informe de Gestión corresponde al ámbito de las funciones a mi cargo y ha sido elaborada de acuerdo con la documentación y los registros disponibles, sin perjuicio de las responsabilidades que correspondan conforme a la normativa vigente.
 
 | DNI y Nombre completo del responsable que entrega |  |
-
+| --- | --- |
 | Cargo / centro de costo |  |
-
 | Lugar y fecha |  |
-
-| Firma | /  / |
-
+| Firma |  |
 
 
+**Nota:** El presente formato corresponde al procedimiento interno de transferencia administrativa y entrega de cargo de la Municipalidad Distrital de San Jerónimo y no sustituye los formatos ni los entregables exigidos para el proceso formal de transferencia de gestión conforme a la normativa de la Contraloría General de la República.
 
+## Anexo 03. Formato para el registro del Acervo Documentario
 
-| /  / | Anexo 03. Formato para el registro del Acervo Documentario |
-
-
-
-
-
-| Dependencia: | Dependencia: | Dependencia: | Dependencia: | Dependencia: | Dependencia: | Dependencia: |
-
-| Encargado: | Encargado: | Encargado: | Encargado: | Encargado: | Encargado: | Encargado: |
-
-| N° | Serie Documental | Desde  / Año | Hasta  / Año | Cantidad de Unidades de Conservación N° | Tipo de Unidades de Conservación (Archivadores de Palanca, Paquetes, Empastados, Fólderes, Cajas Archivadoras, Archivo Digital u otro.) | Ubicación de Unidades de Conservación |
-
-| AÑO 2023 | AÑO 2023 | AÑO 2023 | AÑO 2023 | AÑO 2023 | AÑO 2023 | AÑO 2023 |
-
+| Dependencia: |  |  |  |  |  |  |
+| --- | --- | --- | --- | --- | --- | --- |
+| Encargado: |  |  |  |  |  |  |
+| N° | Serie Documental | Desde Año | Hasta Año | Cantidad de Unidades de Conservación N° | Tipo de Unidades de Conservación (Archivadores de Palanca, Paquetes, Empastados, Fólderes, Cajas Archivadoras, Archivo Digital u otro.) | Ubicación de Unidades de Conservación |
+| AÑO 2023 |  |  |  |  |  |  |
 | 1 | MEMORÁNDUM |  |  |  |  |  |
-
 | 2 | MEMORÁNDUM CIRCULARES |  |  |  |  |  |
-
 | 3 | INFORMES |  |  |  |  |  |
-
 | 4 | INFORMES CIRCULARES |  |  |  |  |  |
-
 | 5 | OFICIOS |  |  |  |  |  |
-
 | 6 | OTROS |  |  |  |  |  |
-
 | 7 | INSERTAR CELDAS DE ACUERDO A NECESIDAD |  |  |  |  |  |
-
-| AÑO 2024 | AÑO 2024 | AÑO 2024 | AÑO 2024 | AÑO 2024 | AÑO 2024 | AÑO 2024 |
-
+| AÑO 2024 |  |  |  |  |  |  |
 | 1 | MEMORÁNDUM |  |  |  |  |  |
-
 | 2 | MEMORÁNDUM CIRCULARES |  |  |  |  |  |
-
 | 3 | INFORMES |  |  |  |  |  |
-
 | 4 | INFORMES CIRCULARES |  |  |  |  |  |
-
 | 5 | OFICIOS |  |  |  |  |  |
-
 | 6 | OTROS |  |  |  |  |  |
-
 | 7 | INSERTAR CELDAS DE ACUERDO A NECESIDAD |  |  |  |  |  |
-
-| AÑO 2025 | AÑO 2025 | AÑO 2025 | AÑO 2025 | AÑO 2025 | AÑO 2025 | AÑO 2025 |
-
+| AÑO 2025 |  |  |  |  |  |  |
 | 1 | MEMORÁNDUM |  |  |  |  |  |
-
 | 2 | MEMORÁNDUM CIRCULARES |  |  |  |  |  |
-
 | 3 | INFORMES |  |  |  |  |  |
-
 | 4 | INFORMES CIRCULARES |  |  |  |  |  |
-
 | 5 | OFICIOS |  |  |  |  |  |
-
 | 6 | OTROS |  |  |  |  |  |
-
 | 7 | INSERTAR CELDAS DE ACUERDO A NECESIDAD |  |  |  |  |  |
-
-| AÑO 2026 | AÑO 2026 | AÑO 2026 | AÑO 2026 | AÑO 2026 | AÑO 2026 | AÑO 2026 |
-
+| AÑO 2026 |  |  |  |  |  |  |
 | 1 | MEMORÁNDUM |  |  |  |  |  |
-
 | 2 | MEMORÁNDUM CIRCULARES |  |  |  |  |  |
-
 | 3 | INFORMES |  |  |  |  |  |
-
 | 4 | INFORMES CIRCULARES |  |  |  |  |  |
-
 | 5 | OFICIOS |  |  |  |  |  |
-
 | 6 | OTROS |  |  |  |  |  |
-
 | 7 | INSERTAR CELDAS DE ACUERDO A NECESIDAD |  |  |  |  |  |
 
 
+## Anexo 04: Formato para el registro de los bienes patrimoniales
 
-
-
-| /  / | Anexo 04: Formato para el registro de los bienes patrimoniales |
-
-
-
-
-
-| SERVIDOR RESPONSABLE DE LOS BIENES | SERVIDOR RESPONSABLE DE LOS BIENES | SERVIDOR RESPONSABLE DE LOS BIENES | SERVIDOR RESPONSABLE DE LOS BIENES | SERVIDOR RESPONSABLE DE LOS BIENES | SERVIDOR RESPONSABLE DE LOS BIENES | SERVIDOR RESPONSABLE DE LOS BIENES | SERVIDOR RESPONSABLE DE LOS BIENES | SERVIDOR RESPONSABLE DE LOS BIENES | SERVIDOR RESPONSABLE DE LOS BIENES | SERVIDOR RESPONSABLE DE LOS BIENES | SERVIDOR RESPONSABLE DE LOS BIENES |
-
-| Centro de Costos: | Centro de Costos: | Centro de Costos: | Centro de Costos: | Centro de Costos: | Centro de Costos: | Centro de Costos: | Centro de Costos: | Centro de Costos: | Centro de Costos: | Centro de Costos: | Centro de Costos: |
-
-| Nombre y Apellidos: | Nombre y Apellidos: | Nombre y Apellidos: | Nombre y Apellidos: | Nombre y Apellidos: | Nombre y Apellidos: | Nombre y Apellidos: | Nombre y Apellidos: | Nombre y Apellidos: | Nombre y Apellidos: | Nombre y Apellidos: | Nombre y Apellidos: |
-
-| DNI: | DNI: | DNI: | DNI: | DNI: | DNI: | DNI: | DNI: | DNI: | DNI: | DNI: | DNI: |
-
-| Cargo: | Cargo: | Cargo: | Cargo: | Cargo: | Cargo: | Cargo: | Cargo: | Cargo: | Cargo: | Cargo: | Cargo: |
-
-| Tipo de Contrato: | Tipo de Contrato: | Tipo de Contrato: | Tipo de Contrato: | Tipo de Contrato: | Tipo de Contrato: | Tipo de Contrato: | Tipo de Contrato: | Tipo de Contrato: | Tipo de Contrato: | Tipo de Contrato: | Tipo de Contrato: |
-
+| SERVIDOR RESPONSABLE DE LOS BIENES |  |  |  |  |  |  |  |  |  |  |  |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Centro de Costos: |  |  |  |  |  |  |  |  |  |  |  |
+| Nombre y Apellidos: |  |  |  |  |  |  |  |  |  |  |  |
+| DNI: |  |  |  |  |  |  |  |  |  |  |  |
+| Cargo: |  |  |  |  |  |  |  |  |  |  |  |
+| Tipo de Contrato: |  |  |  |  |  |  |  |  |  |  |  |
 | N° | Código patrimonial | Denominación | Estado | Marca | Modelo | Color | Serie | Dimensión | Características del bien | Código patrimonial anterior | Ubicación del Bien |
-
 | 1 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 2 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 3 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 4 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 5 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 6 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 7 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 8 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 9 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 10 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 11 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 12 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 13 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 14 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 15 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 16 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 17 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 18 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 19 |  |  |  |  |  |  |  |  |  |  |  |
-
 | 20 |  |  |  |  |  |  |  |  |  |  |  |
 
 
+## Anexo 05: Formato para el registro de información del personal a cargo del Centro de Costo
 
-
-
-| /  / | /  / | /  / | /  / | Anexo 05: Formato para el registro de información del personal a cargo del Centro de Costo | Anexo 05: Formato para el registro de información del personal a cargo del Centro de Costo | Anexo 05: Formato para el registro de información del personal a cargo del Centro de Costo | Anexo 05: Formato para el registro de información del personal a cargo del Centro de Costo |
-
-| DEPENDENCIA: | DEPENDENCIA: | DEPENDENCIA: | DEPENDENCIA: | DEPENDENCIA: | DEPENDENCIA: | DEPENDENCIA: | DEPENDENCIA: |
-
-| ENCARGADO: | ENCARGADO: | ENCARGADO: | ENCARGADO: | ENCARGADO: | ENCARGADO: | ENCARGADO: | ENCARGADO: |
-
+|  |  |  |  | Anexo 05: Formato para el registro de información del personal a cargo del Centro de Costo |  |  |  |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| DEPENDENCIA: |  |  |  |  |  |  |  |
+| ENCARGADO: |  |  |  |  |  |  |  |
 | N° | DNI | Apellidos y Nombres | Cargo | Régimen Laboral | Modalidad Contractual | Situación Laboral Actual | Observaciones |
-
 | 1 |  |  |  |  |  |  |  |
-
 | 2 |  |  |  |  |  |  |  |
-
 | 3 |  |  |  |  |  |  |  |
-
 | 4 |  |  |  |  |  |  |  |
-
 | 5 |  |  |  |  |  |  |  |
 
 
+## Anexo 06: Formato de bienes no patrimoniales
 
-
-
-| /  / | /  / | /  / | /  / | / Anexo 06: Formato de bienes no patrimoniales. / | / Anexo 06: Formato de bienes no patrimoniales. / | / Anexo 06: Formato de bienes no patrimoniales. / | / Anexo 06: Formato de bienes no patrimoniales. / | / Anexo 06: Formato de bienes no patrimoniales. / |
-
-| N° | Descripción | Unidad de Medida | Cantidad | ESTADO SITUACIONAL | ESTADO SITUACIONAL | ESTADO SITUACIONAL | Ubicación | Observaciones |
-
+|  |  |  |  | Anexo 06: Formato de bienes no patrimoniales. |  |  |  |  |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| N° | Descripción | Unidad de Medida | Cantidad | ESTADO SITUACIONAL |  |  | Ubicación | Observaciones |
 | N° | Descripción | Unidad de Medida | Cantidad | B | R | M | Ubicación | Observaciones |
-
 | 1 |  |  |  |  |  |  |  |  |
 
 
+## Anexo 07: Formato de Acta de Transferencia Administrativa de Gestión y Entrega de Cargo
 
+**CENTRO DE COSTO:** ______________________________
 
+**CLASIFICACIÓN:** ______________________________
+
+**UNIDAD DE ORGANIZACIÓN DE LA CUAL DEPENDE:** ______________________________
+
+☐ Primer nivel organizacional  ☐ Segundo nivel organizacional  ☐ Tercer nivel organizacional  ☐ Equipo de trabajo – Centro de Costo
+
+En el distrito de San Jerónimo de la ciudad de Cusco, a los _____ días del mes de __________________ del año 20____, siendo las ______ horas, en las instalaciones de la Municipalidad Distrital de San Jerónimo, se reúnen los responsables que intervienen en la Transferencia Administrativa de Gestión y Entrega de Cargo del Centro de Costo señalado precedentemente, en cumplimiento de las disposiciones establecidas en la presente Directiva.
+
+### I. RESPONSABLE QUE EFECTÚA LA ENTREGA
 
 | Rol | N° DNI | Nombres y apellidos | Cargo/Puesto |
-
+| --- | --- | --- | --- |
 | Responsable del Centro de Costo |  |  |  |
 
 
-
-
+### II. RESPONSABLE DE LA RECEPCIÓN / VERIFICACIÓN
 
 | Rol | N° DNI | Nombres y apellidos | Cargo/Condición |
-
+| --- | --- | --- | --- |
 | Coordinador acreditado por el ETTE / Responsable del Centro de Costo receptor (*) |  |  |  |
 
 
+(*) Para los Centros de Costo de primer, segundo y tercer nivel organizacional interviene el coordinador acreditado por el ETTE. En el caso de los equipos de trabajo que constituyen Centros de Costo, interviene el responsable del Centro de Costo del cual dependan.
 
-
+### III. INFORMACIÓN Y DOCUMENTACIÓN ENTREGADA
 
 | N° | Información / documentación | Condición | Observaciones |
-
-| 1 | Anexo N° 02 – Informe de Gestión | ☐ Entregado  ☐ No entregado |  |
-
-| 2 | Anexo N° 03 – Registro del Acervo Documentario | ☐ Entregado  ☐ No entregado |  |
-
-| 3 | Anexo N° 04 – Registro de Bienes Patrimoniales | ☐ Entregado  ☐ No entregado |  |
-
-| 4 | Anexo N° 05 – Información del Personal a cargo del Centro de Costo | ☐ Entregado  ☐ No entregado |  |
-
-| 5 | Anexo N° 06 – Bienes no Patrimoniales | ☐ Entregado  ☐ No entregado   ☐ No Aplica |  |
-
-| 6 | Otros documentos o información, de corresponder | ☐ Entregado  ☐ No entregado   ☐ No Aplica |  |
+| --- | --- | --- | --- |
+| 1 | Anexo N° 02 – Informe de Gestión | ☐ Entregado ☐ No entregado |  |
+| 2 | Anexo N° 03 – Registro del Acervo Documentario | ☐ Entregado ☐ No entregado |  |
+| 3 | Anexo N° 04 – Registro de Bienes Patrimoniales | ☐ Entregado ☐ No entregado |  |
+| 4 | Anexo N° 05 – Información del Personal a cargo del Centro de Costo | ☐ Entregado ☐ No entregado |  |
+| 5 | Anexo N° 06 – Bienes no Patrimoniales | ☐ Entregado ☐ No entregado ☐ No Aplica |  |
+| 6 | Otros documentos o información, de corresponder | ☐ Entregado ☐ No entregado ☐ No Aplica |  |
 
 
-
-
+### IV. OBSERVACIONES
 
 | N.° | Observación | Documentación relacionada |
-
+| --- | --- | --- |
 | 1 |  |  |
-
 | 2 |  |  |
 
 
+**Comentarios adicionales:**
+
+____________________________________________________________________
+
+____________________________________________________________________
+
+____________________________________________________________________
+
+En constancia de lo señalado, los intervinientes suscriben la presente Acta de Transferencia Administrativa de Gestión y Entrega de Cargo.
+
+| RESPONSABLE QUE EFECTÚA LA ENTREGA Firma: ______________________________________ Nombres y apellidos: ________________________ DNI:_________________________________________ Cargo/Puesto: ____________________________ Centro de Costo:_______________________________ | RESPONSABLE DE LA RECEPCIÓN / VERIFICACIÓN Firma: ______________________________________ Nombres y apellidos: _____________________ DNI: ______________________________ Cargo/Condición: ______________________________ Coordinador ETTE / CC receptor:___________________ |
+| --- | --- |
 
 
+## Anexo 08: Diagrama de Flujo
 
-| RESPONSABLE QUE EFECTÚA LA ENTREGA /  / Firma: ______________________________________ / Nombres y apellidos: ________________________ / DNI:_________________________________________ / Cargo/Puesto: ____________________________ / Centro de Costo:_______________________________ | RESPONSABLE DE LA RECEPCIÓN / VERIFICACIÓN /  / Firma: ______________________________________ / Nombres y apellidos: _____________________ / DNI: ______________________________ / Cargo/Condición: ______________________________ / Coordinador ETTE / CC receptor:___________________ |
+El documento presenta este anexo como diagrama gráfico en la página 23. Para mantenerlo editable en Markdown, se reproduce el flujo funcional descrito en la directiva:
+
+```mermaid
+flowchart TD
+    A[Responsables de equipos de trabajo] --> B[Centro de costo del que dependen]
+    B --> C[Centros de costo de tercer nivel]
+    C --> D[Centro de costo de segundo nivel]
+    D --> E[ETTS: revisión y consolidación]
+    E --> F[ETTE: recepción y revisión formal]
+    G[Centros de costo de primer nivel] --> E
+    C -. revisión/verificación .-> H[Coordinadores acreditados ETTE]
+    D -. revisión/verificación .-> H
+    G -. revisión/verificación .-> H
+```
 

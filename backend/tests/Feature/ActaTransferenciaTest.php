@@ -81,8 +81,8 @@ class ActaTransferenciaTest extends TestCase
         InformeGestion::create([
             'proceso_transferencia_id' => $this->proceso->id,
             'dependencia_id' => $this->dep->id,
-            'principales_funciones' => 'Funciones del centro de costo de prueba.',
-            'logros' => 'Logros registrados en el periodo evaluado.',
+            'funciones' => [['n' => 1, 'descripcion' => 'Funciones del centro de costo de prueba.']],
+            'logros_items' => [['n' => 1, 'actividad' => 'Logros registrados en el periodo evaluado.']],
             'estado' => 'completado',
         ]);
 

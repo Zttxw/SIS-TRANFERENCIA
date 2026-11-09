@@ -22,6 +22,15 @@ class VerificarBienRequest extends FormRequest
         return [
             'estado' => ['required', new Enum(EstadoVerificacionBien::class)],
             'estado_conservacion' => ['nullable', new Enum(EstadoConservacion::class)],
+
+            // Campos de la plantilla Anexo 04 que el servidor completa al verificar
+            // (el SIGA no siempre los trae). Todos opcionales.
+            'color' => ['nullable', 'string', 'max:100'],
+            'dimension' => ['nullable', 'string', 'max:150'],
+            'caracteristicas' => ['nullable', 'string', 'max:1000'],
+            'codigo_patrimonial_anterior' => ['nullable', 'string', 'max:100'],
+            'ubicacion' => ['nullable', 'string', 'max:255'],
+
             'observacion' => [
                 Rule::requiredIf(function () {
                     $estado = $this->input('estado');

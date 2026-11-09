@@ -98,6 +98,22 @@ class PatrimonioService
                     : EstadoConservacion::from((string) $datos['estado_conservacion']))
                 : null;
 
+            // Completar datos físicos del bien tomados de la plantilla oficial
+            // (Anexo 04): solo se sobrescriben los que llegan explícitamente.
+            $bien->fill(array_filter(
+                [
+                    'color' => $datos['color'] ?? null,
+                    'dimension' => $datos['dimension'] ?? null,
+                    'caracteristicas' => $datos['caracteristicas'] ?? null,
+                    'codigo_patrimonial_anterior' => $datos['codigo_patrimonial_anterior'] ?? null,
+                    'ubicacion' => $datos['ubicacion'] ?? null,
+                ],
+                static fn ($v) => $v !== null,
+            ));
+            if ($bien->isDirty()) {
+                $bien->save();
+            }
+
             $verificacion = VerificacionBien::updateOrCreate(
                 ['bien_patrimonial_id' => $bien->id],
                 [

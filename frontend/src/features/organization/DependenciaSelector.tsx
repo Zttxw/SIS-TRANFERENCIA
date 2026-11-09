@@ -57,19 +57,19 @@ export function DependenciaSelector({ className }: { className?: string }) {
     return (
       <div
         className={cn(
-          'inline-flex items-center gap-2 rounded-lg border border-[#3484A5]/30 bg-[#3484A5]/10 px-3 py-1.5 text-xs text-slate-800 shadow-sm max-w-md',
+          'inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs text-foreground shadow-sm max-w-md',
           className,
         )}
         title={dependenciaActual?.nombre ?? 'Despacho asignado'}
       >
-        <Building2 className="h-4 w-4 shrink-0 text-[#3484A5]" />
+        <Building2 className="h-4 w-4 shrink-0 text-primary" />
         <div className="flex items-center gap-1.5 truncate">
           {dependenciaActual ? (
             <>
-              <span className="font-mono text-[11px] font-bold text-[#3484A5] shrink-0">
+              <span className="font-mono text-nota font-bold text-primary shrink-0">
                 [{dependenciaActual.codigo}]
               </span>
-              <span className="truncate font-semibold uppercase tracking-tight text-slate-700">
+              <span className="truncate font-semibold uppercase tracking-tight text-foreground">
                 {dependenciaActual.nombre}
               </span>
             </>
@@ -80,7 +80,7 @@ export function DependenciaSelector({ className }: { className?: string }) {
         {esJefe ? (
           <Badge
             variant="outline"
-            className="ml-auto shrink-0 border-[#2CA792]/40 bg-[#2CA792]/15 text-[#2CA792] text-[10px] font-bold px-1.5 py-0 uppercase"
+            className="ml-auto shrink-0 border-secondary/40 bg-secondary/15 text-secondary text-mini font-bold px-1.5 py-0 uppercase"
           >
             <UserCheck className="mr-1 h-3 w-3" />
             Jefatura
@@ -88,7 +88,7 @@ export function DependenciaSelector({ className }: { className?: string }) {
         ) : (
           <Badge
             variant="outline"
-            className="ml-auto shrink-0 border-slate-300 bg-slate-100 text-slate-600 text-[10px] font-medium px-1.5 py-0 uppercase"
+            className="ml-auto shrink-0 border-border bg-muted text-muted-foreground text-mini font-medium px-1.5 py-0 uppercase"
           >
             Servidor
           </Badge>
@@ -106,7 +106,7 @@ export function DependenciaSelector({ className }: { className?: string }) {
           disabled={isLoading}
           value={dependenciaId ?? data[0]?.id ?? ''}
           onChange={(e) => setDependenciaId(Number(e.target.value))}
-          className="h-9 w-full max-w-sm rounded-lg border border-[#3484A5]/30 bg-background px-3 text-xs font-medium text-slate-800 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3484A5]"
+          className="h-9 w-full max-w-sm rounded-lg border border-primary/30 bg-background px-3 text-xs font-medium text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           {data.map((d) => (
             <option key={d.id} value={d.id}>
@@ -128,7 +128,7 @@ export function DependenciaSelector({ className }: { className?: string }) {
         onChange={(e) =>
           setDependenciaId(e.target.value ? Number(e.target.value) : null)
         }
-        className="h-9 w-full max-w-sm rounded-lg border border-input bg-background px-3 text-xs font-medium text-slate-800 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
+        className="h-9 w-full max-w-sm rounded-lg border border-input bg-background px-3 text-xs font-medium text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
       >
         <option value="" className="font-semibold text-primary">
           🏛️ Monitoreo Global (Todo el Municipio)

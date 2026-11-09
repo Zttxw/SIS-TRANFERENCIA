@@ -36,6 +36,9 @@ class AcervoDocumental extends BaseModel
         'registrado_por_id',
         'tipo',
         'serie_documental',
+        'anio',
+        'desde_anio',
+        'hasta_anio',
         'periodo',
         'cantidad_unidades',
         'unidad_conservacion',
@@ -51,6 +54,9 @@ class AcervoDocumental extends BaseModel
     {
         return [
             'cantidad_unidades' => 'integer',
+            'anio' => 'integer',
+            'desde_anio' => 'integer',
+            'hasta_anio' => 'integer',
         ];
     }
 

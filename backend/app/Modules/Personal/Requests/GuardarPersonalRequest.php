@@ -20,6 +20,7 @@ class GuardarPersonalRequest extends AnexoFormRequest
             'regimen_laboral' => ['required', 'string', 'max:100'],
             'modalidad_contractual' => ['nullable', 'string', 'max:100'],
             'situacion_laboral' => ['nullable', 'string', 'max:100'],
+            'observaciones' => ['nullable', 'string', 'max:1000'],
             'validado' => ['nullable', 'boolean'],
         ];
     }

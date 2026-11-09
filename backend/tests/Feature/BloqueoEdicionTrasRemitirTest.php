@@ -58,8 +58,12 @@ class BloqueoEdicionTrasRemitirTest extends TestCase
     {
         return [
             'dependencia_id' => $this->dep->id,
-            'principales_funciones' => 'Funciones del centro de costo de prueba.',
-            'logros' => 'Principales logros registrados en el periodo.',
+            'funciones' => [
+                ['descripcion' => 'Funciones del centro de costo de prueba.'],
+            ],
+            'logros_items' => [
+                ['actividad' => 'Principales logros registrados en el periodo.'],
+            ],
         ];
     }
 

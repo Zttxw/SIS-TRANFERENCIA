@@ -1,14 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import {
-  AlertCircle,
-  Building2,
-  CheckCircle,
-  Save,
-  User,
-} from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { AlertCircle, Building2, CheckCircle, Save, User } from 'lucide-react'
 
 import { useDependenciaActiva } from '@/auth/hooks'
 import { Can } from '@/auth/Can'
@@ -16,31 +7,28 @@ import { AlertaBloqueoEntrega } from '@/components/anexos/AlertaBloqueoEntrega'
 import { AnexoHeader } from '@/components/anexos/AnexoHeader'
 import { ObservacionesAnexoPanel } from '@/components/anexos/ObservacionesAnexoPanel'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
-import { Textarea } from '@/components/ui/textarea'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
 import { useGuardarInformeGestion, useInformeGestion } from './use-gestion'
-import type { EstadoInformeGestion } from '@/types/gestion'
+import { SeccionFilas } from './SeccionFilas'
+import type {
+  EstadoInformeGestion,
+  FilaDificultad,
+  FilaFuncion,
+  FilaLogro,
+  FilaPendiente,
+  NivelOrganizacional,
+} from '@/types/gestion'
 
-const informeSchema = z.object({
-  principales_funciones: z
-    .string()
-    .min(10, 'Debe ingresar al menos 10 caracteres describiendo las funciones'),
-  logros: z
-    .string()
-    .min(10, 'Debe ingresar al menos 10 caracteres describiendo los logros'),
-  dificultades: z.string().optional().nullable(),
-  asuntos_pendientes: z.string().optional().nullable(),
-})
-
-type FormValues = z.infer<typeof informeSchema>
+const NIVELES: { valor: NivelOrganizacional; etiqueta: string }[] = [
+  { valor: 'primer_nivel', etiqueta: 'Primer nivel' },
+  { valor: 'segundo_nivel', etiqueta: 'Segundo nivel' },
+  { valor: 'tercer_nivel', etiqueta: 'Tercer nivel' },
+  { valor: 'equipo_trabajo', etiqueta: 'Equipo de trabajo' },
+]
 
 export function InformeGestionPage() {
   const { dependenciaId } = useDependenciaActiva()
@@ -48,58 +36,71 @@ export function InformeGestionPage() {
   const { data: informe, isLoading: cargandoInforme } = useInformeGestion(dependenciaId)
   const guardarMut = useGuardarInformeGestion()
 
-  const [estadoDeseado, setEstadoDeseado] = useState<EstadoInformeGestion>('borrador')
-
   const dependencia = estadoData?.dependencia
   const estadoEntrega = estadoData?.entrega?.estado ?? null
   const esModificable =
     !estadoEntrega || estadoEntrega === 'borrador' || estadoEntrega === 'observada'
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    watch,
-    formState: { errors, isDirty },
-  } = useForm<FormValues>({
-    resolver: zodResolver(informeSchema),
-    defaultValues: {
-      principales_funciones: '',
-      logros: '',
-      dificultades: '',
-      asuntos_pendientes: '',
-    },
-  })
+  // Estado de cabecera (Sección I) y de las cuatro tablas de filas.
+  const [nivel, setNivel] = useState<NivelOrganizacional | ''>('')
+  const [cargoPeriodo, setCargoPeriodo] = useState('')
+  const [funciones, setFunciones] = useState<FilaFuncion[]>([])
+  const [logros, setLogros] = useState<FilaLogro[]>([])
+  const [dificultades, setDificultades] = useState<FilaDificultad[]>([])
+  const [pendientes, setPendientes] = useState<FilaPendiente[]>([])
+  const [mostrarErrores, setMostrarErrores] = useState(false)
 
-  // Sincronizar datos cargados con el formulario
+  // Sincronizar los datos cargados con el estado del formulario.
   useEffect(() => {
-    if (informe) {
-      reset({
-        principales_funciones: informe.principales_funciones || '',
-        logros: informe.logros || '',
-        dificultades: informe.dificultades || '',
-        asuntos_pendientes: informe.asuntos_pendientes || '',
-      })
-    } else {
-      reset({
-        principales_funciones: '',
-        logros: '',
-        dificultades: '',
-        asuntos_pendientes: '',
-      })
-    }
-  }, [informe, reset])
+    setNivel((informe?.nivel_organizacional as NivelOrganizacional) ?? '')
+    setCargoPeriodo(informe?.cargo_periodo ?? '')
+    setFunciones(informe?.funciones ?? [])
+    setLogros(informe?.logros_items ?? [])
+    setDificultades(informe?.dificultades_items ?? [])
+    setPendientes(informe?.pendientes_items ?? [])
+    setMostrarErrores(false)
+  }, [informe])
 
-  const onSubmit = (values: FormValues) => {
+  const errorFunciones = useMemo(() => {
+    if (!mostrarErrores) return undefined
+    if (funciones.length === 0) return 'Registre al menos una función principal.'
+    if (funciones.some((f) => !f.descripcion?.trim()))
+      return 'Complete la descripción de todas las funciones.'
+    return undefined
+  }, [funciones, mostrarErrores])
+
+  const errorLogros = useMemo(() => {
+    if (!mostrarErrores) return undefined
+    if (logros.length === 0) return 'Registre al menos un logro o resultado.'
+    if (logros.some((l) => !l.actividad?.trim()))
+      return 'Complete la actividad/intervención de todos los logros.'
+    return undefined
+  }, [logros, mostrarErrores])
+
+  const esValido =
+    funciones.length > 0 &&
+    funciones.every((f) => f.descripcion?.trim()) &&
+    logros.length > 0 &&
+    logros.every((l) => l.actividad?.trim())
+
+  const guardar = (estado: EstadoInformeGestion) => {
     if (!dependenciaId) return
+    setMostrarErrores(true)
+    if (!esValido) return
+
+    // Descartar filas opcionales totalmente vacías antes de enviar.
+    const dificultadesLimpias = dificultades.filter((d) => d.dificultad?.trim())
+    const pendientesLimpios = pendientes.filter((p) => p.asunto?.trim())
 
     guardarMut.mutate({
       dependencia_id: dependenciaId,
-      principales_funciones: values.principales_funciones,
-      logros: values.logros,
-      dificultades: values.dificultades || null,
-      asuntos_pendientes: values.asuntos_pendientes || null,
-      estado: estadoDeseado,
+      nivel_organizacional: nivel || null,
+      cargo_periodo: cargoPeriodo.trim() || null,
+      funciones,
+      logros_items: logros,
+      dificultades_items: dificultadesLimpias,
+      pendientes_items: pendientesLimpios,
+      estado,
     })
   }
 
@@ -115,17 +116,15 @@ export function InformeGestionPage() {
           <Building2 className="mx-auto h-12 w-12 text-muted-foreground/60" />
           <h2 className="mt-4 text-base font-semibold">Selección de Centro de Costo requerida</h2>
           <p className="mt-1 text-sm text-muted-foreground max-w-md mx-auto">
-            Utilice el selector de dependencias en la barra superior para elegir el despacho o centro de costo
-            específico y gestionar su Anexo 02.
+            Utilice el selector de dependencias en la barra superior para elegir el despacho o centro
+            de costo específico y gestionar su Anexo 02.
           </p>
         </Card>
       </div>
     )
   }
 
-  const isLoading = cargandoEstado || cargandoInforme
-
-  if (isLoading) {
+  if (cargandoEstado || cargandoInforme) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-3">
         <Spinner className="h-8 w-8 text-primary" />
@@ -138,11 +137,10 @@ export function InformeGestionPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      {/* Cabecera del Anexo */}
       <AnexoHeader
         numeroAnexo="Anexo 02"
         titulo="Informe de Gestión por Centro de Costo"
-        subtitulo="Memoria descriptiva de funciones, metas cumplidas, dificultades y recomendaciones de gestión (Directiva N.° 001-2026-MDSJ/A §7.2)"
+        subtitulo="Funciones, logros, dificultades y agenda pendiente por secciones de filas (Directiva N.° 001-2026-MDSJ/A §7.2)"
         dependenciaCodigo={dependencia?.codigo}
         dependenciaNombre={dependencia?.nombre}
         acciones={
@@ -154,24 +152,17 @@ export function InformeGestionPage() {
                 size="sm"
                 className="gap-1.5"
                 disabled={!esModificable || guardarMut.isPending}
-                onClick={() => {
-                  setEstadoDeseado('borrador')
-                  handleSubmit(onSubmit)()
-                }}
+                onClick={() => guardar('borrador')}
               >
                 <Save className="h-4 w-4" />
                 Guardar Borrador
               </Button>
-
               <Button
                 type="button"
                 size="sm"
-                className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="gap-1.5 bg-secondary hover:bg-secondary-hover text-white"
                 disabled={!esModificable || guardarMut.isPending}
-                onClick={() => {
-                  setEstadoDeseado('completado')
-                  handleSubmit(onSubmit)()
-                }}
+                onClick={() => guardar('completado')}
               >
                 <CheckCircle className="h-4 w-4" />
                 Marcar Completado
@@ -181,12 +172,11 @@ export function InformeGestionPage() {
         }
       />
 
-      {/* Alerta de bloqueo si la entrega está remitida/consolidada */}
       <AlertaBloqueoEntrega estadoEntrega={estadoEntrega} />
 
-      {/* Ficha Informativa de la Unidad y Responsable */}
+      {/* Sección I — Identificación del centro de costo */}
       <Card className="bg-muted/15">
-        <CardContent className="p-4">
+        <CardContent className="space-y-4 p-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="space-y-1">
               <span className="text-xs text-muted-foreground">Centro de Costo / Despacho</span>
@@ -195,7 +185,6 @@ export function InformeGestionPage() {
                 <span className="truncate">{dependencia?.nombre ?? 'Despacho institucional'}</span>
               </div>
             </div>
-
             <div className="space-y-1">
               <span className="text-xs text-muted-foreground">Responsable del Despacho</span>
               <div className="flex items-center gap-1.5 font-medium text-sm text-foreground">
@@ -207,17 +196,16 @@ export function InformeGestionPage() {
                 </span>
               </div>
             </div>
-
             <div className="space-y-1">
               <span className="text-xs text-muted-foreground">Estado del Informe</span>
               <div>
                 {estadoInformeActual === 'completado' ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-semibold text-success-fg">
                     <CheckCircle className="h-3 w-3" />
                     Completado
                   </span>
                 ) : estadoInformeActual === 'borrador' ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-fg">
                     <Save className="h-3 w-3" />
                     En Borrador
                   </span>
@@ -230,180 +218,165 @@ export function InformeGestionPage() {
               </div>
             </div>
           </div>
+
+          <div className="grid grid-cols-1 gap-4 border-t pt-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Nivel organizacional</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {NIVELES.map((n) => (
+                  <button
+                    key={n.valor}
+                    type="button"
+                    disabled={!esModificable}
+                    onClick={() => setNivel(nivel === n.valor ? '' : n.valor)}
+                    className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+                      nivel === n.valor
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-input text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    {n.etiqueta}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cargo_periodo" className="text-xs">
+                Cargo / puesto y periodo de gestión
+              </Label>
+              <Input
+                id="cargo_periodo"
+                value={cargoPeriodo}
+                disabled={!esModificable}
+                placeholder="Ej. Jefe de la Unidad de Logística · 2023–2026"
+                onChange={(e) => setCargoPeriodo(e.target.value)}
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Formulario Principal de Informe de Gestión */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Sección 1: Funciones Desarrolladas */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded bg-primary/10 text-primary font-bold text-xs">
-                1
-              </div>
-              <div>
-                <CardTitle className="text-base">
-                  Principales Funciones y Actividades Desarrolladas *
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Detalle las atribuciones y actividades sustantivas ejecutadas en la unidad orgánica según el ROF / MOF.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Textarea
-              rows={5}
-              disabled={!esModificable || guardarMut.isPending}
-              placeholder="Describa de manera ordenada las principales funciones desarrolladas por la unidad orgánica..."
-              {...register('principales_funciones')}
-              aria-invalid={Boolean(errors.principales_funciones)}
-            />
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{errors.principales_funciones?.message ?? 'Obligatorio, mínimo 10 caracteres.'}</span>
-              <span>{(watch('principales_funciones') || '').length} caracteres</span>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Sección I — Funciones principales */}
+      <SeccionFilas<FilaFuncion>
+        numero={1}
+        titulo="Principales funciones que desarrolla *"
+        descripcion="Atribuciones y actividades sustantivas de la unidad orgánica según el ROF / MOF."
+        columnas={[
+          {
+            campo: 'descripcion',
+            titulo: 'Función principal',
+            placeholder: 'Describa una función principal del centro de costo',
+            multilinea: true,
+            requerido: true,
+          },
+        ]}
+        filas={funciones}
+        filaVacia={() => ({ descripcion: '' })}
+        onChange={setFunciones}
+        disabled={!esModificable || guardarMut.isPending}
+        etiquetaAgregar="Agregar función"
+        error={errorFunciones}
+      />
 
-        {/* Sección 2: Logros de Gestión */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded bg-emerald-500/10 text-emerald-700 font-bold text-xs">
-                2
-              </div>
-              <div>
-                <CardTitle className="text-base">
-                  Logros Alcanzados en el Periodo de Gestión *
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Resalte metas institucionales alcanzadas, proyectos ejecutados y mejoras de procesos implementadas.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Textarea
-              rows={5}
-              disabled={!esModificable || guardarMut.isPending}
-              placeholder="Indique los principales resultados y metas institucionales cumplidas..."
-              {...register('logros')}
-              aria-invalid={Boolean(errors.logros)}
-            />
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{errors.logros?.message ?? 'Obligatorio, mínimo 10 caracteres.'}</span>
-              <span>{(watch('logros') || '').length} caracteres</span>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Sección II — Logros y resultados */}
+      <SeccionFilas<FilaLogro>
+        numero={2}
+        titulo="Logros y resultados obtenidos *"
+        descripcion="Actividad o intervención, resultado logrado, indicador/meta y medio de verificación."
+        colorNumero="bg-success-soft text-success-fg"
+        columnas={[
+          { campo: 'actividad', titulo: 'Actividad / intervención', multilinea: true, requerido: true, ancho: 1.2 },
+          { campo: 'resultado', titulo: 'Resultado o logro', multilinea: true },
+          { campo: 'indicador', titulo: 'Indicador / meta y cumplimiento', multilinea: true },
+          { campo: 'verificacion', titulo: 'Medio de verificación', multilinea: true },
+        ]}
+        filas={logros}
+        filaVacia={() => ({ actividad: '', resultado: '', indicador: '', verificacion: '' })}
+        onChange={setLogros}
+        disabled={!esModificable || guardarMut.isPending}
+        etiquetaAgregar="Agregar logro"
+        error={errorLogros}
+      />
 
-        {/* Sección 3: Dificultades y Limitaciones */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded bg-amber-500/10 text-amber-700 font-bold text-xs">
-                3
-              </div>
-              <div>
-                <CardTitle className="text-base">
-                  Dificultades y Limitaciones Presentadas
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Aspectos presupuestales, logísticos, normativos o tecnológicos que obstaculizaron el cumplimiento óptimo de metas.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Textarea
-              rows={4}
-              disabled={!esModificable || guardarMut.isPending}
-              placeholder="Indique las contingencias o limitaciones evidenciadas durante el periodo (opcional)..."
-              {...register('dificultades')}
-            />
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Opcional</span>
-              <span>{(watch('dificultades') || '').length} caracteres</span>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Sección III — Dificultades afrontadas */}
+      <SeccionFilas<FilaDificultad>
+        numero={3}
+        titulo="Principales dificultades afrontadas"
+        descripcion="Dificultad y su causa, efecto en la gestión y medida adoptada o recomendada (opcional)."
+        colorNumero="bg-warning-soft text-warning-fg"
+        columnas={[
+          { campo: 'dificultad', titulo: 'Dificultad y causa', multilinea: true },
+          { campo: 'efecto', titulo: 'Efecto / actividad afectada', multilinea: true },
+          { campo: 'medida', titulo: 'Medida adoptada o recomendada', multilinea: true },
+        ]}
+        filas={dificultades}
+        filaVacia={() => ({ dificultad: '', efecto: '', medida: '' })}
+        onChange={setDificultades}
+        disabled={!esModificable || guardarMut.isPending}
+        etiquetaAgregar="Agregar dificultad"
+      />
 
-        {/* Sección 4: Asuntos Pendientes y Recomendaciones */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded bg-purple-500/10 text-purple-700 font-bold text-xs">
-                4
-              </div>
-              <div>
-                <CardTitle className="text-base">
-                  Asuntos Pendientes y Recomendaciones para la Gestión Entrante
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Procesos clave en trámite, recomendaciones técnicas y contingencias urgentes a considerar.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Textarea
-              rows={4}
-              disabled={!esModificable || guardarMut.isPending}
-              placeholder="Señale las acciones prioritarias a las que el servidor entrante debe dar atención inmediata..."
-              {...register('asuntos_pendientes')}
-            />
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Opcional</span>
-              <span>{(watch('asuntos_pendientes') || '').length} caracteres</span>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Sección IV — Agenda pendiente */}
+      <SeccionFilas<FilaPendiente>
+        numero={4}
+        titulo="Agenda pendiente y asuntos que requieren atención"
+        descripcion="Asuntos en trámite, estado y acción requerida, documento de referencia, plazo y responsable (opcional)."
+        colorNumero="bg-purple-500/10 text-purple-700"
+        columnas={[
+          { campo: 'asunto', titulo: 'Asunto pendiente / descripción', multilinea: true, ancho: 1.3 },
+          { campo: 'estado_accion', titulo: 'Estado y acción requerida', multilinea: true },
+          { campo: 'documento_referencia', titulo: 'Doc. de referencia / expediente' },
+          { campo: 'plazo', titulo: 'Plazo o fecha' },
+          { campo: 'responsable', titulo: 'Unidad / responsable' },
+        ]}
+        filas={pendientes}
+        filaVacia={() => ({
+          asunto: '',
+          estado_accion: '',
+          documento_referencia: '',
+          plazo: '',
+          responsable: '',
+        })}
+        onChange={setPendientes}
+        disabled={!esModificable || guardarMut.isPending}
+        etiquetaAgregar="Agregar asunto"
+      />
 
-        {/* Barra de Acciones Inferior */}
-        <Can permiso="anexos.registrar">
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border bg-card p-4 shadow-sm">
-            <div className="text-xs text-muted-foreground">
-              {isDirty ? (
-                <span className="text-amber-600 font-medium">Hay cambios no guardados en el formulario.</span>
-              ) : (
-                <span>Todos los cambios guardados.</span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!esModificable || guardarMut.isPending}
-                onClick={() => {
-                  setEstadoDeseado('borrador')
-                  handleSubmit(onSubmit)()
-                }}
-              >
-                <Save className="mr-1.5 h-4 w-4" />
-                Guardar como Borrador
-              </Button>
-
-              <Button
-                type="button"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                disabled={!esModificable || guardarMut.isPending}
-                onClick={() => {
-                  setEstadoDeseado('completado')
-                  handleSubmit(onSubmit)()
-                }}
-              >
-                <CheckCircle className="mr-1.5 h-4 w-4" />
-                Completar Anexo 02
-              </Button>
-            </div>
+      {/* Barra de acciones inferior */}
+      <Can permiso="anexos.registrar">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border bg-card p-4 shadow-sm">
+          <div className="text-xs text-muted-foreground">
+            {esValido ? (
+              <span>Listo para guardar.</span>
+            ) : (
+              <span className="text-warning-fg font-medium">
+                Complete al menos una función y un logro para poder guardar.
+              </span>
+            )}
           </div>
-        </Can>
-      </form>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!esModificable || guardarMut.isPending}
+              onClick={() => guardar('borrador')}
+            >
+              <Save className="mr-1.5 h-4 w-4" />
+              Guardar como Borrador
+            </Button>
+            <Button
+              type="button"
+              className="bg-secondary hover:bg-secondary-hover text-white"
+              disabled={!esModificable || guardarMut.isPending}
+              onClick={() => guardar('completado')}
+            >
+              <CheckCircle className="mr-1.5 h-4 w-4" />
+              Completar Anexo 02
+            </Button>
+          </div>
+        </div>
+      </Can>
 
-      {/* Panel Reutilizable de Observaciones del Anexo */}
       <ObservacionesAnexoPanel
         anexo="gestion"
         observableId={informe?.id}

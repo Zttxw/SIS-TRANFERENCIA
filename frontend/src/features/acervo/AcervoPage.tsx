@@ -206,12 +206,12 @@ export function AcervoPage() {
                   <tr key={item.id} className="hover:bg-muted/20 transition-colors">
                     <td className="p-3 whitespace-nowrap">
                       {item.tipo === 'digital' ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-800 dark:bg-purple-950/60 dark:text-purple-300">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-mini font-semibold text-purple-800 dark:bg-purple-950/60 dark:text-purple-300">
                           <HardDrive className="h-3 w-3" />
                           Digital
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-info-soft px-2 py-0.5 text-mini font-semibold text-info-fg">
                           <FolderArchive className="h-3 w-3" />
                           Físico
                         </span>

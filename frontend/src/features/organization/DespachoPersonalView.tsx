@@ -65,7 +65,7 @@ export function DespachoPersonalView() {
   if (depCargando || estadoCargando) {
     return (
       <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
-        <Spinner className="h-8 w-8 text-[#3484A5]" />
+        <Spinner className="h-8 w-8 text-primary" />
         <p className="text-xs text-muted-foreground font-medium">
           Cargando información del despacho y trabajadores...
         </p>
@@ -95,22 +95,22 @@ export function DespachoPersonalView() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-bold text-[#3484A5] bg-[#3484A5]/10 px-2.5 py-0.5 rounded">
+            <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded">
               Anexo 01
             </span>
-            <span className="font-mono text-xs font-bold bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded">
+            <span className="font-mono text-xs font-bold bg-muted text-foreground px-2.5 py-0.5 rounded">
               [{dep.codigo}]
             </span>
             <Badge
               variant="outline"
-              className="text-xs font-semibold border-[#2CA792]/40 bg-[#2CA792]/10 text-[#2CA792]"
+              className="text-xs font-semibold border-secondary/40 bg-secondary/10 text-secondary"
             >
               Nivel Operativo {dep.nivel}
             </Badge>
             {esJefe && (
               <Badge
                 variant="outline"
-                className="text-xs font-bold border-[#3484A5]/40 bg-[#3484A5]/15 text-[#3484A5]"
+                className="text-xs font-bold border-primary/40 bg-primary/15 text-primary"
               >
                 <UserCheck className="mr-1 h-3.5 w-3.5" />
                 Su Despacho a Cargo
@@ -130,7 +130,7 @@ export function DespachoPersonalView() {
           <Button
             size="sm"
             onClick={() => navigate('/')}
-            className="h-8 text-xs gap-1.5 bg-[#3484A5] hover:bg-[#2b718d] text-white shadow-xs cursor-pointer"
+            className="h-8 text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white shadow-xs cursor-pointer"
           >
             <Boxes className="h-3.5 w-3.5" />
             <span>Ver Tablero de Entrega</span>
@@ -146,17 +146,17 @@ export function DespachoPersonalView() {
         <Card className="border shadow-xs">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+              <p className="text-nota font-semibold text-muted-foreground uppercase tracking-wider">
                 Trabajadores Asignados
               </p>
-              <p className="text-2xl font-bold font-mono text-[#3484A5] mt-1">
+              <p className="text-2xl font-bold font-mono text-primary mt-1">
                 {dep.servidores?.length ?? 0}
               </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <p className="text-nota text-muted-foreground mt-0.5">
                 Padrón operativo del centro de costo
               </p>
             </div>
-            <div className="h-10 w-10 rounded-xl bg-[#3484A5]/10 flex items-center justify-center text-[#3484A5]">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
               <Users className="h-5 w-5" />
             </div>
           </CardContent>
@@ -166,17 +166,17 @@ export function DespachoPersonalView() {
         <Card className="border shadow-xs">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+              <p className="text-nota font-semibold text-muted-foreground uppercase tracking-wider">
                 Bienes Patrimoniales (SIGA)
               </p>
-              <p className="text-2xl font-bold font-mono text-emerald-600 mt-1">
+              <p className="text-2xl font-bold font-mono text-success-fg mt-1">
                 {estadoData?.anexo04_patrimonio?.total_bienes ?? 0}
               </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <p className="text-nota text-muted-foreground mt-0.5">
                 {estadoData?.anexo04_patrimonio?.confirmados ?? 0} verificados en Anexo 04
               </p>
             </div>
-            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+            <div className="h-10 w-10 rounded-xl bg-success-soft flex items-center justify-center text-success-fg">
               <Package className="h-5 w-5" />
             </div>
           </CardContent>
@@ -186,13 +186,13 @@ export function DespachoPersonalView() {
         <Card className="border shadow-xs">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+              <p className="text-nota font-semibold text-muted-foreground uppercase tracking-wider">
                 Acervo Documentario
               </p>
               <p className="text-2xl font-bold font-mono text-indigo-600 mt-1">
                 {estadoData?.anexo03_acervo?.total_series ?? 0}
               </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <p className="text-nota text-muted-foreground mt-0.5">
                 Series documentales inventariadas
               </p>
             </div>
@@ -206,18 +206,18 @@ export function DespachoPersonalView() {
         <Card className="border shadow-xs">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+              <p className="text-nota font-semibold text-muted-foreground uppercase tracking-wider">
                 Estado de Entrega
               </p>
-              <p className="text-base font-bold text-slate-800 capitalize mt-1.5 flex items-center gap-1.5">
-                <ShieldCheck className="h-4 w-4 text-[#2CA792]" />
+              <p className="text-base font-bold text-foreground capitalize mt-1.5 flex items-center gap-1.5">
+                <ShieldCheck className="h-4 w-4 text-secondary" />
                 {estadoData?.entrega?.estado ?? 'Borrador'}
               </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <p className="text-nota text-muted-foreground mt-0.5">
                 Destino: {dep.parent_id ? 'Superior Jerárquico' : 'ETTS Institucional'}
               </p>
             </div>
-            <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+            <div className="h-10 w-10 rounded-xl bg-warning-soft flex items-center justify-center text-warning-fg">
               <Building2 className="h-5 w-5" />
             </div>
           </CardContent>
@@ -228,11 +228,11 @@ export function DespachoPersonalView() {
           PADRÓN DE TRABAJADORES DE LA OFICINA
           ======================================================== */}
       <Card className="border shadow-xs">
-        <CardHeader className="py-4 px-5 border-b border-border bg-slate-50/50">
+        <CardHeader className="py-4 px-5 border-b border-border bg-muted">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                <Users className="h-4 w-4 text-[#3484A5]" />
+              <CardTitle className="text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
                 <span>Trabajadores y Personal del Despacho ({servidoresFiltrados.length})</span>
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground mt-0.5">
@@ -246,7 +246,7 @@ export function DespachoPersonalView() {
                 placeholder="Buscar por DNI, nombres o cargo..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                className="pl-8 text-xs h-8 bg-white"
+                className="pl-8 text-xs h-8 bg-background"
               />
             </div>
           </div>
@@ -260,7 +260,7 @@ export function DespachoPersonalView() {
           ) : (
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-border bg-muted/30 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                <tr className="border-b border-border bg-muted/30 text-nota font-bold uppercase tracking-wider text-muted-foreground">
                   <th className="py-2.5 px-4">DNI</th>
                   <th className="py-2.5 px-4">Servidor Público</th>
                   <th className="py-2.5 px-4">Cargo Oficial</th>
@@ -274,24 +274,24 @@ export function DespachoPersonalView() {
                   return (
                     <tr
                       key={s.id}
-                      className={`hover:bg-slate-50/70 transition-colors ${
-                        esResponsable ? 'bg-[#3484A5]/5' : ''
+                      className={`hover:bg-muted transition-colors ${
+                        esResponsable ? 'bg-primary/5' : ''
                       }`}
                     >
-                      <td className="py-3 px-4 font-mono font-semibold text-[#3484A5]">
+                      <td className="py-3 px-4 font-mono font-semibold text-primary">
                         {s.dni}
                       </td>
-                      <td className="py-3 px-4 font-semibold text-slate-800 uppercase">
+                      <td className="py-3 px-4 font-semibold text-foreground uppercase">
                         {s.apellidos}, {s.nombres}
                       </td>
-                      <td className="py-3 px-4 text-slate-600">
+                      <td className="py-3 px-4 text-muted-foreground">
                         {s.cargo || 'Servidor Público Asignado'}
                       </td>
                       <td className="py-3 px-4">
                         {esResponsable ? (
                           <Badge
                             variant="outline"
-                            className="border-[#2CA792]/40 bg-[#2CA792]/15 text-[#2CA792] font-bold text-[10px] uppercase"
+                            className="border-secondary/40 bg-secondary/15 text-secondary font-bold text-mini uppercase"
                           >
                             <UserCheck className="mr-1 h-3 w-3" />
                             Jefatura de Despacho
@@ -299,7 +299,7 @@ export function DespachoPersonalView() {
                         ) : (
                           <Badge
                             variant="outline"
-                            className="border-slate-200 bg-slate-50 text-slate-600 font-medium text-[10px] uppercase"
+                            className="border-border bg-muted text-muted-foreground font-medium text-mini uppercase"
                           >
                             Servidor
                           </Badge>
@@ -310,7 +310,7 @@ export function DespachoPersonalView() {
                           variant="ghost"
                           size="sm"
                           onClick={() => navigate('/patrimonio')}
-                          className="h-7 text-xs text-[#3484A5] hover:bg-[#3484A5]/10 gap-1 font-medium"
+                          className="h-7 text-xs text-primary hover:bg-primary/10 gap-1 font-medium"
                         >
                           <span>Bienes en custodia</span>
                           <ArrowRight className="h-3 w-3" />
@@ -332,49 +332,49 @@ export function DespachoPersonalView() {
         {/* Anexo 04 */}
         <Card
           onClick={() => navigate('/patrimonio')}
-          className="border shadow-xs hover:border-[#3484A5]/50 transition-all cursor-pointer group"
+          className="border shadow-xs hover:border-primary/50 transition-all cursor-pointer group"
         >
           <CardContent className="p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-[#3484A5]/10 flex items-center justify-center text-[#3484A5] group-hover:bg-[#3484A5] group-hover:text-white transition-colors">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
                 <Package className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-800">Anexo 04 · Patrimonio</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
+                <p className="text-xs font-bold text-foreground">Anexo 04 · Patrimonio</p>
+                <p className="text-nota text-muted-foreground mt-0.5">
                   Verificar {estadoData?.anexo04_patrimonio?.total_bienes ?? 0} bienes en custodia
                 </p>
               </div>
             </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-[#3484A5] transition-colors" />
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </CardContent>
         </Card>
 
         {/* Anexo 05 */}
         <Card
           onClick={() => navigate('/personal')}
-          className="border shadow-xs hover:border-[#3484A5]/50 transition-all cursor-pointer group"
+          className="border shadow-xs hover:border-primary/50 transition-all cursor-pointer group"
         >
           <CardContent className="p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:bg-teal-600 group-hover:text-white transition-colors">
+              <div className="h-10 w-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary group-hover:bg-secondary group-hover:text-white transition-colors">
                 <Users className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-800">Anexo 05 · Personal Asignado</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
+                <p className="text-xs font-bold text-foreground">Anexo 05 · Personal Asignado</p>
+                <p className="text-nota text-muted-foreground mt-0.5">
                   Padrón de servidores y situación contractual
                 </p>
               </div>
             </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-teal-600 transition-colors" />
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-secondary transition-colors" />
           </CardContent>
         </Card>
 
         {/* Anexo 03 */}
         <Card
           onClick={() => navigate('/acervo')}
-          className="border shadow-xs hover:border-[#3484A5]/50 transition-all cursor-pointer group"
+          className="border shadow-xs hover:border-primary/50 transition-all cursor-pointer group"
         >
           <CardContent className="p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -382,8 +382,8 @@ export function DespachoPersonalView() {
                 <Archive className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-800">Anexo 03 · Acervo Documentario</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
+                <p className="text-xs font-bold text-foreground">Anexo 03 · Acervo Documentario</p>
+                <p className="text-nota text-muted-foreground mt-0.5">
                   Inventario físico de archivadores y cajas
                 </p>
               </div>

@@ -32,7 +32,12 @@ export interface BienPatrimonial {
   descripcion: string | null
   marca: string | null
   modelo: string | null
+  color: string | null
   serie: string | null
+  dimension: string | null
+  caracteristicas: string | null
+  codigo_patrimonial_anterior: string | null
+  ubicacion: string | null
   estado_siga: string | null
   valor: string | number | null
   fuente: string
@@ -57,6 +62,11 @@ export interface BienPatrimonial {
 export interface VerificarBienPayload {
   estado: EstadoVerificacionBien
   estado_conservacion?: EstadoConservacion | null
+  color?: string | null
+  dimension?: string | null
+  caracteristicas?: string | null
+  codigo_patrimonial_anterior?: string | null
+  ubicacion?: string | null
   observacion?: string | null
 }
 

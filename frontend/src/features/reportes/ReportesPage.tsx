@@ -10,7 +10,7 @@ export function ReportesPage() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="border-[#3484A5]/40 text-[#3484A5] text-[11px] font-semibold bg-[#3484A5]/5">
+            <Badge variant="outline" className="border-primary/40 text-primary text-nota font-semibold bg-primary/5">
               Módulo de Reportes
             </Badge>
             <span className="text-xs font-medium text-muted-foreground">
@@ -27,8 +27,8 @@ export function ReportesPage() {
       </div>
 
       {/* Tarjeta de Coordinación */}
-      <Card className="border-dashed border-2 bg-slate-50/50 p-8 text-center shadow-xs">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#3484A5]/10 text-[#3484A5]">
+      <Card className="border-dashed border-2 bg-muted p-8 text-center shadow-xs">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
           <BarChart3 className="h-6 w-6" />
         </div>
         <h2 className="mt-4 text-base font-semibold text-foreground">
@@ -40,7 +40,7 @@ export function ReportesPage() {
         </p>
 
         <div className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-          <Clock className="h-4 w-4 text-[#3484A5]" />
+          <Clock className="h-4 w-4 text-primary" />
           <span>Fase de configuración inicial</span>
         </div>
       </Card>
@@ -50,7 +50,7 @@ export function ReportesPage() {
         <Card className="shadow-xs opacity-75">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-              <FileSpreadsheet className="h-4 w-4 text-[#3484A5]" />
+              <FileSpreadsheet className="h-4 w-4 text-primary" />
               Matriz de Anexos
             </CardTitle>
           </CardHeader>
@@ -62,7 +62,7 @@ export function ReportesPage() {
         <Card className="shadow-xs opacity-75">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-              <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+              <FileSpreadsheet className="h-4 w-4 text-success-fg" />
               Conciliación SIGA
             </CardTitle>
           </CardHeader>
@@ -74,7 +74,7 @@ export function ReportesPage() {
         <Card className="shadow-xs opacity-75">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-              <FileSpreadsheet className="h-4 w-4 text-amber-600" />
+              <FileSpreadsheet className="h-4 w-4 text-warning-fg" />
               Observaciones CGR
             </CardTitle>
           </CardHeader>

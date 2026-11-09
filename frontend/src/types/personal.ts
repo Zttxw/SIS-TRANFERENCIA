@@ -10,6 +10,7 @@ export interface Personal {
   regimen_laboral: string
   modalidad_contractual: string | null
   situacion_laboral: string | null
+  observaciones: string | null
   validado: boolean
   fuente: string
   created_at: string
@@ -31,6 +32,7 @@ export interface GuardarPersonalPayload {
   regimen_laboral: string
   modalidad_contractual?: string | null
   situacion_laboral?: string | null
+  observaciones?: string | null
   validado?: boolean
 }
 

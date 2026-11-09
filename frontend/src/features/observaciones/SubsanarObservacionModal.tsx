@@ -80,7 +80,7 @@ export function SubsanarObservacionModal({
         <div className="rounded-lg border bg-muted/40 p-3.5 space-y-2 text-xs">
           <div className="flex items-center justify-between text-muted-foreground font-medium">
             <span className="flex items-center gap-1.5">
-              <MessageSquare className="h-3.5 w-3.5 text-amber-500" />
+              <MessageSquare className="h-3.5 w-3.5 text-warning" />
               Observación formulada
             </span>
             <span>
@@ -93,9 +93,9 @@ export function SubsanarObservacionModal({
         </div>
 
         {/* Aviso de re-remisión automática */}
-        <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 text-xs text-sky-950 dark:border-sky-900/60 dark:bg-sky-950/20 dark:text-sky-200">
+        <div className="rounded-lg border border-info-border bg-info-soft/60 p-3 text-xs text-info-fg">
           <div className="flex items-start gap-2">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-info-fg" />
             <div>
               <p className="font-semibold">Re-remisión automática institucional (RN-13)</p>
               <p className="mt-0.5">
@@ -137,7 +137,7 @@ export function SubsanarObservacionModal({
             <Button
               type="submit"
               disabled={subsanarMut.isPending}
-              className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="gap-1.5 bg-secondary hover:bg-secondary-hover text-white"
             >
               <CheckCircle2 className="h-4 w-4" />
               {subsanarMut.isPending ? 'Subsanando...' : 'Confirmar Subsanación'}

@@ -49,7 +49,7 @@ export function RevisarModal({
               onClick={() => setAccion('consolidar')}
               className={`rounded-lg border p-3 text-left transition-all ${
                 accion === 'consolidar'
-                  ? 'border-emerald-500 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
+                  ? 'border-success-border bg-success-soft text-success-fg'
                   : 'border-border hover:bg-muted'
               }`}
             >
@@ -63,7 +63,7 @@ export function RevisarModal({
               onClick={() => setAccion('observar')}
               className={`rounded-lg border p-3 text-left transition-all ${
                 accion === 'observar'
-                  ? 'border-amber-500 bg-amber-500/10 text-amber-800 dark:text-amber-300'
+                  ? 'border-warning-border bg-warning-soft text-warning-fg'
                   : 'border-border hover:bg-muted'
               }`}
             >

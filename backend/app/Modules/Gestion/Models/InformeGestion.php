@@ -28,12 +28,25 @@ class InformeGestion extends BaseModel
         'dependencia_id',
         'servidor_responsable_id',
         'elaborado_por_id',
-        'principales_funciones',
-        'logros',
-        'dificultades',
-        'asuntos_pendientes',
+        'nivel_organizacional',
+        'cargo_periodo',
+        'funciones',
+        'logros_items',
+        'dificultades_items',
+        'pendientes_items',
         'estado',
     ];
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return [
+            'funciones' => 'array',
+            'logros_items' => 'array',
+            'dificultades_items' => 'array',
+            'pendientes_items' => 'array',
+        ];
+    }
 
     /** @return BelongsTo<Dependencia, $this> */
     public function dependencia(): BelongsTo

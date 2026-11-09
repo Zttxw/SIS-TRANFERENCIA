@@ -43,7 +43,7 @@ export function RemitirModal({
       }`}
     >
       <form onSubmit={handleRemitir} className="space-y-4">
-        <div className="rounded-lg bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
+        <div className="rounded-lg border border-warning-border bg-warning-soft p-3 text-xs text-warning-fg">
           Nota: Una vez remitida la entrega, los anexos quedarán en modo de solo lectura (bloqueados para edición) hasta que el revisor emita una resolución o solicite subsanación.
         </div>
 

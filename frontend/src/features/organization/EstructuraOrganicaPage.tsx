@@ -104,7 +104,7 @@ function ArbolOrganicoAdminView() {
   if (isLoading) {
     return (
       <div className="flex min-h-[450px] flex-col items-center justify-center gap-3">
-        <Spinner className="h-8 w-8 text-[#3484A5]" />
+        <Spinner className="h-8 w-8 text-primary" />
         <p className="text-xs text-muted-foreground font-medium">
           Cargando estructura orgánica institucional...
         </p>
@@ -134,13 +134,13 @@ function ArbolOrganicoAdminView() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-bold text-[#3484A5] bg-[#3484A5]/10 px-2.5 py-0.5 rounded">
+            <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded">
               Anexo 01
             </span>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
               Relación de Centros de Costo y Estructura Orgánica
             </h1>
-            <Badge variant="outline" className="text-xs font-semibold border-[#3484A5]/30 text-[#3484A5] bg-[#3484A5]/5">
+            <Badge variant="outline" className="text-xs font-semibold border-primary/30 text-primary bg-primary/5">
               {dependencias.length} Unidades
             </Badge>
           </div>
@@ -150,8 +150,8 @@ function ArbolOrganicoAdminView() {
         </div>
 
         {/* Aviso de homologación con SGD */}
-        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs font-medium">
-          <Sparkles className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-warning-soft border border-warning-border text-warning-fg text-xs font-medium">
+          <Sparkles className="h-3.5 w-3.5 text-warning-fg shrink-0" />
           <span>Homologación con SGD activa</span>
         </div>
       </div>
@@ -168,7 +168,7 @@ function ArbolOrganicoAdminView() {
                 placeholder="Buscar por código (ej. 01.03) o nombre de oficina..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                className="pl-8 text-xs h-8 bg-slate-50/60"
+                className="pl-8 text-xs h-8 bg-muted"
               />
             </div>
 
@@ -203,10 +203,10 @@ function ArbolOrganicoAdminView() {
           <CardHeader className="py-3 px-4 border-b border-border bg-muted/20">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
               <span className="flex items-center gap-2">
-                <FolderTree className="h-4 w-4 text-[#3484A5]" />
+                <FolderTree className="h-4 w-4 text-primary" />
                 Explorador de Carpetas Orgánicas
               </span>
-              <span className="text-[11px] font-normal text-slate-500">
+              <span className="text-nota font-normal text-muted-foreground">
                 Directorio Institucional MDSJ
               </span>
             </CardTitle>
@@ -239,17 +239,17 @@ function ArbolOrganicoAdminView() {
         <div className="lg:col-span-5 xl:col-span-4 space-y-4">
           {nodoEfectivo ? (
             <Card className="border shadow-xs sticky top-20">
-              <CardHeader className="p-4 border-b border-border bg-slate-50/70">
+              <CardHeader className="p-4 border-b border-border bg-muted">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <span className="text-[10px] font-mono font-bold text-[#3484A5] bg-[#3484A5]/10 px-2 py-0.5 rounded">
+                    <span className="text-mini font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
                       [{nodoEfectivo.codigo}]
                     </span>
                     <h3 className="text-sm font-bold text-foreground mt-1.5 leading-snug">
                       {nodoEfectivo.nombre}
                     </h3>
                   </div>
-                  <Badge variant="outline" className="text-[10px] shrink-0 font-semibold bg-white">
+                  <Badge variant="outline" className="text-mini shrink-0 font-semibold bg-background">
                     Nivel {nodoEfectivo.nivel}
                   </Badge>
                 </div>
@@ -258,14 +258,14 @@ function ArbolOrganicoAdminView() {
               <CardContent className="p-4 space-y-4 text-xs">
                 {/* Indicador de Despacho Activo */}
                 {nodoEfectivo.id === dependenciaId ? (
-                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 font-semibold">
-                    <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-success-soft border border-success-border text-success-fg font-semibold">
+                    <Check className="h-4 w-4 text-success-fg shrink-0" />
                     <span>Esta unidad es actualmente su despacho activo</span>
                   </div>
                 ) : (
                   <Button
                     onClick={() => handleSeleccionarDespacho(nodoEfectivo)}
-                    className="w-full h-8 text-xs bg-[#3484A5] hover:bg-[#2b718d] text-white font-medium cursor-pointer"
+                    className="w-full h-8 text-xs bg-primary hover:bg-primary-hover text-white font-medium cursor-pointer"
                   >
                     Establecer como despacho activo
                   </Button>
@@ -293,12 +293,12 @@ function ArbolOrganicoAdminView() {
                           <div className="font-semibold text-foreground">
                             {nodoEfectivo.encargado.nombres} {nodoEfectivo.encargado.apellidos}
                           </div>
-                          <div className="text-[10px] text-slate-500">
+                          <div className="text-mini text-muted-foreground">
                             {nodoEfectivo.encargado.cargo || 'Responsable'}
                           </div>
                         </>
                       ) : (
-                        <span className="italic text-slate-400">Sin asignar</span>
+                        <span className="italic text-muted-foreground">Sin asignar</span>
                       )}
                     </div>
                   </div>
@@ -306,7 +306,7 @@ function ArbolOrganicoAdminView() {
 
                 {/* Enlaces Rápidos a Anexos de este despacho */}
                 <div className="space-y-2 border-t border-border pt-3">
-                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
+                  <span className="text-nota font-bold text-muted-foreground uppercase tracking-wider block">
                     Acciones de Auditoría
                   </span>
 
@@ -317,7 +317,7 @@ function ArbolOrganicoAdminView() {
                       onClick={() => handleAbrirDashboard(nodoEfectivo)}
                       className="h-8 justify-start text-xs gap-2 font-medium cursor-pointer"
                     >
-                      <Boxes className="h-3.5 w-3.5 text-[#3484A5]" />
+                      <Boxes className="h-3.5 w-3.5 text-primary" />
                       <span>Abrir Dashboard de esta oficina</span>
                       <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
                     </Button>
@@ -331,7 +331,7 @@ function ArbolOrganicoAdminView() {
                       }}
                       className="h-8 justify-start text-xs gap-2 font-medium cursor-pointer"
                     >
-                      <Package className="h-3.5 w-3.5 text-[#3484A5]" />
+                      <Package className="h-3.5 w-3.5 text-primary" />
                       <span>Ver Anexo 04 (Patrimonio SIGA)</span>
                       <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
                     </Button>
@@ -345,7 +345,7 @@ function ArbolOrganicoAdminView() {
                       }}
                       className="h-8 justify-start text-xs gap-2 font-medium cursor-pointer"
                     >
-                      <FileText className="h-3.5 w-3.5 text-[#3484A5]" />
+                      <FileText className="h-3.5 w-3.5 text-primary" />
                       <span>Ver Asuntos Pendientes (SGD)</span>
                       <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
                     </Button>
@@ -397,10 +397,10 @@ function CarpetaNodoItem({
         onClick={() => onSeleccionarNodo(nodo)}
         className={`group flex items-center gap-1.5 py-1.5 px-2 rounded-lg cursor-pointer text-xs transition-all ${
           esSeleccionado
-            ? 'bg-[#3484A5]/15 text-[#3484A5] font-semibold ring-1 ring-[#3484A5]/30'
+            ? 'bg-primary/15 text-primary font-semibold ring-1 ring-primary/30'
             : esActivo
-            ? 'bg-emerald-50 text-emerald-900 font-semibold'
-            : 'hover:bg-slate-100/80 text-slate-800'
+            ? 'bg-success-soft text-success-fg font-semibold'
+            : 'hover:bg-muted text-foreground'
         }`}
         style={{ paddingLeft: `${nivel * 16 + 8}px` }}
       >
@@ -412,7 +412,7 @@ function CarpetaNodoItem({
               e.stopPropagation()
               onToggle(nodo.id)
             }}
-            className="h-4 w-4 flex items-center justify-center rounded hover:bg-slate-200/60 text-slate-500"
+            className="h-4 w-4 flex items-center justify-center rounded hover:bg-muted text-muted-foreground"
           >
             {estaExpandido ? (
               <ChevronDown className="h-3.5 w-3.5" />
@@ -427,30 +427,30 @@ function CarpetaNodoItem({
         {/* Ícono de Carpeta */}
         {tieneHijos ? (
           estaExpandido ? (
-            <FolderOpen className="h-4 w-4 text-amber-500 fill-amber-500/20 shrink-0" />
+            <FolderOpen className="h-4 w-4 text-warning fill-amber-500/20 shrink-0" />
           ) : (
-            <Folder className="h-4 w-4 text-amber-500 fill-amber-500/10 shrink-0" />
+            <Folder className="h-4 w-4 text-warning fill-amber-500/10 shrink-0" />
           )
         ) : (
-          <Folder className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+          <Folder className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
         )}
 
         {/* Código y Nombre */}
-        <span className="font-mono text-[11px] text-slate-500 font-normal shrink-0">
+        <span className="font-mono text-nota text-muted-foreground font-normal shrink-0">
           [{nodo.codigo}]
         </span>
         <span className="truncate flex-1">{nodo.nombre}</span>
 
         {/* Insignia si es Despacho Activo */}
         {esActivo && (
-          <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-emerald-600 text-white shrink-0">
+          <span className="px-1.5 py-0.2 rounded-full text-mini font-bold bg-success text-white shrink-0">
             Activo
           </span>
         )}
 
         {/* Cantidad de subdependencias */}
         {tieneHijos && (
-          <span className="text-[10px] text-slate-400 font-mono shrink-0">
+          <span className="text-mini text-muted-foreground font-mono shrink-0">
             ({nodo.hijos.length})
           </span>
         )}
@@ -458,7 +458,7 @@ function CarpetaNodoItem({
 
       {/* Subcarpetas anidadas recursivas */}
       {tieneHijos && estaExpandido && (
-        <div className="border-l border-slate-200 ml-3 pl-1 space-y-0.5">
+        <div className="border-l border-border ml-3 pl-1 space-y-0.5">
           {nodo.hijos.map((hijo) => (
             <CarpetaNodoItem
               key={hijo.id}

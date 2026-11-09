@@ -15,13 +15,13 @@ export function AlertaBloqueoEntrega({ estadoEntrega, className = '' }: AlertaBl
   if (estadoEntrega === 'remitida') {
     return (
       <div
-        className={`flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50/80 p-4 text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-200 ${className}`}
+        className={`flex items-start gap-3 rounded-lg border border-info-border bg-info-soft p-4 text-info-fg ${className}`}
         role="alert"
       >
-        <Lock className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" />
+        <Lock className="h-5 w-5 shrink-0 text-info mt-0.5" />
         <div className="text-sm space-y-1">
           <p className="font-semibold">Entrega en modo Solo Lectura (Remitida)</p>
-          <p className="text-blue-800/90 dark:text-blue-300">
+          <p className="text-info-fg/90">
             La entrega de este centro de costo ya fue remitida al nivel jerárquico superior para su revisión.
             Los campos se encuentran bloqueados para edición. Solo podrán modificarse si la entrega es observada.
           </p>
@@ -33,13 +33,13 @@ export function AlertaBloqueoEntrega({ estadoEntrega, className = '' }: AlertaBl
   if (estadoEntrega === 'observada') {
     return (
       <div
-        className={`flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200 ${className}`}
+        className={`flex items-start gap-3 rounded-lg border border-warning-border bg-warning-soft p-4 text-warning-fg ${className}`}
         role="alert"
       >
-        <AlertCircle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+        <AlertCircle className="h-5 w-5 shrink-0 text-warning mt-0.5" />
         <div className="text-sm space-y-1">
           <p className="font-semibold">Entrega con Observaciones Pendientes</p>
-          <p className="text-amber-800/90 dark:text-amber-300">
+          <p className="text-warning-fg/90">
             La entrega ha sido devuelta con observaciones. La edición de este anexo se encuentra habilitada para
             que proceda con las correcciones pertinentes y la posterior respuesta de subsanación.
           </p>
@@ -51,13 +51,13 @@ export function AlertaBloqueoEntrega({ estadoEntrega, className = '' }: AlertaBl
   if (estadoEntrega === 'consolidada') {
     return (
       <div
-        className={`flex items-start gap-3 rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-emerald-900 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-200 ${className}`}
+        className={`flex items-start gap-3 rounded-lg border border-success-border bg-success-soft p-4 text-success-fg ${className}`}
         role="alert"
       >
-        <CheckCircle className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+        <CheckCircle className="h-5 w-5 shrink-0 text-success mt-0.5" />
         <div className="text-sm space-y-1">
           <p className="font-semibold">Entrega Consolidada y Aprobada</p>
-          <p className="text-emerald-800/90 dark:text-emerald-300">
+          <p className="text-success-fg/90">
             La información de este anexo ha sido verificada y consolidada de manera definitiva en el proceso
             institucional de transferencia. El registro es inmutable.
           </p>

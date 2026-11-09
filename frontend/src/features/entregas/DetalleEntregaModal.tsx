@@ -59,7 +59,7 @@ export function DetalleEntregaModal({
             {/* Banner de Estado de Entrega */}
             <div className="rounded-lg border bg-muted/40 p-3 flex items-center justify-between">
               <div>
-                <span className="text-[11px] font-medium text-muted-foreground block">
+                <span className="text-nota font-medium text-muted-foreground block">
                   Estado de Entrega Jerárquica
                 </span>
                 <span className="font-semibold text-sm capitalize">
@@ -67,7 +67,7 @@ export function DetalleEntregaModal({
                 </span>
               </div>
               {estado.entrega?.hacia_etts && (
-                <span className="text-[11px] font-semibold text-primary bg-primary/10 rounded-full px-2.5 py-0.5">
+                <span className="text-nota font-semibold text-primary bg-primary/10 rounded-full px-2.5 py-0.5">
                   Destino: ETTS Institucional
                 </span>
               )}
@@ -91,7 +91,7 @@ export function DetalleEntregaModal({
               {/* Anexo 03 Acervo */}
               <div className="rounded-md border p-2.5 bg-background">
                 <div className="flex items-center gap-1.5 font-medium text-muted-foreground mb-1">
-                  <Archive className="h-3.5 w-3.5 text-amber-600" />
+                  <Archive className="h-3.5 w-3.5 text-warning-fg" />
                   <span>Anexo 03 · Acervo</span>
                 </div>
                 <div className="font-semibold text-foreground">
@@ -102,7 +102,7 @@ export function DetalleEntregaModal({
               {/* Anexo 04 Patrimonio */}
               <div className="rounded-md border p-2.5 bg-background">
                 <div className="flex items-center gap-1.5 font-medium text-muted-foreground mb-1">
-                  <Package className="h-3.5 w-3.5 text-emerald-600" />
+                  <Package className="h-3.5 w-3.5 text-success-fg" />
                   <span>Anexo 04 · Patrimonio</span>
                 </div>
                 <div className="font-semibold text-foreground">
@@ -124,7 +124,7 @@ export function DetalleEntregaModal({
               {/* Anexo 06 No Patrimonial */}
               <div className="col-span-2 rounded-md border p-2.5 bg-background">
                 <div className="flex items-center gap-1.5 font-medium text-muted-foreground mb-1">
-                  <PackageOpen className="h-3.5 w-3.5 text-rose-600" />
+                  <PackageOpen className="h-3.5 w-3.5 text-danger-fg" />
                   <span>Anexo 06 · Bienes No Patrimoniales</span>
                 </div>
                 <div className="font-semibold text-foreground">

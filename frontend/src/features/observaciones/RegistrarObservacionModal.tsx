@@ -144,9 +144,9 @@ export function RegistrarObservacionModal({
           )}
         </div>
 
-        <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 text-xs text-amber-900 dark:border-amber-950/60 dark:bg-amber-950/20 dark:text-amber-200">
+        <div className="rounded-lg border border-warning-border bg-warning-soft/50 p-3 text-xs text-warning-fg">
           <div className="flex items-start gap-2">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warning-fg" />
             <p>
               Al registrar la observación, la entrega del centro de costo podrá ser objeto de
               revisión u observación conforme al ciclo de control institucional.

@@ -100,7 +100,7 @@ export function SubirEvidenciaModal({
               <p className="mt-2 text-xs font-medium text-foreground">
                 {archivo ? archivo.name : 'Seleccione o arrastre el archivo de sustento'}
               </p>
-              <p className="text-[11px] text-muted-foreground">Hasta 25 MB por archivo</p>
+              <p className="text-nota text-muted-foreground">Hasta 25 MB por archivo</p>
               <Input
                 id="archivo-evidencia"
                 type="file"

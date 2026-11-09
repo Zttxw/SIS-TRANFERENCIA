@@ -71,6 +71,7 @@ class PersonalService
                 'regimen_laboral' => $datos['regimen_laboral'],
                 'modalidad_contractual' => $datos['modalidad_contractual'] ?? null,
                 'situacion_laboral' => $datos['situacion_laboral'] ?? null,
+                'observaciones' => $datos['observaciones'] ?? null,
                 'validado' => $datos['validado'] ?? true,
                 'validado_por_id' => $usuario->id,
                 'fuente' => FuenteDato::MANUAL->value,
