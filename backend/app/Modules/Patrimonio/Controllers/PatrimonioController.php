@@ -6,11 +6,13 @@ namespace App\Modules\Patrimonio\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Patrimonio\Requests\VerificarBienRequest;
+use App\Modules\Patrimonio\Services\PatrimonioPdf;
 use App\Modules\Patrimonio\Services\PatrimonioService;
 use App\Support\Concerns\AutorizaAmbito;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PatrimonioController extends Controller
 {
@@ -18,7 +20,20 @@ class PatrimonioController extends Controller
 
     public function __construct(
         protected PatrimonioService $patrimonioService,
+        protected PatrimonioPdf $patrimonioPdf,
     ) {}
+
+    /**
+     * Descarga el PDF oficial del Anexo 04 (bienes agrupados por servidor).
+     */
+    public function pdf(Request $request): StreamedResponse
+    {
+        $dependenciaId = (int) $request->input('dependencia_id');
+        abort_unless($dependenciaId > 0, 422, 'Debe especificar dependencia_id.');
+        $this->autorizarDependencia($request->user(), $dependenciaId);
+
+        return $this->patrimonioPdf->descargar($dependenciaId);
+    }
 
     /**
      * Listado paginado de bienes patrimoniales con filtros.

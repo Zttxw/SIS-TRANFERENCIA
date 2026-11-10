@@ -1,8 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
+import { notificarError } from '@/lib/api-errors'
 import type { FiltrosPersonal, GuardarPersonalPayload } from '@/types/personal'
 import { personalService } from './personal.service'
+
+const CONFLICTO =
+  'No se puede modificar: la entrega de este centro de costo está bloqueada (remitida o consolidada).'
 
 export function usePersonal(filtros: FiltrosPersonal = {}) {
   return useQuery({
@@ -23,14 +27,7 @@ export function useGuardarPersonal() {
       queryClient.invalidateQueries({ queryKey: ['personal-asignado'] })
       queryClient.invalidateQueries({ queryKey: ['transferencia-estado', vars.dependencia_id] })
     },
-    onError: (error: any) => {
-      if (error?.status === 409 || error?.response?.status === 409) {
-        toast.error('No se puede modificar: la entrega está bloqueada (remitida o consolidada).')
-        return
-      }
-      const msg = error?.response?.data?.message ?? 'Error al guardar el servidor.'
-      toast.error(msg)
-    },
+    onError: (error) => notificarError(error, { conflicto: CONFLICTO }),
   })
 }
 
@@ -44,14 +41,10 @@ export function useEliminarPersonal() {
       queryClient.invalidateQueries({ queryKey: ['personal-asignado'] })
       queryClient.invalidateQueries({ queryKey: ['transferencia-estado'] })
     },
-    onError: (error: any) => {
-      if (error?.status === 409 || error?.response?.status === 409) {
-        toast.error('No se puede eliminar: la entrega está bloqueada (remitida o consolidada).')
-        return
-      }
-      const msg = error?.response?.data?.message ?? 'Error al eliminar el servidor.'
-      toast.error(msg)
-    },
+    onError: (error) =>
+      notificarError(error, {
+        conflicto: 'No se puede eliminar: la entrega está bloqueada (remitida o consolidada).',
+      }),
   })
 }
 

@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import { descargarArchivo } from '@/lib/descargas'
 import type { ApiPaginated, ApiSuccess } from '@/types/api'
 import type { FiltrosPersonal, GuardarPersonalPayload, Personal } from '@/types/personal'
 
@@ -21,6 +22,15 @@ export const personalService = {
 
   async eliminar(id: number): Promise<void> {
     await api.delete(`/personal/${id}`)
+  },
+
+  /** Descarga el PDF oficial del Anexo 05 (personal a cargo). */
+  async descargarPdf(dependenciaId: number): Promise<void> {
+    await descargarArchivo(
+      '/personal/pdf',
+      { dependencia_id: dependenciaId },
+      'Anexo05-Personal.pdf',
+    )
   },
 }
 

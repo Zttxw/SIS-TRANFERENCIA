@@ -22,6 +22,7 @@ import axios from 'axios'
 import { useDependenciaActiva } from '@/auth/hooks'
 import { Can } from '@/auth/Can'
 import { AnexoHeader } from '@/components/anexos/AnexoHeader'
+import { BotonDescargarPdf } from '@/components/anexos/BotonDescargarPdf'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Card,
@@ -32,6 +33,7 @@ import {
 } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
+import { actaService } from './acta.service'
 import { ActaImprimible } from './ActaImprimible'
 import { FirmaDigitalSeamModal } from './FirmaDigitalSeamModal'
 import { SubirEvidenciaModal } from './SubirEvidenciaModal'
@@ -236,6 +238,16 @@ export function ActaPage() {
         dependenciaNombre={depActual.nombre}
         acciones={
           <div className="flex flex-wrap items-center gap-2">
+            <BotonDescargarPdf
+              descargar={() => actaService.descargarPdf(dependenciaId)}
+              etiqueta="Acta PDF"
+            />
+            <Can permiso="expediente.ver">
+              <BotonDescargarPdf
+                descargar={() => actaService.descargarExpediente(dependenciaId)}
+                etiqueta="Expediente completo"
+              />
+            </Can>
             <Button
               variant="outline"
               size="sm"
@@ -243,7 +255,7 @@ export function ActaPage() {
               className="gap-2 shadow-sm"
             >
               <Printer className="h-4 w-4" />
-              Imprimir / PDF Oficial
+              Imprimir (vista)
             </Button>
 
             <Can permiso="actas.generar">

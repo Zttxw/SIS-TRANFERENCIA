@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import { descargarArchivo } from '@/lib/descargas'
 import type { ApiPaginated, ApiSuccess } from '@/types/api'
 import type {
   BienNoPatrimonial,
@@ -30,6 +31,15 @@ export const noPatrimonialService = {
 
   async eliminar(id: number): Promise<void> {
     await api.delete(`/nopatrimonial/${id}`)
+  },
+
+  /** Descarga el PDF oficial del Anexo 06 (bienes no patrimoniales). */
+  async descargarPdf(dependenciaId: number): Promise<void> {
+    await descargarArchivo(
+      '/nopatrimonial/pdf',
+      { dependencia_id: dependenciaId },
+      'Anexo06-NoPatrimonial.pdf',
+    )
   },
 }
 

@@ -25,6 +25,7 @@ import {
 
 import { useAuth, useDependenciaActiva } from '@/auth/hooks'
 import { Can } from '@/auth/Can'
+import { QueSigueCard } from '@/components/anexos/QueSigueCard'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Card,
@@ -324,6 +325,15 @@ export function DashboardPage() {
           Verifique la información precargada desde el SGD y el SIGA, complete lo que falte y remita su entrega a su responsable inmediato.
         </p>
       </div>
+
+      {/* ¿Qué sigue? — una sugerencia contextual, descartable */}
+      <QueSigueCard
+        estadoEntrega={estadoEntrega}
+        esEditable={esEditable}
+        anexos={filasAnexos
+          .filter((a) => ['anexo02', 'anexo03', 'anexo04', 'anexo05'].includes(a.id))
+          .map((a) => ({ nombre: a.nombre, ruta: a.ruta, completado: a.completado }))}
+      />
 
       {/* ========================================================
           LAYOUT PRINCIPAL: DOS COLUMNAS (8 COLS + 4 COLS)

@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import { descargarArchivo } from '@/lib/descargas'
 import type { ApiSuccess } from '@/types/api'
 import type { ActaTransferencia, EvidenciaItem, SubirEvidenciaPayload } from '@/types/acta'
 
@@ -12,6 +13,30 @@ export const actaService = {
       params: { dependencia_id: dependenciaId },
     })
     return res.data.data
+  },
+
+  /**
+   * Descarga el PDF oficial del Acta (Anexo 07) generado por el backend. Exige
+   * entrega CONSOLIDADA (el backend responde 409 en otro caso).
+   */
+  async descargarPdf(dependenciaId: number): Promise<void> {
+    await descargarArchivo(
+      '/transferencia/acta/pdf',
+      { dependencia_id: dependenciaId },
+      'Anexo07-Acta.pdf',
+    )
+  },
+
+  /**
+   * Descarga el expediente completo (todos los anexos de la dependencia en un
+   * solo PDF). Exige entrega CONSOLIDADA (409 en otro caso).
+   */
+  async descargarExpediente(dependenciaId: number): Promise<void> {
+    await descargarArchivo(
+      '/expediente/pdf',
+      { dependencia_id: dependenciaId },
+      'Expediente-Transferencia.pdf',
+    )
   },
 
   /**

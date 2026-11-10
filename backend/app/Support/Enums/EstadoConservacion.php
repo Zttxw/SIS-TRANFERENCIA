@@ -23,4 +23,17 @@ enum EstadoConservacion: string
             self::INSERVIBLE => 'Inservible / de baja',
         };
     }
+
+    /**
+     * Sigla B / R / M usada por los formatos oficiales (Anexo 06). «Inservible»
+     * se consigna como «M» (malo) por no existir una cuarta columna en el formato.
+     */
+    public function siglaBRM(): string
+    {
+        return match ($this) {
+            self::BUENO => 'B',
+            self::REGULAR => 'R',
+            self::MALO, self::INSERVIBLE => 'M',
+        };
+    }
 }

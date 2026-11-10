@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import { descargarArchivo } from '@/lib/descargas'
 import type { ApiPaginated, ApiSuccess } from '@/types/api'
 import type {
   AcervoDocumental,
@@ -31,6 +32,15 @@ export const acervoService = {
 
   async eliminar(id: number): Promise<void> {
     await api.delete(`/acervo/${id}`)
+  },
+
+  /** Descarga el PDF oficial del Anexo 03 (acervo agrupado por año). */
+  async descargarPdf(dependenciaId: number): Promise<void> {
+    await descargarArchivo(
+      '/acervo/pdf',
+      { dependencia_id: dependenciaId },
+      'Anexo03-Acervo.pdf',
+    )
   },
 }
 

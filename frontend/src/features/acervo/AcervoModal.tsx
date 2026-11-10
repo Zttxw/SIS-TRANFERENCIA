@@ -1,14 +1,16 @@
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm, type UseFormSetError } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { FormField } from '@/components/ui/form-field'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import type { AcervoDocumental, GuardarAcervoPayload } from '@/types/acervo'
+import { aOpcionesSelect, TIPOS_ACERVO, UNIDADES_CONSERVACION } from '@/lib/catalogos'
+import type { AcervoDocumental, GuardarAcervoPayload, TipoAcervo } from '@/types/acervo'
 
 const acervoSchema = z.object({
   tipo: z.enum(['fisico', 'digital']),
@@ -26,7 +28,14 @@ type FormValues = z.infer<typeof acervoSchema>
 interface AcervoModalProps {
   open: boolean
   onClose: () => void
-  onSave: (payload: GuardarAcervoPayload) => void
+  /**
+   * Guarda el payload. Recibe `setError` del formulario para que el `onError`
+   * de la mutación pueda mapear un 422 al campo exacto (ver `aplicarErroresAFormulario`).
+   */
+  onSave: (
+    payload: GuardarAcervoPayload,
+    helpers: { setError: UseFormSetError<FormValues> },
+  ) => void
   acervo?: AcervoDocumental | null
   dependenciaId: number
   loading?: boolean
@@ -46,6 +55,8 @@ export function AcervoModal({
     register,
     handleSubmit,
     reset,
+    control,
+    setError,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(acervoSchema),
@@ -88,17 +99,20 @@ export function AcervoModal({
   }, [acervo, reset])
 
   const onSubmit = (values: FormValues) => {
-    onSave({
-      dependencia_id: dependenciaId,
-      tipo: values.tipo,
-      serie_documental: values.serie_documental,
-      periodo: values.periodo || null,
-      cantidad_unidades: values.cantidad_unidades,
-      unidad_conservacion: values.unidad_conservacion,
-      ubicacion: values.ubicacion || null,
-      descripcion: values.descripcion || null,
-      observaciones: values.observaciones || null,
-    })
+    onSave(
+      {
+        dependencia_id: dependenciaId,
+        tipo: values.tipo,
+        serie_documental: values.serie_documental,
+        periodo: values.periodo || null,
+        cantidad_unidades: values.cantidad_unidades,
+        unidad_conservacion: values.unidad_conservacion,
+        ubicacion: values.ubicacion || null,
+        descripcion: values.descripcion || null,
+        observaciones: values.observaciones || null,
+      },
+      { setError },
+    )
   }
 
   return (
@@ -110,81 +124,108 @@ export function AcervoModal({
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="tipo">Formato del Acervo *</Label>
-            <select
-              id="tipo"
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-              {...register('tipo')}
-            >
-              <option value="fisico">Físico (Papel / Archivadores)</option>
-              <option value="digital">Digital (Repositorios / Nube)</option>
-            </select>
-          </div>
+          <FormField
+            label="Formato del Acervo"
+            htmlFor="tipo"
+            requerido
+            error={errors.tipo?.message}
+            hint="Físico: papel, tomos o archivadores. Digital: repositorios, nube o unidades de disco. El digital suele provenir del SGD."
+          >
+            <Controller
+              control={control}
+              name="tipo"
+              render={({ field }) => (
+                <Select<TipoAcervo>
+                  id="tipo"
+                  options={aOpcionesSelect<TipoAcervo>(TIPOS_ACERVO)}
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </FormField>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="periodo">Periodo Cronológico</Label>
+          <FormField label="Periodo Cronológico" htmlFor="periodo" hint="Rango de años que abarca la serie, p. ej. 2023 - 2026.">
             <Input id="periodo" placeholder="Ej. 2023 - 2026" {...register('periodo')} />
-          </div>
+          </FormField>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="serie">Serie o Tipología Documental *</Label>
+        <FormField
+          label="Serie o Tipología Documental"
+          htmlFor="serie"
+          requerido
+          error={errors.serie_documental?.message}
+          hint="Agrupe por tipo documental, no documento a documento. Ej.: «Comprobantes de pago», «Resoluciones de Gerencia», «Informes técnicos»."
+        >
           <Input
             id="serie"
             placeholder="Ej. Comprobantes de pago, Informes técnicos, Resoluciones..."
             {...register('serie_documental')}
             aria-invalid={Boolean(errors.serie_documental)}
           />
-          {errors.serie_documental && (
-            <p className="text-xs text-destructive">{errors.serie_documental.message}</p>
-          )}
-        </div>
+        </FormField>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="cant">Cantidad de Unidades *</Label>
+          <FormField
+            label="Cantidad de Unidades"
+            htmlFor="cant"
+            requerido
+            error={errors.cantidad_unidades?.message}
+          >
             <Input
               id="cant"
               type="number"
               min={1}
               {...register('cantidad_unidades', { valueAsNumber: true })}
             />
-            {errors.cantidad_unidades && (
-              <p className="text-xs text-destructive">{errors.cantidad_unidades.message}</p>
-            )}
-          </div>
+          </FormField>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="unidad_cons">Unidad de Conservación *</Label>
-            <Input
-              id="unidad_cons"
-              placeholder="Ej. Archivadores, Tomos, Folders, GB..."
-              {...register('unidad_conservacion')}
+          <FormField
+            label="Unidad de Conservación"
+            htmlFor="unidad_cons"
+            requerido
+            error={errors.unidad_conservacion?.message}
+            hint="Cómo se cuenta la cantidad: archivadores, tomos, folders, cajas. Para acervo digital use GB."
+          >
+            <Controller
+              control={control}
+              name="unidad_conservacion"
+              render={({ field }) => (
+                <Select
+                  id="unidad_cons"
+                  buscable
+                  options={aOpcionesSelect(UNIDADES_CONSERVACION)}
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Ej. Archivadores, Tomos, GB…"
+                />
+              )}
             />
-          </div>
+          </FormField>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="ubi">Ubicación Física o Digital</Label>
+        <FormField
+          label="Ubicación Física o Digital"
+          htmlFor="ubi"
+          hint="Dónde se custodia: estante físico o ruta del repositorio digital."
+        >
           <Input
             id="ubi"
-            placeholder="Ej. Estante 3, Balda 2 / Servidor OTI carpeta \TRANSFERENCIA"
+            placeholder="Ej. Estante 3, Balda 2 / Servidor OTI carpeta TRANSFERENCIA"
             {...register('ubicacion')}
           />
-        </div>
+        </FormField>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="desc">Descripción del Contenido</Label>
+        <FormField label="Descripción del Contenido" htmlFor="desc">
           <Textarea
             id="desc"
             rows={2}
             placeholder="Breve reseña del contenido o alcance de las series archivadas..."
             {...register('descripcion')}
           />
-        </div>
+        </FormField>
 
-        <div className="flex items-center justify-end gap-2 pt-3 border-t">
+        <div className="flex items-center justify-end gap-2 border-t pt-3">
           <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
             Cancelar
           </Button>

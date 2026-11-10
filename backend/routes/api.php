@@ -4,11 +4,13 @@ use App\Modules\Acervo\Controllers\AcervoController;
 use App\Modules\Auth\Controllers\ActivacionController;
 use App\Modules\Auth\Controllers\AuthController;
 use App\Modules\Documentos\Controllers\DocumentoPendienteController;
+use App\Modules\Expediente\Controllers\ExpedienteController;
 use App\Modules\Gestion\Controllers\GestionController;
 use App\Modules\NoPatrimonial\Controllers\NoPatrimonialController;
 use App\Modules\Organization\Controllers\DependenciaController;
 use App\Modules\Patrimonio\Controllers\PatrimonioController;
 use App\Modules\Personal\Controllers\PersonalController;
+use App\Modules\Reportes\Controllers\ReportesController;
 use App\Modules\Transferencia\Controllers\ObservacionController;
 use App\Modules\Transferencia\Controllers\TransferenciaController;
 use App\Support\Http\EvidenciaController;
@@ -51,11 +53,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('gestion')->group(function () {
         Route::get('/informe', [GestionController::class, 'show'])->middleware('permiso:anexos.ver');
         Route::post('/informe', [GestionController::class, 'store'])->middleware('permiso:anexos.registrar');
+        Route::get('/informe/pdf', [GestionController::class, 'pdf'])->middleware('permiso:anexos.ver');
     });
 
     // Anexo 03: Acervo Documental Físico y Digital (plan §7.3).
     Route::prefix('acervo')->group(function () {
         Route::get('/', [AcervoController::class, 'index'])->middleware('permiso:anexos.ver');
+        Route::get('/pdf', [AcervoController::class, 'pdf'])->middleware('permiso:anexos.ver');
         Route::post('/', [AcervoController::class, 'store'])->middleware('permiso:anexos.registrar');
         Route::put('/{id}', [AcervoController::class, 'update'])->middleware('permiso:anexos.registrar');
         Route::delete('/{id}', [AcervoController::class, 'destroy'])->middleware('permiso:anexos.registrar');
@@ -64,6 +68,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Anexo 04: Inventario Patrimonial y Verificación física (plan §4.2, §7.4).
     Route::prefix('patrimonio')->group(function () {
         Route::get('/resumen', [PatrimonioController::class, 'resumen'])->middleware('permiso:anexos.ver,reportes.ver');
+        Route::get('/pdf', [PatrimonioController::class, 'pdf'])->middleware('permiso:anexos.ver');
         Route::get('/bienes', [PatrimonioController::class, 'index'])->middleware('permiso:anexos.ver');
         Route::get('/bienes/{id}', [PatrimonioController::class, 'show'])->middleware('permiso:anexos.ver');
         Route::post('/bienes/{id}/verificar', [PatrimonioController::class, 'verificar'])->middleware('permiso:bienes.verificar');
@@ -72,6 +77,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Anexo 05: Personal a Cargo (plan §7.5).
     Route::prefix('personal')->group(function () {
         Route::get('/', [PersonalController::class, 'index'])->middleware('permiso:anexos.ver');
+        Route::get('/pdf', [PersonalController::class, 'pdf'])->middleware('permiso:anexos.ver');
         Route::post('/', [PersonalController::class, 'store'])->middleware('permiso:anexos.registrar');
         Route::delete('/{id}', [PersonalController::class, 'destroy'])->middleware('permiso:anexos.registrar');
     });
@@ -79,6 +85,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Anexo 06: Bienes No Patrimoniales (plan §7.6).
     Route::prefix('nopatrimonial')->group(function () {
         Route::get('/', [NoPatrimonialController::class, 'index'])->middleware('permiso:anexos.ver');
+        Route::get('/pdf', [NoPatrimonialController::class, 'pdf'])->middleware('permiso:anexos.ver');
         Route::post('/', [NoPatrimonialController::class, 'store'])->middleware('permiso:anexos.registrar');
         Route::put('/{id}', [NoPatrimonialController::class, 'update'])->middleware('permiso:anexos.registrar');
         Route::delete('/{id}', [NoPatrimonialController::class, 'destroy'])->middleware('permiso:anexos.registrar');
@@ -92,6 +99,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/remitir', [TransferenciaController::class, 'remitir'])->middleware('permiso:entregas.remitir');
         Route::post('/revisar', [TransferenciaController::class, 'revisar'])->middleware('permiso:entregas.revisar');
         Route::get('/acta', [TransferenciaController::class, 'acta'])->middleware('permiso:actas.generar');
+        Route::get('/acta/pdf', [TransferenciaController::class, 'actaPdf'])->middleware('permiso:actas.generar');
+    });
+
+    // Expediente de entrega: paquete PDF único con todos los anexos (F5).
+    Route::get('/expediente/pdf', [ExpedienteController::class, 'pdf'])->middleware('permiso:expediente.ver');
+
+    // Reportes consolidados y exportación (plan §7.11, F5). La vista requiere
+    // reportes.ver; la descarga Excel/PDF requiere reportes.exportar.
+    Route::prefix('reportes')->group(function () {
+        Route::get('/{reporte}', [ReportesController::class, 'mostrar'])->middleware('permiso:reportes.ver');
+        Route::get('/{reporte}/export', [ReportesController::class, 'exportar'])->middleware('permiso:reportes.exportar');
     });
 
     // Observaciones y subsanaciones sobre los anexos (plan §7.9).

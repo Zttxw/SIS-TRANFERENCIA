@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
+import { notificarError } from '@/lib/api-errors'
 import type { FiltrosPatrimonio, VerificarBienPayload } from '@/types/patrimonio'
 import { patrimonioService } from './patrimonio.service'
 
@@ -38,14 +39,11 @@ export function useVerificarBien() {
       queryClient.invalidateQueries({ queryKey: ['patrimonio-resumen'] })
       queryClient.invalidateQueries({ queryKey: ['transferencia-estado'] })
     },
-    onError: (error: any) => {
-      if (error?.status === 409 || error?.response?.status === 409) {
-        toast.error('No se puede verificar: la entrega de esta dependencia está congelada/consolidada.')
-        return
-      }
-      const msg = error?.response?.data?.message ?? 'Error al registrar la verificación física.'
-      toast.error(msg)
-    },
+    onError: (error) =>
+      notificarError(error, {
+        conflicto:
+          'No se puede verificar: la entrega de esta dependencia está congelada o consolidada.',
+      }),
   })
 }
 

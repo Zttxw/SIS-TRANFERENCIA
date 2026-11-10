@@ -1,13 +1,16 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import {
   AlertCircle,
   Building2,
   CheckCircle2,
+  ChevronDown,
   ClipboardCheck,
   Filter,
   HelpCircle,
+  List,
   Package,
   Search,
+  UserSquare,
   XCircle,
 } from 'lucide-react'
 
@@ -15,6 +18,7 @@ import { useAuth, useDependenciaActiva } from '@/auth/hooks'
 import { Can } from '@/auth/Can'
 import { AlertaBloqueoEntrega } from '@/components/anexos/AlertaBloqueoEntrega'
 import { AnexoHeader } from '@/components/anexos/AnexoHeader'
+import { BotonDescargarPdf } from '@/components/anexos/BotonDescargarPdf'
 import { ObservacionesAnexoPanel } from '@/components/anexos/ObservacionesAnexoPanel'
 import { Button } from '@/components/ui/button'
 import {
@@ -24,15 +28,27 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/pagination'
+import { Select } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
+import { cn } from '@/lib/utils'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
 import {
   useBienesPatrimoniales,
   useResumenPatrimonial,
   useVerificarBien,
 } from './use-patrimonio'
-import { VerificarBienModal } from './VerificarBienModal'
+import { patrimonioService } from './patrimonio.service'
+import { FilaVerificacionPatrimonio } from './FilaVerificacionPatrimonio'
+import { agruparPatrimonioPorServidor } from './agrupar-por-servidor'
 import type { BienPatrimonial, EstadoVerificacionBien, VerificarBienPayload } from '@/types/patrimonio'
+
+const FILTRO_ESTADO_OPCIONES = [
+  { value: '', label: 'Todos los estados' },
+  { value: 'pendiente', label: 'Pendientes' },
+  { value: 'confirmado', label: 'Confirmados' },
+  { value: 'con_observacion', label: 'Con observación' },
+  { value: 'no_ubicado', label: 'No ubicados' },
+]
 
 function renderEstadoBadge(estado?: EstadoVerificacionBien | null) {
   switch (estado) {
@@ -76,8 +92,9 @@ export function PatrimonioPage() {
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<EstadoVerificacionBien | ''>('')
 
-  const [modalVerifAbierto, setModalVerifAbierto] = useState(false)
-  const [bienSeleccionado, setBienSeleccionado] = useState<BienPatrimonial | null>(null)
+  // Id del bien cuya fila de verificación está desplegada en línea (o null).
+  const [filaExpandidaId, setFilaExpandidaId] = useState<number | null>(null)
+  const [vista, setVista] = useState<'lista' | 'servidor'>('lista')
 
   const { data: estadoData } = useEstadoEntrega(dependenciaId)
   const { data: resumen } = useResumenPatrimonial(dependenciaId)
@@ -96,17 +113,13 @@ export function PatrimonioPage() {
     !estadoEntrega || estadoEntrega === 'borrador' || estadoEntrega === 'observada'
   const dependencia = estadoData?.dependencia
 
-  const handleGuardarVerificacion = (payload: VerificarBienPayload) => {
-    if (!bienSeleccionado) return
+  const alternarFila = (bienId: number) =>
+    setFilaExpandidaId((actual) => (actual === bienId ? null : bienId))
 
+  const handleGuardarVerificacion = (bienId: number, payload: VerificarBienPayload) => {
     verificarMut.mutate(
-      { id: bienSeleccionado.id, payload },
-      {
-        onSuccess: () => {
-          setModalVerifAbierto(false)
-          setBienSeleccionado(null)
-        },
-      },
+      { id: bienId, payload },
+      { onSuccess: () => setFilaExpandidaId(null) },
     )
   }
 
@@ -131,6 +144,115 @@ export function PatrimonioPage() {
 
   const bienes = paginado?.data ?? []
   const meta = paginado?.meta
+  const totalColumnas = dependenciaId ? 8 : 9
+  const esVistaServidor = vista === 'servidor'
+
+  // Render de una fila de bien + su fila de verificación expandida (reutilizado
+  // por la vista Lista y la vista Por servidor).
+  const renderFilaBien = (bien: BienPatrimonial) => {
+    const verif = bien.verificacion
+    const estadoVerif = verif?.estado ?? 'pendiente'
+    const expandida = filaExpandidaId === bien.id
+
+    return (
+      <Fragment key={bien.id}>
+        <tr className={cn('transition-colors', expandida ? 'bg-muted/30' : 'hover:bg-muted/20')}>
+          <td className="p-3 font-mono font-bold text-foreground whitespace-nowrap">
+            {bien.codigo_patrimonial}
+          </td>
+          <td className="p-3 max-w-xs font-medium text-foreground">
+            <p className="line-clamp-2">{bien.denominacion}</p>
+          </td>
+          {!dependenciaId && (
+            <td className="p-3 max-w-[200px] text-nota text-muted-foreground truncate">
+              <span className="font-mono text-primary font-semibold block">
+                [{bien.dependencia?.codigo}]
+              </span>
+              <span className="truncate block">{bien.dependencia?.nombre}</span>
+            </td>
+          )}
+          <td className="p-3 whitespace-nowrap text-muted-foreground">
+            <div>{bien.marca ? `${bien.marca}` : 'S/M'}</div>
+            <div className="text-mini text-muted-foreground/80">
+              {bien.modelo ? `Mod: ${bien.modelo}` : ''} {bien.serie ? `· S/N: ${bien.serie}` : ''}
+            </div>
+          </td>
+          <td className="p-3 whitespace-nowrap font-mono text-muted-foreground">
+            {bien.valor != null ? `S/. ${Number(bien.valor).toFixed(2)}` : '-'}
+          </td>
+          <td className="p-3 max-w-[180px] text-muted-foreground truncate">
+            {bien.servidor ? (
+              `${bien.servidor.apellidos}, ${bien.servidor.nombres}`
+            ) : (
+              <span className="italic text-muted-foreground/60">Sin custodio</span>
+            )}
+          </td>
+          <td className="p-3 whitespace-nowrap">{renderEstadoBadge(estadoVerif)}</td>
+          <td className="p-3 whitespace-nowrap capitalize text-muted-foreground">
+            {verif?.estado_conservacion ?? '-'}
+          </td>
+          <td className="p-3 text-right whitespace-nowrap">
+            <Can permiso="bienes.verificar">
+              <Button
+                variant={estadoVerif === 'pendiente' && !expandida ? 'default' : 'outline'}
+                size="sm"
+                className="h-7 gap-1 text-xs"
+                disabled={!esModificable}
+                aria-expanded={expandida}
+                onClick={() => alternarFila(bien.id)}
+              >
+                {expandida ? (
+                  <ChevronDown className="h-3.5 w-3.5" />
+                ) : (
+                  <ClipboardCheck className="h-3.5 w-3.5" />
+                )}
+                {expandida ? 'Cerrar' : estadoVerif === 'pendiente' ? 'Verificar' : 'Editar'}
+              </Button>
+            </Can>
+          </td>
+        </tr>
+
+        {expandida && (
+          <FilaVerificacionPatrimonio
+            bien={bien}
+            colSpan={totalColumnas}
+            loading={verificarMut.isPending}
+            onCancelar={() => setFilaExpandidaId(null)}
+            onGuardar={(payload) => handleGuardarVerificacion(bien.id, payload)}
+          />
+        )}
+      </Fragment>
+    )
+  }
+
+  const gruposServidor = esVistaServidor ? agruparPatrimonioPorServidor(bienes) : []
+
+  const toggleVista = (
+    <div className="flex items-center rounded-md border p-0.5">
+      <Button
+        type="button"
+        variant={vista === 'lista' ? 'secondary' : 'ghost'}
+        size="sm"
+        className="h-7 gap-1.5 px-2.5"
+        onClick={() => setVista('lista')}
+        aria-pressed={vista === 'lista'}
+      >
+        <List className="h-3.5 w-3.5" />
+        Lista
+      </Button>
+      <Button
+        type="button"
+        variant={esVistaServidor ? 'secondary' : 'ghost'}
+        size="sm"
+        className="h-7 gap-1.5 px-2.5"
+        onClick={() => setVista('servidor')}
+        aria-pressed={esVistaServidor}
+      >
+        <UserSquare className="h-3.5 w-3.5" />
+        Por servidor
+      </Button>
+    </div>
+  )
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -144,6 +266,13 @@ export function PatrimonioPage() {
         }
         dependenciaCodigo={dependencia?.codigo}
         dependenciaNombre={dependencia?.nombre ?? (esGlobal ? 'Municipalidad Distrital de San Jerónimo (Visión Global)' : undefined)}
+        acciones={
+          <BotonDescargarPdf
+            descargar={() => patrimonioService.descargarPdf(dependenciaId as number)}
+            disabled={!dependenciaId}
+            etiqueta="PDF oficial"
+          />
+        }
       />
 
       {dependenciaId && <AlertaBloqueoEntrega estadoEntrega={estadoEntrega} />}
@@ -247,22 +376,18 @@ export function PatrimonioPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              {toggleVista}
               <Filter className="h-4 w-4 text-muted-foreground" />
-              <select
-                aria-label="Filtrar por estado de verificación"
-                className="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+              <Select
+                className="w-52"
+                options={FILTRO_ESTADO_OPCIONES}
                 value={filtroEstado}
-                onChange={(e) => {
-                  setFiltroEstado(e.target.value as EstadoVerificacionBien | '')
+                onChange={(v) => {
+                  setFiltroEstado(v as EstadoVerificacionBien | '')
                   setPagina(1)
                 }}
-              >
-                <option value="">Todos los estados</option>
-                <option value="pendiente">Pendientes</option>
-                <option value="confirmado">Confirmados</option>
-                <option value="con_observacion">Con observación</option>
-                <option value="no_ubicado">No ubicados</option>
-              </select>
+                placeholder="Todos los estados"
+              />
             </div>
           </div>
         </CardContent>
@@ -288,85 +413,50 @@ export function PatrimonioPage() {
             <tbody className="divide-y">
               {isLoading ? (
                 <tr>
-                  <td colSpan={!dependenciaId ? 9 : 8} className="py-12 text-center text-muted-foreground">
+                  <td colSpan={totalColumnas} className="py-12 text-center text-muted-foreground">
                     <Spinner className="mx-auto h-6 w-6 text-primary" />
                     <p className="mt-2">Cargando bienes patrimoniales...</p>
                   </td>
                 </tr>
               ) : bienes.length === 0 ? (
                 <tr>
-                  <td colSpan={!dependenciaId ? 9 : 8} className="py-10 text-center text-muted-foreground">
+                  <td colSpan={totalColumnas} className="py-10 text-center text-muted-foreground">
                     <Package className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
                     {!dependenciaId
                       ? 'No se encontraron bienes patrimoniales registrados en el pliego.'
                       : 'No se encontraron bienes patrimoniales registrados en esta dependencia.'}
                   </td>
                 </tr>
-              ) : (
-                bienes.map((bien) => {
-                  const verif = bien.verificacion
-                  const estadoVerif = verif?.estado ?? 'pendiente'
-
-                  return (
-                    <tr key={bien.id} className="hover:bg-muted/20 transition-colors">
-                      <td className="p-3 font-mono font-bold text-foreground whitespace-nowrap">
-                        {bien.codigo_patrimonial}
-                      </td>
-                      <td className="p-3 max-w-xs font-medium text-foreground">
-                        <p className="line-clamp-2">{bien.denominacion}</p>
-                      </td>
-                      {!dependenciaId && (
-                        <td className="p-3 max-w-[200px] text-nota text-muted-foreground truncate">
-                          <span className="font-mono text-primary font-semibold block">
-                            [{bien.dependencia?.codigo}]
+              ) : esVistaServidor ? (
+                gruposServidor.map((grupo) => (
+                  <Fragment key={grupo.servidorId ?? 'sin-custodio'}>
+                    <tr className="bg-muted/40">
+                      <td colSpan={totalColumnas} className="px-3 py-2">
+                        <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                          <UserSquare className="h-3.5 w-3.5 text-primary" />
+                          {grupo.etiqueta}
+                          <span className="font-normal text-muted-foreground">
+                            · {grupo.bienes.length} bien{grupo.bienes.length !== 1 ? 'es' : ''}
                           </span>
-                          <span className="truncate block">{bien.dependencia?.nombre}</span>
-                        </td>
-                      )}
-                      <td className="p-3 whitespace-nowrap text-muted-foreground">
-                        <div>{bien.marca ? `${bien.marca}` : 'S/M'}</div>
-                        <div className="text-mini text-muted-foreground/80">
-                          {bien.modelo ? `Mod: ${bien.modelo}` : ''} {bien.serie ? `· S/N: ${bien.serie}` : ''}
-                        </div>
-                      </td>
-                      <td className="p-3 whitespace-nowrap font-mono text-muted-foreground">
-                        {bien.valor != null ? `S/. ${Number(bien.valor).toFixed(2)}` : '-'}
-                      </td>
-                      <td className="p-3 max-w-[180px] text-muted-foreground truncate">
-                        {bien.servidor
-                          ? `${bien.servidor.apellidos}, ${bien.servidor.nombres}`
-                          : <span className="italic text-muted-foreground/60">Sin custodio</span>}
-                      </td>
-                      <td className="p-3 whitespace-nowrap">
-                        {renderEstadoBadge(estadoVerif)}
-                      </td>
-                      <td className="p-3 whitespace-nowrap capitalize text-muted-foreground">
-                        {verif?.estado_conservacion ?? '-'}
-                      </td>
-                      <td className="p-3 text-right whitespace-nowrap">
-                        <Can permiso="bienes.verificar">
-                          <Button
-                            variant={estadoVerif === 'pendiente' ? 'default' : 'outline'}
-                            size="sm"
-                            className="h-7 gap-1 text-xs"
-                            disabled={!esModificable}
-                            onClick={() => {
-                              setBienSeleccionado(bien)
-                              setModalVerifAbierto(true)
-                            }}
-                          >
-                            <ClipboardCheck className="h-3.5 w-3.5" />
-                            {estadoVerif === 'pendiente' ? 'Verificar' : 'Editar'}
-                          </Button>
-                        </Can>
+                        </span>
                       </td>
                     </tr>
-                  )
-                })
+                    {grupo.bienes.map(renderFilaBien)}
+                  </Fragment>
+                ))
+              ) : (
+                bienes.map(renderFilaBien)
               )}
             </tbody>
           </table>
         </div>
+
+        {esVistaServidor && meta && meta.last_page > 1 && (
+          <p className="px-4 py-2 text-nota text-warning-fg">
+            Agrupando por servidor los {bienes.length} bienes de esta página. Use la
+            paginación para ver el resto del inventario.
+          </p>
+        )}
 
         {meta && (
           <Pagination
@@ -380,18 +470,6 @@ export function PatrimonioPage() {
           />
         )}
       </Card>
-
-      {/* Modal de Verificación */}
-      <VerificarBienModal
-        open={modalVerifAbierto}
-        onClose={() => {
-          setModalVerifAbierto(false)
-          setBienSeleccionado(null)
-        }}
-        onSave={handleGuardarVerificacion}
-        bien={bienSeleccionado}
-        loading={verificarMut.isPending}
-      />
 
       {/* Panel de Observaciones */}
       <ObservacionesAnexoPanel

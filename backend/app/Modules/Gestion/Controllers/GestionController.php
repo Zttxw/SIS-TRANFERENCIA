@@ -7,10 +7,12 @@ namespace App\Modules\Gestion\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Gestion\Requests\GuardarInformeGestionRequest;
 use App\Modules\Gestion\Services\GestionService;
+use App\Modules\Gestion\Services\InformeGestionPdf;
 use App\Support\Concerns\AutorizaAmbito;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class GestionController extends Controller
 {
@@ -18,6 +20,7 @@ class GestionController extends Controller
 
     public function __construct(
         protected GestionService $gestionService,
+        protected InformeGestionPdf $informeGestionPdf,
     ) {}
 
     /**
@@ -48,5 +51,20 @@ class GestionController extends Controller
         );
 
         return ApiResponse::success($informe, 'Informe de gestión guardado con éxito.');
+    }
+
+    /**
+     * Descarga el PDF oficial del Anexo 02 con el formato de la directiva. Se
+     * emite en cualquier estado (marca de agua «BORRADOR» si la entrega aún no
+     * está consolidada), acotado al ámbito del usuario.
+     */
+    public function pdf(Request $request): StreamedResponse
+    {
+        $dependenciaId = (int) $request->input('dependencia_id');
+        abort_unless($dependenciaId > 0, 422, 'Debe especificar dependencia_id.');
+
+        $this->autorizarDependencia($request->user(), $dependenciaId);
+
+        return $this->informeGestionPdf->descargar($dependenciaId);
     }
 }

@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Transferencia\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Transferencia\Services\ActaPdf;
 use App\Modules\Transferencia\Services\TransferenciaService;
 use App\Support\Concerns\AutorizaAmbito;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TransferenciaController extends Controller
 {
@@ -17,6 +19,7 @@ class TransferenciaController extends Controller
 
     public function __construct(
         protected TransferenciaService $transferenciaService,
+        protected ActaPdf $actaPdf,
     ) {}
 
     /**
@@ -127,5 +130,18 @@ class TransferenciaController extends Controller
         $acta = $this->transferenciaService->obtenerActa($dependenciaId, $request->user());
 
         return ApiResponse::success($acta, 'Acta de transferencia obtenida.');
+    }
+
+    /**
+     * Descarga el PDF oficial del Acta (Anexo 07). Exige entrega CONSOLIDADA
+     * (409 en otro caso) a través del mismo generador que el resto de anexos.
+     */
+    public function actaPdf(Request $request): StreamedResponse
+    {
+        $dependenciaId = (int) $request->input('dependencia_id');
+        abort_unless($dependenciaId > 0, 422, 'Debe especificar dependencia_id.');
+        $this->autorizarDependencia($request->user(), $dependenciaId);
+
+        return $this->actaPdf->descargar($dependenciaId, $request->user());
     }
 }

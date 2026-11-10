@@ -1,47 +1,82 @@
 import { useState } from 'react'
-import {
-  Briefcase,
-  Building2,
-  Pencil,
-  Search,
-  Trash2,
-  UserCheck,
-  UserPlus,
-  Users,
-} from 'lucide-react'
+import { Briefcase, UserCheck, UserPlus } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { useDependenciaActiva } from '@/auth/hooks'
-import { Can } from '@/auth/Can'
-import { AlertaBloqueoEntrega } from '@/components/anexos/AlertaBloqueoEntrega'
-import { AnexoHeader } from '@/components/anexos/AnexoHeader'
-import { ObservacionesAnexoPanel } from '@/components/anexos/ObservacionesAnexoPanel'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Pagination } from '@/components/ui/pagination'
-import { Spinner } from '@/components/ui/spinner'
+import { AnexoCrudPage } from '@/components/anexos/AnexoCrudPage'
+import { BotonDescargarPdf } from '@/components/anexos/BotonDescargarPdf'
+import type { ColumnaTabla } from '@/components/ui/data-table'
+import { aplicarErroresAFormulario } from '@/lib/api-errors'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
-import {
-  useEliminarPersonal,
-  useGuardarPersonal,
-  usePersonal,
-} from './use-personal'
+import { personalService } from './personal.service'
+import { useEliminarPersonal, useGuardarPersonal, usePersonal } from './use-personal'
 import { PersonalModal } from './PersonalModal'
-import type { GuardarPersonalPayload, Personal } from '@/types/personal'
+import type { Personal } from '@/types/personal'
+
+const columnas: ColumnaTabla<Personal>[] = [
+  {
+    id: 'dni',
+    header: 'DNI',
+    cell: (s) => <span className="font-mono font-medium text-foreground">{s.dni}</span>,
+  },
+  {
+    id: 'nombre',
+    header: 'Apellidos y Nombres',
+    cell: (s) => (
+      <span className="font-semibold text-foreground">
+        {s.apellidos}, {s.nombres}
+      </span>
+    ),
+  },
+  {
+    id: 'cargo',
+    header: 'Cargo / Función',
+    cell: (s) => (
+      <span className="flex items-center gap-1.5 text-muted-foreground">
+        <Briefcase className="h-3.5 w-3.5 text-primary" />
+        {s.cargo}
+      </span>
+    ),
+  },
+  {
+    id: 'regimen',
+    header: 'Régimen Laboral',
+    cell: (s) => (
+      <span className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-mini font-semibold text-secondary-foreground">
+        {s.regimen_laboral}
+      </span>
+    ),
+  },
+  {
+    id: 'modalidad',
+    header: 'Modalidad',
+    ocultarEnMovil: true,
+    cell: (s) => <span className="text-muted-foreground">{s.modalidad_contractual ?? '-'}</span>,
+  },
+  {
+    id: 'situacion',
+    header: 'Situación',
+    cell: (s) => (
+      <span className="inline-flex items-center gap-1 rounded bg-success-soft px-1.5 py-0.5 text-mini font-medium text-success-fg">
+        <UserCheck className="h-3 w-3" />
+        {s.situacion_laboral ?? 'ACTIVO'}
+      </span>
+    ),
+  },
+]
 
 export function PersonalPage() {
   const { dependenciaId } = useDependenciaActiva()
   const [pagina, setPagina] = useState(1)
   const [busqueda, setBusqueda] = useState('')
 
-  const [modalAbierto, setModalAbierto] = useState(false)
-  const [personalAEditar, setPersonalAEditar] = useState<Personal | null>(null)
-
   const { data: estadoData } = useEstadoEntrega(dependenciaId)
-  const { data: paginado, isLoading } = usePersonal({
+  const {
+    data: paginado,
+    isLoading,
+    error,
+    refetch,
+  } = usePersonal({
     dependencia_id: dependenciaId ?? undefined,
     search: busqueda || undefined,
     page: pagina,
@@ -54,220 +89,73 @@ export function PersonalPage() {
   const estadoEntrega = estadoData?.entrega?.estado ?? null
   const esModificable =
     !estadoEntrega || estadoEntrega === 'borrador' || estadoEntrega === 'observada'
-  const dependencia = estadoData?.dependencia
-
-  const handleGuardar = (payload: GuardarPersonalPayload) => {
-    guardarMut.mutate(payload, {
-      onSuccess: () => {
-        setModalAbierto(false)
-        setPersonalAEditar(null)
-      },
-    })
-  }
-
-  const handleEliminar = (servidor: Personal) => {
-    if (confirm(`¿Confirma retirar a ${servidor.nombres} ${servidor.apellidos} del Anexo 05?`)) {
-      eliminarMut.mutate(servidor.id)
-    }
-  }
-
-  if (!dependenciaId) {
-    return (
-      <div className="mx-auto max-w-5xl space-y-6">
-        <AnexoHeader
-          numeroAnexo="Anexo 05"
-          titulo="Padrón de Personal Asignado"
-          subtitulo="Seleccione un centro de costo en la parte superior para consultar el personal a cargo."
-        />
-        <Card className="border-dashed p-10 text-center">
-          <Building2 className="mx-auto h-12 w-12 text-muted-foreground/60" />
-          <h2 className="mt-4 text-base font-semibold">Selección de Centro de Costo requerida</h2>
-          <p className="mt-1 text-sm text-muted-foreground max-w-md mx-auto">
-            Utilice el selector de dependencias en la barra superior para gestionar el padrón de servidores asignados.
-          </p>
-        </Card>
-      </div>
-    )
-  }
 
   const colaboradores = paginado?.data ?? []
-  const meta = paginado?.meta
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <AnexoHeader
-        numeroAnexo="Anexo 05"
-        titulo="Personal y Colaboradores Asignados a la Unidad"
-        subtitulo="Padrón oficial de servidores, regímenes laborales y situación contractual (Directiva N.° 001-2026-MDSJ/A §7.5)"
-        dependenciaCodigo={dependencia?.codigo}
-        dependenciaNombre={dependencia?.nombre}
-        acciones={
-          <Can permiso="anexos.registrar">
-            <Button
-              size="sm"
-              className="gap-1.5"
-              disabled={!esModificable}
-              onClick={() => {
-                setPersonalAEditar(null)
-                setModalAbierto(true)
-              }}
-            >
-              <UserPlus className="h-4 w-4" />
-              Registrar Servidor
-            </Button>
-          </Can>
-        }
-      />
-
-      <AlertaBloqueoEntrega estadoEntrega={estadoEntrega} />
-
-      {/* Búsqueda */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar servidor por DNI, nombres, apellidos o cargo..."
-              value={busqueda}
-              onChange={(e) => {
-                setBusqueda(e.target.value)
-                setPagina(1)
-              }}
-              className="pl-9"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tabla de Personal */}
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b bg-muted/40 font-medium text-muted-foreground">
-              <tr>
-                <th className="p-3">DNI</th>
-                <th className="p-3">Apellidos y Nombres</th>
-                <th className="p-3">Cargo / Función</th>
-                <th className="p-3">Régimen Laboral</th>
-                <th className="p-3">Modalidad</th>
-                <th className="p-3">Situación</th>
-                <th className="p-3 text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-muted-foreground">
-                    <Spinner className="mx-auto h-6 w-6 text-primary" />
-                    <p className="mt-2">Cargando nómina de personal...</p>
-                  </td>
-                </tr>
-              ) : colaboradores.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-10 text-center text-muted-foreground">
-                    <Users className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
-                    No se han registrado servidores para esta dependencia.
-                  </td>
-                </tr>
-              ) : (
-                colaboradores.map((servidor) => (
-                  <tr key={servidor.id} className="hover:bg-muted/20 transition-colors">
-                    <td className="p-3 font-mono font-medium text-foreground whitespace-nowrap">
-                      {servidor.dni}
-                    </td>
-                    <td className="p-3 font-semibold text-foreground whitespace-nowrap">
-                      {servidor.apellidos}, {servidor.nombres}
-                    </td>
-                    <td className="p-3 text-muted-foreground whitespace-nowrap">
-                      <span className="flex items-center gap-1.5">
-                        <Briefcase className="h-3.5 w-3.5 text-primary" />
-                        {servidor.cargo}
-                      </span>
-                    </td>
-                    <td className="p-3 whitespace-nowrap">
-                      <span className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-mini font-semibold text-secondary-foreground">
-                        {servidor.regimen_laboral}
-                      </span>
-                    </td>
-                    <td className="p-3 whitespace-nowrap text-muted-foreground">
-                      {servidor.modalidad_contractual ?? '-'}
-                    </td>
-                    <td className="p-3 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1 rounded bg-success-soft px-1.5 py-0.5 text-mini font-medium text-success-fg">
-                        <UserCheck className="h-3 w-3" />
-                        {servidor.situacion_laboral ?? 'ACTIVO'}
-                      </span>
-                    </td>
-                    <td className="p-3 text-right whitespace-nowrap">
-                      <Can permiso="anexos.registrar">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                            disabled={!esModificable}
-                            onClick={() => {
-                              setPersonalAEditar(servidor)
-                              setModalAbierto(true)
-                            }}
-                            aria-label="Editar servidor"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                            disabled={!esModificable || eliminarMut.isPending}
-                            onClick={() => handleEliminar(servidor)}
-                            aria-label="Eliminar servidor"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </Can>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {meta && (
-          <Pagination
-            currentPage={meta.current_page}
-            lastPage={meta.last_page}
-            total={meta.total}
-            from={meta.from}
-            to={meta.to}
-            onPageChange={(p) => setPagina(p)}
-            disabled={isLoading}
-          />
-        )}
-      </Card>
-
-      {/* Modal Alta / Edición */}
-      <PersonalModal
-        open={modalAbierto}
-        onClose={() => {
-          setModalAbierto(false)
-          setPersonalAEditar(null)
-        }}
-        onSave={handleGuardar}
-        personal={personalAEditar}
-        dependenciaId={dependenciaId}
-        loading={guardarMut.isPending}
-      />
-
-      {/* Panel de Observaciones */}
-      <ObservacionesAnexoPanel
-        anexo="personal"
-        observableId={colaboradores[0]?.id}
-        dependenciaId={dependenciaId ?? undefined}
-        esModificable={esModificable}
-      />
-    </div>
+    <AnexoCrudPage<Personal>
+      numeroAnexo="Anexo 05"
+      tituloCorto="Padrón de Personal Asignado"
+      titulo="Personal y Colaboradores Asignados a la Unidad"
+      subtitulo="Padrón oficial de servidores, regímenes laborales y situación contractual (Directiva N.° 001-2026-MDSJ/A §7.5)"
+      anexoObservable="personal"
+      guiaSeleccion="Utilice el selector de dependencias en la barra superior para gestionar el padrón de servidores asignados."
+      dependenciaId={dependenciaId}
+      dependencia={estadoData?.dependencia}
+      estadoEntrega={estadoEntrega}
+      esModificable={esModificable}
+      filas={colaboradores}
+      rowKey={(s) => s.id}
+      loading={isLoading}
+      error={error}
+      onReintentar={refetch}
+      meta={paginado?.meta}
+      onPageChange={setPagina}
+      columnas={columnas}
+      busqueda={busqueda}
+      onBuscar={(v) => {
+        setBusqueda(v)
+        setPagina(1)
+      }}
+      placeholderBusqueda="Buscar servidor por DNI, nombres, apellidos o cargo..."
+      accionesExtra={
+        <BotonDescargarPdf
+          descargar={() => personalService.descargarPdf(dependenciaId as number)}
+          disabled={!dependenciaId}
+          etiqueta="PDF oficial"
+        />
+      }
+      textoNuevo="Registrar Servidor"
+      iconoNuevo={UserPlus}
+      vacio={{
+        titulo: 'Sin servidores registrados',
+        descripcion: 'No se han registrado servidores para esta dependencia.',
+      }}
+      confirmarEliminar={(s) => ({
+        title: 'Retirar servidor',
+        description: `Se retirará a ${s.nombres} ${s.apellidos} del Anexo 05. Esta acción no se puede deshacer.`,
+      })}
+      onEliminar={(s) => eliminarMut.mutate(s.id)}
+      eliminando={eliminarMut.isPending}
+      renderModal={({ open, onClose, registro }) => (
+        <PersonalModal
+          open={open}
+          onClose={onClose}
+          personal={registro}
+          dependenciaId={dependenciaId!}
+          loading={guardarMut.isPending}
+          onSave={(payload, { setError }) => {
+            guardarMut.mutate(payload, {
+              onSuccess: onClose,
+              onError: (err) => {
+                if (aplicarErroresAFormulario(err, setError)) {
+                  toast.error('Revise los campos marcados en el formulario.')
+                }
+              },
+            })
+          }}
+        />
+      )}
+    />
   )
 }
-

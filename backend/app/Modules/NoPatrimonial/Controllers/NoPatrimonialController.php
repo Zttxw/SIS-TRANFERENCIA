@@ -6,11 +6,13 @@ namespace App\Modules\NoPatrimonial\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\NoPatrimonial\Requests\GuardarBienNoPatrimonialRequest;
+use App\Modules\NoPatrimonial\Services\NoPatrimonialPdf;
 use App\Modules\NoPatrimonial\Services\NoPatrimonialService;
 use App\Support\Concerns\AutorizaAmbito;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class NoPatrimonialController extends Controller
 {
@@ -18,7 +20,20 @@ class NoPatrimonialController extends Controller
 
     public function __construct(
         protected NoPatrimonialService $noPatrimonialService,
+        protected NoPatrimonialPdf $noPatrimonialPdf,
     ) {}
+
+    /**
+     * Descarga el PDF oficial del Anexo 06 (bienes no patrimoniales).
+     */
+    public function pdf(Request $request): StreamedResponse
+    {
+        $dependenciaId = (int) $request->input('dependencia_id');
+        abort_unless($dependenciaId > 0, 422, 'Debe especificar dependencia_id.');
+        $this->autorizarDependencia($request->user(), $dependenciaId);
+
+        return $this->noPatrimonialPdf->descargar($dependenciaId);
+    }
 
     public function index(Request $request): JsonResponse
     {

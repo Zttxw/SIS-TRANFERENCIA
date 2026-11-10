@@ -51,18 +51,26 @@ export class ApiError extends Error {
   readonly status: number
   readonly errors?: Record<string, string[]>
   readonly isNetworkError: boolean
+  /**
+   * Cuerpo crudo de la respuesta de error. Normalmente innecesario, pero en
+   * descargas (`responseType: 'blob'`) el backend devuelve el error como Blob
+   * sin parsear; se conserva aquí para decodificarlo (ver lib/descargas.ts).
+   */
+  readonly data?: unknown
 
   constructor(params: {
     status: number
     message: string
     errors?: Record<string, string[]>
     isNetworkError?: boolean
+    data?: unknown
   }) {
     super(params.message)
     this.name = 'ApiError'
     this.status = params.status
     this.errors = params.errors
     this.isNetworkError = params.isNetworkError ?? false
+    this.data = params.data
   }
 
   get esNoAutorizado(): boolean {

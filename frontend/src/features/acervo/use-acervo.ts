@@ -1,8 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
+import { notificarError } from '@/lib/api-errors'
 import type { FiltrosAcervo, GuardarAcervoPayload } from '@/types/acervo'
 import { acervoService } from './acervo.service'
+
+const CONFLICTO_ACERVO =
+  'No se puede guardar: la entrega de este centro de costo está bloqueada (remitida o consolidada).'
 
 export function useAcervo(filtros: FiltrosAcervo = {}) {
   return useQuery({
@@ -23,14 +27,7 @@ export function useCrearAcervo() {
       queryClient.invalidateQueries({ queryKey: ['acervo-documental'] })
       queryClient.invalidateQueries({ queryKey: ['transferencia-estado', vars.dependencia_id] })
     },
-    onError: (error: any) => {
-      if (error?.status === 409 || error?.response?.status === 409) {
-        toast.error('No se puede registrar: la entrega está bloqueada (remitida o consolidada).')
-        return
-      }
-      const msg = error?.response?.data?.message ?? 'Error al registrar el acervo.'
-      toast.error(msg)
-    },
+    onError: (error) => notificarError(error, { conflicto: CONFLICTO_ACERVO }),
   })
 }
 
@@ -45,14 +42,7 @@ export function useActualizarAcervo() {
       queryClient.invalidateQueries({ queryKey: ['acervo-documental'] })
       queryClient.invalidateQueries({ queryKey: ['transferencia-estado', vars.payload.dependencia_id] })
     },
-    onError: (error: any) => {
-      if (error?.status === 409 || error?.response?.status === 409) {
-        toast.error('No se puede actualizar: la entrega está bloqueada (remitida o consolidada).')
-        return
-      }
-      const msg = error?.response?.data?.message ?? 'Error al actualizar el acervo.'
-      toast.error(msg)
-    },
+    onError: (error) => notificarError(error, { conflicto: CONFLICTO_ACERVO }),
   })
 }
 
@@ -66,14 +56,10 @@ export function useEliminarAcervo() {
       queryClient.invalidateQueries({ queryKey: ['acervo-documental'] })
       queryClient.invalidateQueries({ queryKey: ['transferencia-estado'] })
     },
-    onError: (error: any) => {
-      if (error?.status === 409 || error?.response?.status === 409) {
-        toast.error('No se puede eliminar: la entrega está bloqueada (remitida o consolidada).')
-        return
-      }
-      const msg = error?.response?.data?.message ?? 'Error al eliminar el acervo.'
-      toast.error(msg)
-    },
+    onError: (error) =>
+      notificarError(error, {
+        conflicto:
+          'No se puede eliminar: la entrega está bloqueada (remitida o consolidada).',
+      }),
   })
 }
-

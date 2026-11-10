@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import { descargarArchivo } from '@/lib/descargas'
 import type { ApiPaginated, ApiSuccess } from '@/types/api'
 import type {
   BienPatrimonial,
@@ -40,6 +41,15 @@ export const patrimonioService = {
       payload,
     )
     return res.data.data
+  },
+
+  /** Descarga el PDF oficial del Anexo 04 (bienes agrupados por servidor). */
+  async descargarPdf(dependenciaId: number): Promise<void> {
+    await descargarArchivo(
+      '/patrimonio/pdf',
+      { dependencia_id: dependenciaId },
+      'Anexo04-Patrimonio.pdf',
+    )
   },
 }
 

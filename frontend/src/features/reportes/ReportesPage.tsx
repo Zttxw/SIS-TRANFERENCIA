@@ -1,89 +1,258 @@
-import { BarChart3, Clock, FileSpreadsheet } from 'lucide-react'
+import { useState } from 'react'
+import { BarChart3, Boxes, MessageSquareWarning } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { DataTable, type ColumnaTabla } from '@/components/ui/data-table'
+import { cn } from '@/lib/utils'
+import { BotonesExport } from './BotonesExport'
+import {
+  useConciliacionPatrimonial,
+  useMatrizAnexos,
+  useObservacionesReporte,
+} from './use-reportes'
+import type { ClaveReporte, FilaConciliacion, FilaMatriz, FilaObservacion } from '@/types/reportes'
 
-export function ReportesPage() {
+const TABS: { clave: ClaveReporte; etiqueta: string; icono: typeof BarChart3 }[] = [
+  { clave: 'matriz-anexos', etiqueta: 'Matriz de anexos', icono: BarChart3 },
+  { clave: 'conciliacion-patrimonial', etiqueta: 'Conciliación patrimonial', icono: Boxes },
+  { clave: 'observaciones', etiqueta: 'Observaciones', icono: MessageSquareWarning },
+]
+
+/** Chip de presencia de anexo (Sí / —) para la matriz. */
+function Presencia({ ok }: { ok: boolean }) {
+  return ok ? (
+    <span className="inline-block rounded bg-success-soft px-1.5 py-0.5 text-nota font-semibold text-success-fg">
+      Sí
+    </span>
+  ) : (
+    <span className="text-muted-foreground">—</span>
+  )
+}
+
+function KpiStrip({ items }: { items: { etiqueta: string; valor: string | number }[] }) {
   return (
-    <div className="space-y-6">
-      {/* Cabecera */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="border-primary/40 text-primary text-nota font-semibold bg-primary/5">
-              Módulo de Reportes
-            </Badge>
-            <span className="text-xs font-medium text-muted-foreground">
-              Directiva CGR N.° 016-2022-CG/PREVI
-            </span>
-          </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
-            Generación y Exportación de Reportes
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Consolidado ejecutivo, matrices de seguimiento y expedientes de rendición de cuentas.
-          </p>
-        </div>
-      </div>
-
-      {/* Tarjeta de Coordinación */}
-      <Card className="border-dashed border-2 bg-muted p-8 text-center shadow-xs">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <BarChart3 className="h-6 w-6" />
-        </div>
-        <h2 className="mt-4 text-base font-semibold text-foreground">
-          Módulo de Reportes en Planificación
-        </h2>
-        <p className="mx-auto mt-2 max-w-md text-xs text-muted-foreground leading-relaxed">
-          Los parámetros para la consolidación de reportes, descargas en Excel/PDF y cruces oficiales
-          con el SIGA/SGD se definirán en la mesa técnica de coordinación.
-        </p>
-
-        <div className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-          <Clock className="h-4 w-4 text-primary" />
-          <span>Fase de configuración inicial</span>
-        </div>
-      </Card>
-
-      {/* Vista previa de tipos de reportes futuros */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card className="shadow-xs opacity-75">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-              <FileSpreadsheet className="h-4 w-4 text-primary" />
-              Matriz de Anexos
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-1 text-xs text-muted-foreground">
-            Resumen consolidado del estado de los anexos 01 al 06 por cada dependencia.
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+      {items.map((it) => (
+        <Card key={it.etiqueta} className="bg-muted/20">
+          <CardContent className="p-3">
+            <div className="text-lg font-bold text-foreground">{it.valor}</div>
+            <div className="text-nota text-muted-foreground">{it.etiqueta}</div>
           </CardContent>
         </Card>
-
-        <Card className="shadow-xs opacity-75">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-              <FileSpreadsheet className="h-4 w-4 text-success-fg" />
-              Conciliación SIGA
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-1 text-xs text-muted-foreground">
-            Balance patrimonial de bienes verificados, faltantes y en almacén.
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-xs opacity-75">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-              <FileSpreadsheet className="h-4 w-4 text-warning-fg" />
-              Observaciones CGR
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-1 text-xs text-muted-foreground">
-            Pliegos observados y tiempos de respuesta de subsanación técnica.
-          </CardContent>
-        </Card>
-      </div>
+      ))}
     </div>
   )
 }
 
+function MatrizView() {
+  const { data, isLoading, error, refetch } = useMatrizAnexos()
+  const m = data?.metricas
+
+  const columnas: ColumnaTabla<FilaMatriz>[] = [
+    { id: 'codigo', header: 'Código', cell: (f) => <span className="font-mono">{f.codigo}</span> },
+    { id: 'nombre', header: 'Centro de costo', cell: (f) => f.nombre },
+    {
+      id: 'estado',
+      header: 'Estado',
+      cell: (f) => <span className="capitalize">{f.estado_entrega}</span>,
+    },
+    { id: 'a02', header: 'A02', align: 'center', cell: (f) => <Presencia ok={f.anexo_02} /> },
+    { id: 'a03', header: 'A03', align: 'center', cell: (f) => <Presencia ok={f.anexo_03} /> },
+    { id: 'a04', header: 'A04', align: 'center', cell: (f) => <Presencia ok={f.anexo_04} /> },
+    { id: 'a05', header: 'A05', align: 'center', cell: (f) => <Presencia ok={f.anexo_05} /> },
+    { id: 'a06', header: 'A06', align: 'center', cell: (f) => <Presencia ok={f.anexo_06} /> },
+    {
+      id: 'obs',
+      header: 'Obs.',
+      align: 'center',
+      cell: (f) =>
+        f.observaciones_abiertas > 0 ? (
+          <span className="font-semibold text-warning-fg">{f.observaciones_abiertas}</span>
+        ) : (
+          <span className="text-muted-foreground">0</span>
+        ),
+    },
+    {
+      id: 'patr',
+      header: '% Patrimonio',
+      align: 'right',
+      cell: (f) => `${f.patrimonio_porcentaje} %`,
+    },
+  ]
+
+  return (
+    <div className="space-y-4">
+      {m && (
+        <KpiStrip
+          items={[
+            { etiqueta: 'Dependencias', valor: m.total_dependencias },
+            { etiqueta: 'Consolidadas', valor: m.consolidadas },
+            { etiqueta: 'Remitidas', valor: m.remitidas },
+            { etiqueta: 'Observadas', valor: m.observadas },
+            { etiqueta: 'Borrador', valor: m.borrador },
+            { etiqueta: '% Avance', valor: `${m.porcentaje_avance} %` },
+          ]}
+        />
+      )}
+      <DataTable<FilaMatriz>
+        columnas={columnas}
+        filas={data?.filas}
+        rowKey={(f) => f.dependencia_id}
+        loading={isLoading}
+        error={error}
+        onReintentar={() => refetch()}
+        vacio={{ titulo: 'Sin dependencias en su ámbito', descripcion: 'No hay datos para consolidar.' }}
+      />
+    </div>
+  )
+}
+
+function ConciliacionView() {
+  const { data, isLoading, error, refetch } = useConciliacionPatrimonial()
+  const t = data?.totales
+
+  const columnas: ColumnaTabla<FilaConciliacion>[] = [
+    { id: 'codigo', header: 'Código', cell: (f) => <span className="font-mono">{f.codigo}</span> },
+    { id: 'nombre', header: 'Centro de costo', cell: (f) => f.nombre },
+    { id: 'total', header: 'Total', align: 'right', cell: (f) => f.total },
+    { id: 'conf', header: 'Verificados', align: 'right', cell: (f) => f.confirmados },
+    { id: 'pend', header: 'Pendientes', align: 'right', cell: (f) => f.pendientes },
+    { id: 'porc', header: '% Avance', align: 'right', cell: (f) => `${f.porcentaje} %` },
+  ]
+
+  return (
+    <div className="space-y-4">
+      {t && (
+        <KpiStrip
+          items={[
+            { etiqueta: 'Bienes SIGA', valor: t.total_bienes },
+            { etiqueta: 'Verificados', valor: t.verificados },
+            { etiqueta: 'Pendientes', valor: t.pendientes },
+            { etiqueta: '% Avance', valor: `${t.porcentaje} %` },
+          ]}
+        />
+      )}
+      <DataTable<FilaConciliacion>
+        columnas={columnas}
+        filas={data?.filas}
+        rowKey={(f) => f.dependencia_id}
+        loading={isLoading}
+        error={error}
+        onReintentar={() => refetch()}
+        vacio={{
+          titulo: 'Sin bienes patrimoniales',
+          descripcion: 'Ninguna dependencia de su ámbito tiene bienes para conciliar.',
+        }}
+      />
+    </div>
+  )
+}
+
+function ObservacionesView() {
+  const { data, isLoading, error, refetch } = useObservacionesReporte()
+  const r = data?.resumen
+
+  const columnas: ColumnaTabla<FilaObservacion>[] = [
+    { id: 'codigo', header: 'Código', cell: (f) => <span className="font-mono">{f.codigo}</span> },
+    { id: 'nombre', header: 'Centro de costo', cell: (f) => f.nombre },
+    { id: 'anexo', header: 'Anexo', cell: (f) => f.anexo },
+    {
+      id: 'descripcion',
+      header: 'Observación',
+      cell: (f) => <span className="line-clamp-2">{f.descripcion}</span>,
+    },
+    { id: 'estado', header: 'Estado', cell: (f) => f.estado_etiqueta },
+    { id: 'registrada', header: 'Registrada', cell: (f) => f.registrada_en ?? '—' },
+    {
+      id: 'dias',
+      header: 'Días subsanación',
+      align: 'right',
+      cell: (f) => (f.dias_subsanacion ?? '—'),
+    },
+  ]
+
+  return (
+    <div className="space-y-4">
+      {r && (
+        <KpiStrip
+          items={[
+            { etiqueta: 'Abiertas', valor: r.abiertas },
+            { etiqueta: 'En subsanación', valor: r.en_subsanacion },
+            { etiqueta: 'Subsanadas', valor: r.subsanadas },
+            { etiqueta: 'Desestimadas', valor: r.desestimadas },
+          ]}
+        />
+      )}
+      <DataTable<FilaObservacion & { __k: number }>
+        columnas={columnas}
+        filas={data?.filas.map((f, i) => ({ ...f, __k: i }))}
+        rowKey={(f) => `${f.dependencia_id}-${f.__k}`}
+        loading={isLoading}
+        error={error}
+        onReintentar={() => refetch()}
+        vacio={{
+          titulo: 'Sin observaciones',
+          descripcion: 'No hay observaciones registradas en su ámbito.',
+        }}
+      />
+    </div>
+  )
+}
+
+export function ReportesPage() {
+  const [tab, setTab] = useState<ClaveReporte>('matriz-anexos')
+
+  return (
+    <div className="space-y-6">
+      {/* Cabecera */}
+      <div className="flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className="border-primary/40 bg-primary/5 text-nota font-semibold text-primary"
+            >
+              Módulo de Reportes
+            </Badge>
+            <span className="text-xs font-medium text-muted-foreground">
+              Directiva N.° 001-2026-MDSJ/A
+            </span>
+          </div>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
+            Consolidados de la Transferencia
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Matriz de anexos, conciliación patrimonial y observaciones — acotados a su ámbito.
+          </p>
+        </div>
+        <BotonesExport reporte={tab} />
+      </div>
+
+      {/* Selector de reporte */}
+      <div className="flex flex-wrap gap-2">
+        {TABS.map(({ clave, etiqueta, icono: Icono }) => (
+          <button
+            key={clave}
+            type="button"
+            onClick={() => setTab(clave)}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
+              tab === clave
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-input text-muted-foreground hover:bg-muted',
+            )}
+          >
+            <Icono className="h-4 w-4" />
+            {etiqueta}
+          </button>
+        ))}
+      </div>
+
+      {/* Contenido del reporte activo */}
+      {tab === 'matriz-anexos' && <MatrizView />}
+      {tab === 'conciliacion-patrimonial' && <ConciliacionView />}
+      {tab === 'observaciones' && <ObservacionesView />}
+    </div>
+  )
+}

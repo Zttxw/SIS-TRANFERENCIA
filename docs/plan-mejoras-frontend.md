@@ -146,11 +146,11 @@ react-hook-form + zod · sonner**. Primitivas UI propias (estilo shadcn copiado,
 | Login por DNI | `/login` | ✅ Funcional | Validación zod espejo del backend |
 | Dashboard | `/` | ✅ Funcional | + `TableroOperativoView` |
 | Estructura orgánica (Anexo 01) | `/organigrama` | 🟡 Parcial | Árbol; falta pulir UX |
-| Anexo 02 · Gestión | `/gestion` | 🟡 Funcional pero **desalineado** | Usa `textarea` libres; el formato oficial pide tablas de filas (ver §0.4) |
-| Anexo 03 · Acervo | `/acervo` | 🟡 Funcional | Modelo OK; falta agrupar por año; `<select>` nativo |
-| Anexo 04 · Patrimonio | `/patrimonio` | 🟡 Funcional | Verificación OK; UX de tabla mejorable |
-| Anexo 05 · Personal | `/personal` | 🟡 Funcional | Regímenes hardcodeados en el modal |
-| Anexo 06 · No patrimonial | `/nopatrimonial` | 🟡 Funcional | — |
+| Anexo 02 · Gestión | `/gestion` | 🟢 Alineado (F0+F4) | Secciones I–IV tipo tabla (`SeccionFilas`); migrado a `AnexoLayout`; hints + «faltan: X» |
+| Anexo 03 · Acervo | `/acervo` | 🟢 F3+F4 | Sobre `AnexoCrudPage`; `Select` + catálogos; toggle Lista / **Por año** |
+| Anexo 04 · Patrimonio | `/patrimonio` | 🟢 F4 | Verificación **inline** (fila expandible, sin modal) + campos SIGA; toggle Lista / **Por servidor** |
+| Anexo 05 · Personal | `/personal` | 🟢 Migrado F3 | Sobre `AnexoCrudPage`; regímenes/situación desde `catalogos.ts` |
+| Anexo 06 · No patrimonial | `/nopatrimonial` | 🟢 Migrado F3 | Sobre `AnexoCrudPage`; estados/unidades desde `catalogos.ts` |
 | Documentos pendientes (SGD) | `/documentos` | 🟡 Funcional | — |
 | Observaciones | `/observaciones` | 🟡 Funcional | Usa `confirm()` nativo |
 | Entregas / flujo | `/entregas` | 🟡 Parcial | Árbol + bandeja; a validar e2e |
@@ -338,24 +338,93 @@ estilizar en el código nuevo. Build + lint verdes.
 **Entregable:** una sola fuente de verdad visual; tema oscuro coherente; sin hex
 mágicos. (Puede apoyarse en la skill `dataviz` para la paleta accesible.)
 
-### F3 — Patrón de anexo real (abstracción) + manejo de errores unificado *(fundación)*
+### F3 — Patrón de anexo real (abstracción) + manejo de errores unificado *(fundación)* ✅ EJECUTADA (2026-11-10)
 
-- `<AnexoLayout>`: cabecera (`AnexoHeader`) + `AlertaBloqueoEntrega` +
-  indicador de estado del anexo + slot de contenido + `ObservacionesAnexoPanel`,
-  todo en un contenedor único.
-- `<AnexoCrudPage>`: patrón declarativo para los anexos de listado (03, 05, 06 y
-  documentos): recibe columnas, filtros, hooks de datos y el modal; aplica
-  automáticamente el bloqueo por estado (409), estados vacíos y permisos (`<Can>`).
-- **Mapa único de errores API → UI**: helper que traduce 401/403/409/422 a
-  copy en español y, en 422, mapea `errors` a los campos del formulario
-  automáticamente (hoy es manual e inconsistente).
-- `src/lib/catalogos.ts`: regímenes, unidades de conservación, estados de
-  conservación, etc., en un solo lugar.
+- ✅ `<AnexoLayout>` (`components/anexos/AnexoLayout.tsx`): cabecera (`AnexoHeader`) +
+  `EstadoAnexoChip` (indicador de estado) + `AlertaBloqueoEntrega` + slot de
+  contenido + `ObservacionesAnexoPanel`, en un contenedor único. Resuelve también
+  el guard de «seleccione centro de costo» que cada página reimplementaba.
+- ✅ `<AnexoCrudPage>` (`components/anexos/AnexoCrudPage.tsx`): patrón declarativo
+  para anexos de listado. Recibe columnas, filtros, datos, hooks y el modal
+  (render-prop); aplica automáticamente el bloqueo por estado (`esModificable`),
+  permisos (`<Can>`), estados carga/vacío/error (`DataTable`), la columna de
+  acciones editar/eliminar y la **confirmación suave** de borrado (`useConfirm`,
+  no `confirm()` nativo).
+- ✅ **Mapa único de errores API → UI** (`lib/api-errors.ts`): `mensajeDeError`
+  (401/403/409/422/red → copy ES accionable), `notificarError` (toast; omite 401 y
+  422), y `aplicarErroresAFormulario(error, setError)` que mapea los `errors` de un
+  422 al campo exacto de react-hook-form. **Corrige un bug latente:** los `use-*.ts`
+  leían `error?.response?.data?.message` (forma cruda de axios) que el interceptor
+  ya había normalizado → rama muerta, el usuario veía el mensaje genérico.
+- ✅ `src/lib/catalogos.ts`: regímenes laborales, situación laboral, tipos de
+  acervo, unidades de conservación, estados de conservación, unidades de medida,
+  en un solo lugar (+ helper `aOpcionesSelect`).
+- ✅ **Migradas como prueba del patrón:** Acervo (03), Personal (05), No
+  Patrimonial (06) — página + modal. Eliminados ahí: `confirm()` nativos,
+  `<select>` crudos (→ `Select`), catálogos hardcodeados, markup de tabla a mano,
+  mapeo de errores inconsistente. 422 cableado al campo en los 3 modales.
 
 **Entregable:** las páginas de anexo pasan a ser configuración; mejorar UX = tocar
-un sitio. Errores consistentes en toda la app.
+un sitio. Errores consistentes en toda la app. Build (prod+dev) + typecheck + lint
+verdes (sin warnings nuevos). **Pendiente de adopción (barrido posterior):** las
+páginas fuera de alcance de esta ronda (documentos, patrimonio, acta, admin,
+entregas, gestión, observaciones) aún usan el `response?.data` muerto y no pasan
+por `AnexoCrudPage`; migrarlas es trabajo mecánico de F4/F6.
 
 ### F4 — Capa de usabilidad y ayuda contextual *(aplicación — el corazón del pedido)*
+
+> **Avance (2026-11-10) — corte «vertical 02 + ayuda/estado en migrados» EJECUTADO.**
+> Build+typecheck+lint verdes (sin warnings nuevos). Hecho en esta ronda:
+> - ✅ **Anexo 02** migrado a `AnexoLayout` (header + `EstadoAnexoChip` + alerta +
+>   observaciones + guard), conservando sus 4 `SeccionFilas` (ya tipo tabla desde
+>   F0) y los botones borrador/completado. Se añadió `hint` por sección y
+>   `IndicadorFaltantes` («Faltan: una función principal, un logro…»). El estado
+>   propio del informe (borrador/completado) queda como chip aparte en la Sección I.
+> - ✅ **Ayuda por campo bajo demanda** (`FormField hint` → `HelpTooltip`) en los
+>   modales 03/05/06: formato de acervo, serie documental, unidad de conservación,
+>   régimen/situación laboral, denominación no patrimonial, estado de conservación.
+> - ✅ **Microcopy/ejemplos** en placeholders revisados con lenguaje de servidor
+>   público; nueva primitiva `components/anexos/IndicadorFaltantes.tsx`.
+> - ✅ **Vacíos accionables + confirmaciones suaves + errores traducidos** ya venían
+>   de F3 (`AnexoCrudPage` + `api-errors`); verificados en los 3 anexos.
+>
+> **Avance (2026-11-10) — corte 2: Anexo 03 por año EJECUTADO.**
+> - ✅ **Anexo 03 agrupado por año** (`AcervoPorAnio` + helper `agrupar-por-anio.ts`):
+>   toggle Lista/Por año en el Acervo; cada año es sección colapsable con sus
+>   series. El año se deriva sin tocar backend (`anio` → `desde_anio` → primer año
+>   del texto `periodo` → «Sin año»); orden desc; no se hardcodea 2023–2026.
+> - ✅ **`AnexoCrudPage` extendido** con prop `vistaAlternativa(handlers)` — un
+>   render-prop que reemplaza el cuerpo de tabla conservando todo el marco
+>   (header, chip, alerta, filtros, modal, observaciones) y expone
+>   `abrirAlta`/`abrirEdicion`. Reutilizable para el 04 «por servidor».
+> - ✅ La vista por año trae todas las series (`per_page` alto) y agrupa en cliente;
+>   borrado con confirmación suave (`useConfirm`); aviso discreto si el total del
+>   servidor supera lo cargado.
+>
+> **Avance (2026-11-10) — corte 3: Anexo 04 verificación inline EJECUTADO.**
+> - ✅ **Verificación sin modal, en la misma tabla** (`FilaVerificacionPatrimonio`):
+>   al pulsar «Verificar/Editar» la fila se **despliega** y muestra un sub-formulario
+>   dentro de la tabla (resultado, estado de conservación y los **campos SIGA que se
+>   completan al verificar**: ubicación, color, dimensión, características, código
+>   anterior + observación con sustento obligatorio RN-05). Guarda en línea y colapsa.
+>   Botón con chevron (`aria-expanded`); `VerificarBienModal` eliminado.
+> - ✅ **`<select>` nativos → `Select` accesible** (filtro de estado + sub-formulario)
+>   y `use-patrimonio` migrado a `notificarError` (bug `response?.data` muerto corregido).
+> - Decisión de UX (usuario): completar en la propia fila es más fluido que abrir un
+>   modal; se mantiene el resumen SIGA, filtros y paginación de la página intactos.
+>
+> **Avance (2026-11-10) — corte 4: F4 COMPLETA.**
+> - ✅ **Anexo 04 agrupado por servidor responsable** (`agrupar-por-servidor.ts` +
+>   toggle Lista/Por servidor en PatrimonioPage): cada custodio es una cabecera de
+>   grupo sobre las mismas filas (la verificación inline sigue funcionando). La fila
+>   de bien se extrajo a `renderFilaBien` reutilizable; aviso si hay más páginas.
+> - ✅ **«¿Qué sigue?» contextual** (`components/anexos/QueSigueCard.tsx`): una sola
+>   sugerencia prioritaria, **descartable**, derivada del estado real de la entrega
+>   y los anexos (observada→subsanar; consolidada→acta; borrador→primer anexo
+>   incompleto o remitir; remitida/en_revision→nada). Montada en el DashboardPage.
+>
+> **F4 cerrada.** Pendiente menor (opcional, puede ir en F6): microcopy de
+> documentos. Siguiente fase: **F5** (PDF oficial por anexo + Reportes + paquete).
 
 Sobre las fundaciones anteriores, y respetando *intuitivo, no saturado*:
 
@@ -388,6 +457,50 @@ Sobre las fundaciones anteriores, y respetando *intuitivo, no saturado*:
 cuando la pide. Sin saturación visual.
 
 ### F5 — Cierre de huecos funcionales *(aplicación)*
+
+> **EJECUTADA (2026-11-10).** Primera fase que toca backend además del frontend.
+> Decisiones §5.2 confirmadas con el usuario: Reportes MVP = los 3 (matriz+avance,
+> conciliación patrimonial, observaciones); **Excel primero** (`maatwebsite/excel`),
+> PDF después; motor **`barryvdh/laravel-dompdf`**; PDF de anexos 02–06 generable
+> **siempre** (marca de agua «BORRADOR» si la entrega no está consolidada), acta 07
+> y paquete completo exigen CONSOLIDADA. **60 tests backend verdes** (42 base + 18
+> F5), `npm run build` + `tsc` verdes, pint limpio, sin lint nuevos.
+>
+> **1) PDF oficial 02–06 + acta 07 (vertical 02 primero, luego replicado).**
+> - Soporte compartido: `Support\Services\PdfService` (envuelve dompdf: stream +
+>   binario), `Support\Services\ContextoTransferencia` (proceso activo + estado de
+>   entrega + noción de «borrador» para la marca de agua), layout Blade único
+>   `resources/views/pdf/layout.blade.php` (cabecera/pie institucional, marca de
+>   agua BORRADOR) y **partials** `pdf/partials/anexo0{2..6}.blade.php` reutilizados
+>   por el PDF individual y el expediente (una sola fuente de verdad del formato).
+> - Un generador por anexo (`InformeGestionPdf`, `AcervoPdf`, `PatrimonioPdf`,
+>   `PersonalPdf`, `NoPatrimonialPdf`, `ActaPdf`), cada uno con `datos()` (modelo de
+>   vista) + `descargar()`. 04 agrupa por servidor responsable; 03 por año; 06 con
+>   estado B/R/M (`EstadoConservacion::siglaBRM()`). Acta reutiliza
+>   `TransferenciaService::obtenerActa` (gate 409 CONSOLIDADA).
+> - Endpoints `GET /{anexo}/pdf?dependencia_id=` gated `permiso:anexos.ver` + ámbito;
+>   `GET /transferencia/acta/pdf` gated `actas.generar`. Descarga autenticada en
+>   frontend vía `lib/descargas.ts` (Blob+Bearer, decodifica errores-blob a
+>   `ApiError`) + primitiva `components/anexos/BotonDescargarPdf`; botón «PDF oficial»
+>   en las 6 páginas (02–06 + acta). `AnexoCrudPage` ganó prop `accionesExtra`.
+>
+> **2) Reportes (`/reportes`) — cascarón → real.** Módulo `App\Modules\Reportes`:
+> `ReportesService` (matriz de anexos+avance, conciliación patrimonial,
+> observaciones; reutiliza el tablero operativo; todo acotado al ámbito),
+> `ReportesController` (JSON `GET /reportes/{reporte}` gated `reportes.ver` +
+> export `GET /reportes/{reporte}/export?formato=excel|pdf` gated
+> `reportes.exportar`), exportadores `maatwebsite/excel` y PDF genérico
+> `pdf/reporte.blade.php`. Frontend: `ReportesPage` con 3 pestañas, KPIs,
+> `DataTable` y botones Excel/PDF (`BotonesExport`, gated).
+>
+> **3) Paquete de entrega.** `App\Modules\Expediente\Services\ExpedientePdf` compone
+> un único PDF con todos los anexos presentes (reutiliza `datos()` de cada generador
+> + partials, página por anexo), exige CONSOLIDADA (409). Endpoint
+> `GET /expediente/pdf` gated `expediente.ver`; botón «Expediente completo» en la
+> página del Acta.
+>
+> **No incluido en este corte (queda para F6):** validación e2e del flujo de
+> Entregas con datos reales y alineación del Anexo 01 / Estructura orgánica.
 
 - **PDF oficial por anexo (02–06) + acta (07)** — *objetivo confirmado*:
   - Backend genera cada anexo con el **formato exacto de la directiva** (maqueta

@@ -6,11 +6,13 @@ namespace App\Modules\Personal\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Personal\Requests\GuardarPersonalRequest;
+use App\Modules\Personal\Services\PersonalPdf;
 use App\Modules\Personal\Services\PersonalService;
 use App\Support\Concerns\AutorizaAmbito;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PersonalController extends Controller
 {
@@ -18,7 +20,20 @@ class PersonalController extends Controller
 
     public function __construct(
         protected PersonalService $personalService,
+        protected PersonalPdf $personalPdf,
     ) {}
+
+    /**
+     * Descarga el PDF oficial del Anexo 05 (personal a cargo).
+     */
+    public function pdf(Request $request): StreamedResponse
+    {
+        $dependenciaId = (int) $request->input('dependencia_id');
+        abort_unless($dependenciaId > 0, 422, 'Debe especificar dependencia_id.');
+        $this->autorizarDependencia($request->user(), $dependenciaId);
+
+        return $this->personalPdf->descargar($dependenciaId);
+    }
 
     public function index(Request $request): JsonResponse
     {

@@ -1,12 +1,14 @@
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm, type UseFormSetError } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { FormField } from '@/components/ui/form-field'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
+import { aOpcionesSelect, REGIMENES_LABORALES, SITUACIONES_LABORALES } from '@/lib/catalogos'
 import type { GuardarPersonalPayload, Personal } from '@/types/personal'
 
 const personalSchema = z.object({
@@ -24,7 +26,10 @@ type FormValues = z.infer<typeof personalSchema>
 interface PersonalModalProps {
   open: boolean
   onClose: () => void
-  onSave: (payload: GuardarPersonalPayload) => void
+  onSave: (
+    payload: GuardarPersonalPayload,
+    helpers: { setError: UseFormSetError<FormValues> },
+  ) => void
   personal?: Personal | null
   dependenciaId: number
   loading?: boolean
@@ -44,6 +49,8 @@ export function PersonalModal({
     register,
     handleSubmit,
     reset,
+    control,
+    setError,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(personalSchema),
@@ -83,16 +90,19 @@ export function PersonalModal({
   }, [personal, reset])
 
   const onSubmit = (values: FormValues) => {
-    onSave({
-      dependencia_id: dependenciaId,
-      dni: values.dni,
-      nombres: values.nombres,
-      apellidos: values.apellidos,
-      cargo: values.cargo,
-      regimen_laboral: values.regimen_laboral,
-      modalidad_contractual: values.modalidad_contractual || null,
-      situacion_laboral: values.situacion_laboral || null,
-    })
+    onSave(
+      {
+        dependencia_id: dependenciaId,
+        dni: values.dni,
+        nombres: values.nombres,
+        apellidos: values.apellidos,
+        cargo: values.cargo,
+        regimen_laboral: values.regimen_laboral,
+        modalidad_contractual: values.modalidad_contractual || null,
+        situacion_laboral: values.situacion_laboral || null,
+      },
+      { setError },
+    )
   }
 
   return (
@@ -103,8 +113,13 @@ export function PersonalModal({
       description="Anexo 05: Relación de personal y colaboradores asignados a la unidad orgánica (Directiva §7.5)."
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="dni">DNI (8 dígitos) *</Label>
+        <FormField
+          label="DNI (8 dígitos)"
+          htmlFor="dni"
+          requerido
+          error={errors.dni?.message}
+          hint={isEditing ? 'El DNI no puede cambiarse al editar un servidor existente.' : undefined}
+        >
           <Input
             id="dni"
             maxLength={8}
@@ -113,67 +128,83 @@ export function PersonalModal({
             {...register('dni')}
             aria-invalid={Boolean(errors.dni)}
           />
-          {errors.dni && <p className="text-xs text-destructive">{errors.dni.message}</p>}
-        </div>
+        </FormField>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="nombres">Nombres *</Label>
+          <FormField label="Nombres" htmlFor="nombres" requerido error={errors.nombres?.message}>
             <Input id="nombres" placeholder="Nombres completos" {...register('nombres')} />
-            {errors.nombres && <p className="text-xs text-destructive">{errors.nombres.message}</p>}
-          </div>
+          </FormField>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="apellidos">Apellidos *</Label>
+          <FormField label="Apellidos" htmlFor="apellidos" requerido error={errors.apellidos?.message}>
             <Input id="apellidos" placeholder="Apellidos paterno y materno" {...register('apellidos')} />
-            {errors.apellidos && <p className="text-xs text-destructive">{errors.apellidos.message}</p>}
-          </div>
+          </FormField>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="cargo">Cargo / Función Desempeñada *</Label>
-          <Input id="cargo" placeholder="Ej. Especialista en Redes, Técnico Administrativo..." {...register('cargo')} />
-          {errors.cargo && <p className="text-xs text-destructive">{errors.cargo.message}</p>}
-        </div>
+        <FormField
+          label="Cargo / Función Desempeñada"
+          htmlFor="cargo"
+          requerido
+          error={errors.cargo?.message}
+        >
+          <Input
+            id="cargo"
+            placeholder="Ej. Especialista en Redes, Técnico Administrativo..."
+            {...register('cargo')}
+          />
+        </FormField>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="regimen">Régimen Laboral *</Label>
-            <select
-              id="regimen"
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-              {...register('regimen_laboral')}
-            >
-              <option value="D.L. 1057 (CAS)">D.L. 1057 (CAS)</option>
-              <option value="D.L. 276 (Carrera Administrativa)">D.L. 276 (Carrera Administrativa)</option>
-              <option value="D.L. 728 (Régimen Privado)">D.L. 728 (Régimen Privado)</option>
-              <option value="Locación de Servicios (FTH)">Locación de Servicios (FTH)</option>
-              <option value="Designación de Confianza">Designación de Confianza</option>
-              <option value="Otro">Otro</option>
-            </select>
-          </div>
+          <FormField
+            label="Régimen Laboral"
+            htmlFor="regimen"
+            requerido
+            error={errors.regimen_laboral?.message}
+            hint="Régimen bajo el que presta servicios el servidor: CAS (D.L. 1057), carrera (D.L. 276), privado (D.L. 728) o locación. Use «Otro» si no aplica."
+          >
+            <Controller
+              control={control}
+              name="regimen_laboral"
+              render={({ field }) => (
+                <Select
+                  id="regimen"
+                  buscable
+                  options={aOpcionesSelect(REGIMENES_LABORALES)}
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </FormField>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="sit">Situación Laboral</Label>
-            <select
-              id="sit"
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-              {...register('situacion_laboral')}
-            >
-              <option value="ACTIVO">ACTIVO</option>
-              <option value="VACACIONES">VACACIONES</option>
-              <option value="LICENCIA">LICENCIA</option>
-              <option value="DESTAQUE">DESTAQUE</option>
-            </select>
-          </div>
+          <FormField
+            label="Situación Laboral"
+            htmlFor="sit"
+            hint="Condición del servidor a la fecha de la transferencia: activo, de vacaciones, con licencia o destacado a otra unidad."
+          >
+            <Controller
+              control={control}
+              name="situacion_laboral"
+              render={({ field }) => (
+                <Select
+                  id="sit"
+                  options={aOpcionesSelect(SITUACIONES_LABORALES)}
+                  value={field.value ?? 'ACTIVO'}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </FormField>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="mod_cont">Modalidad Contractual</Label>
-          <Input id="mod_cont" placeholder="Ej. Plazo Determinado, Indeterminado..." {...register('modalidad_contractual')} />
-        </div>
+        <FormField label="Modalidad Contractual" htmlFor="mod_cont">
+          <Input
+            id="mod_cont"
+            placeholder="Ej. Plazo Determinado, Indeterminado..."
+            {...register('modalidad_contractual')}
+          />
+        </FormField>
 
-        <div className="flex items-center justify-end gap-2 pt-3 border-t">
+        <div className="flex items-center justify-end gap-2 border-t pt-3">
           <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
             Cancelar
           </Button>
@@ -185,4 +216,3 @@ export function PersonalModal({
     </Dialog>
   )
 }
-

@@ -1,27 +1,16 @@
 import { useState } from 'react'
-import {
-  Building2,
-  FolderArchive,
-  HardDrive,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-} from 'lucide-react'
+import { CalendarRange, FolderArchive, HardDrive, List, Plus } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { useDependenciaActiva } from '@/auth/hooks'
 import { Can } from '@/auth/Can'
-import { AlertaBloqueoEntrega } from '@/components/anexos/AlertaBloqueoEntrega'
-import { AnexoHeader } from '@/components/anexos/AnexoHeader'
-import { ObservacionesAnexoPanel } from '@/components/anexos/ObservacionesAnexoPanel'
+import { AnexoCrudPage } from '@/components/anexos/AnexoCrudPage'
+import { BotonDescargarPdf } from '@/components/anexos/BotonDescargarPdf'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Pagination } from '@/components/ui/pagination'
-import { Spinner } from '@/components/ui/spinner'
+import { useConfirm } from '@/components/ui/confirm-dialog'
+import { Select } from '@/components/ui/select'
+import type { ColumnaTabla } from '@/components/ui/data-table'
+import { aplicarErroresAFormulario } from '@/lib/api-errors'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
 import {
   useActualizarAcervo,
@@ -29,25 +18,95 @@ import {
   useCrearAcervo,
   useEliminarAcervo,
 } from './use-acervo'
+import { acervoService } from './acervo.service'
 import { AcervoModal } from './AcervoModal'
-import type { AcervoDocumental, GuardarAcervoPayload, TipoAcervo } from '@/types/acervo'
+import { AcervoPorAnio } from './AcervoPorAnio'
+import type { AcervoDocumental, TipoAcervo } from '@/types/acervo'
+
+type VistaAcervo = 'lista' | 'anio'
+
+const FILTRO_TIPO_OPCIONES = [
+  { value: '', label: 'Todos los formatos' },
+  { value: 'fisico', label: 'Físico (Papel / Archivadores)' },
+  { value: 'digital', label: 'Digital (Repositorios / Nube)' },
+]
+
+const columnas: ColumnaTabla<AcervoDocumental>[] = [
+  {
+    id: 'tipo',
+    header: 'Formato',
+    cell: (item) =>
+      item.tipo === 'digital' ? (
+        <span className="inline-flex items-center gap-1 rounded-full bg-info-soft px-2 py-0.5 text-mini font-semibold text-info-fg">
+          <HardDrive className="h-3 w-3" />
+          Digital
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-mini font-semibold text-muted-foreground">
+          <FolderArchive className="h-3 w-3" />
+          Físico
+        </span>
+      ),
+  },
+  {
+    id: 'serie',
+    header: 'Serie / Tipología Documental',
+    className: 'max-w-xs',
+    cell: (item) => <p className="truncate font-semibold text-foreground">{item.serie_documental}</p>,
+  },
+  {
+    id: 'periodo',
+    header: 'Periodo',
+    cell: (item) => <span className="text-muted-foreground">{item.periodo ?? '-'}</span>,
+  },
+  {
+    id: 'cantidad',
+    header: 'Cantidad',
+    cell: (item) => (
+      <span className="font-medium text-foreground">
+        {item.cantidad_unidades} {item.unidad_conservacion}
+      </span>
+    ),
+  },
+  {
+    id: 'ubicacion',
+    header: 'Ubicación',
+    className: 'max-w-xs',
+    ocultarEnMovil: true,
+    cell: (item) => <p className="truncate text-muted-foreground">{item.ubicacion ?? '-'}</p>,
+  },
+  {
+    id: 'descripcion',
+    header: 'Descripción',
+    className: 'max-w-xs',
+    ocultarEnMovil: true,
+    cell: (item) => <p className="line-clamp-2 text-muted-foreground">{item.descripcion ?? '-'}</p>,
+  },
+]
 
 export function AcervoPage() {
   const { dependenciaId } = useDependenciaActiva()
+  const confirmar = useConfirm()
   const [pagina, setPagina] = useState(1)
   const [busqueda, setBusqueda] = useState('')
   const [tipoFiltro, setTipoFiltro] = useState<TipoAcervo | ''>('')
+  const [vista, setVista] = useState<VistaAcervo>('lista')
 
-  const [modalAbierto, setModalAbierto] = useState(false)
-  const [acervoAEditar, setAcervoAEditar] = useState<AcervoDocumental | null>(null)
+  const esVistaAnio = vista === 'anio'
 
   const { data: estadoData } = useEstadoEntrega(dependenciaId)
-  const { data: paginado, isLoading } = useAcervo({
+  const {
+    data: paginado,
+    isLoading,
+    error,
+    refetch,
+  } = useAcervo({
     dependencia_id: dependenciaId ?? undefined,
     tipo: tipoFiltro || undefined,
     search: busqueda || undefined,
-    page: pagina,
-    per_page: 15,
+    // La vista por año agrupa en cliente: trae todas las series (sin paginar).
+    page: esVistaAnio ? 1 : pagina,
+    per_page: esVistaAnio ? 500 : 15,
   })
 
   const crearMut = useCrearAcervo()
@@ -57,251 +116,158 @@ export function AcervoPage() {
   const estadoEntrega = estadoData?.entrega?.estado ?? null
   const esModificable =
     !estadoEntrega || estadoEntrega === 'borrador' || estadoEntrega === 'observada'
-  const dependencia = estadoData?.dependencia
-
-  const handleGuardar = (payload: GuardarAcervoPayload) => {
-    if (acervoAEditar) {
-      actualizarMut.mutate(
-        { id: acervoAEditar.id, payload },
-        {
-          onSuccess: () => {
-            setModalAbierto(false)
-            setAcervoAEditar(null)
-          },
-        },
-      )
-    } else {
-      crearMut.mutate(payload, {
-        onSuccess: () => {
-          setModalAbierto(false)
-        },
-      })
-    }
-  }
-
-  const handleEliminar = (acervo: AcervoDocumental) => {
-    if (confirm(`¿Confirma eliminar la serie "${acervo.serie_documental}" del Anexo 03?`)) {
-      eliminarMut.mutate(acervo.id)
-    }
-  }
-
-  if (!dependenciaId) {
-    return (
-      <div className="mx-auto max-w-5xl space-y-6">
-        <AnexoHeader
-          numeroAnexo="Anexo 03"
-          titulo="Inventario de Acervo Documental"
-          subtitulo="Seleccione un centro de costo en la parte superior para consultar o registrar el acervo documental."
-        />
-        <Card className="border-dashed p-10 text-center">
-          <Building2 className="mx-auto h-12 w-12 text-muted-foreground/60" />
-          <h2 className="mt-4 text-base font-semibold">Selección de Centro de Costo requerida</h2>
-          <p className="mt-1 text-sm text-muted-foreground max-w-md mx-auto">
-            Utilice el selector de dependencias en la barra superior para gestionar el acervo documental del despacho.
-          </p>
-        </Card>
-      </div>
-    )
-  }
 
   const series = paginado?.data ?? []
-  const meta = paginado?.meta
 
-  return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <AnexoHeader
-        numeroAnexo="Anexo 03"
-        titulo="Inventario de Acervo Documental (Físico y Digital)"
-        subtitulo="Series documentales, expedientes custodiados y archivos de gestión de la unidad (Directiva N.° 001-2026-MDSJ/A §7.3)"
-        dependenciaCodigo={dependencia?.codigo}
-        dependenciaNombre={dependencia?.nombre}
-        acciones={
-          <Can permiso="anexos.registrar">
-            <Button
-              size="sm"
-              className="gap-1.5"
-              disabled={!esModificable}
-              onClick={() => {
-                setAcervoAEditar(null)
-                setModalAbierto(true)
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              Nueva Serie Documental
-            </Button>
-          </Can>
-        }
-      />
+  const confirmarEliminarSerie = (item: AcervoDocumental) => ({
+    title: 'Eliminar serie documental',
+    description: `Se eliminará la serie "${item.serie_documental}" del Anexo 03. Esta acción no se puede deshacer.`,
+  })
 
-      <AlertaBloqueoEntrega estadoEntrega={estadoEntrega} />
+  // Borrado con confirmación suave para la vista por año (la de lista lo resuelve
+  // AnexoCrudPage con su propio useConfirm).
+  const eliminarConConfirmacion = async (item: AcervoDocumental) => {
+    const ok = await confirmar({
+      ...confirmarEliminarSerie(item),
+      variant: 'destructive',
+      confirmText: 'Eliminar',
+    })
+    if (ok) eliminarMut.mutate(item.id)
+  }
 
-      {/* Barra de filtros y formato */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por serie documental, periodo o ubicación..."
-                value={busqueda}
-                onChange={(e) => {
-                  setBusqueda(e.target.value)
-                  setPagina(1)
-                }}
-                className="pl-9"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <select
-                aria-label="Filtrar por formato de acervo"
-                className="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-                value={tipoFiltro}
-                onChange={(e) => {
-                  setTipoFiltro(e.target.value as TipoAcervo | '')
-                  setPagina(1)
-                }}
-              >
-                <option value="">Todos los formatos</option>
-                <option value="fisico">Físico (Papel / Archivadores)</option>
-                <option value="digital">Digital (Repositorios / Nube)</option>
-              </select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tabla de Acervo Documental */}
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b bg-muted/40 font-medium text-muted-foreground">
-              <tr>
-                <th className="p-3">Formato</th>
-                <th className="p-3">Serie / Tipología Documental</th>
-                <th className="p-3">Periodo</th>
-                <th className="p-3">Cantidad</th>
-                <th className="p-3">Ubicación</th>
-                <th className="p-3">Descripción</th>
-                <th className="p-3 text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-muted-foreground">
-                    <Spinner className="mx-auto h-6 w-6 text-primary" />
-                    <p className="mt-2">Cargando inventario de acervo...</p>
-                  </td>
-                </tr>
-              ) : series.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-10 text-center text-muted-foreground">
-                    <FolderArchive className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
-                    No se han registrado series documentales para esta dependencia.
-                  </td>
-                </tr>
-              ) : (
-                series.map((item) => (
-                  <tr key={item.id} className="hover:bg-muted/20 transition-colors">
-                    <td className="p-3 whitespace-nowrap">
-                      {item.tipo === 'digital' ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-mini font-semibold text-purple-800 dark:bg-purple-950/60 dark:text-purple-300">
-                          <HardDrive className="h-3 w-3" />
-                          Digital
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-info-soft px-2 py-0.5 text-mini font-semibold text-info-fg">
-                          <FolderArchive className="h-3 w-3" />
-                          Físico
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-3 font-medium text-foreground max-w-xs">
-                      <p className="truncate font-semibold">{item.serie_documental}</p>
-                    </td>
-                    <td className="p-3 whitespace-nowrap text-muted-foreground">
-                      {item.periodo ?? '-'}
-                    </td>
-                    <td className="p-3 whitespace-nowrap font-medium text-foreground">
-                      {item.cantidad_unidades} {item.unidad_conservacion}
-                    </td>
-                    <td className="p-3 max-w-xs text-muted-foreground">
-                      <p className="truncate">{item.ubicacion ?? '-'}</p>
-                    </td>
-                    <td className="p-3 max-w-xs text-muted-foreground">
-                      <p className="line-clamp-2">{item.descripcion ?? '-'}</p>
-                    </td>
-                    <td className="p-3 text-right whitespace-nowrap">
-                      <Can permiso="anexos.registrar">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                            disabled={!esModificable}
-                            onClick={() => {
-                              setAcervoAEditar(item)
-                              setModalAbierto(true)
-                            }}
-                            aria-label="Editar serie"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                            disabled={!esModificable || eliminarMut.isPending}
-                            onClick={() => handleEliminar(item)}
-                            aria-label="Eliminar serie"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </Can>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {meta && (
-          <Pagination
-            currentPage={meta.current_page}
-            lastPage={meta.last_page}
-            total={meta.total}
-            from={meta.from}
-            to={meta.to}
-            onPageChange={(p) => setPagina(p)}
-            disabled={isLoading}
-          />
-        )}
-      </Card>
-
-      {/* Modal Alta / Edición */}
-      <AcervoModal
-        open={modalAbierto}
-        onClose={() => {
-          setModalAbierto(false)
-          setAcervoAEditar(null)
-        }}
-        onSave={handleGuardar}
-        acervo={acervoAEditar}
-        dependenciaId={dependenciaId}
-        loading={crearMut.isPending || actualizarMut.isPending}
-      />
-
-      {/* Panel de Observaciones */}
-      <ObservacionesAnexoPanel
-        anexo="acervo"
-        observableId={series[0]?.id}
-        dependenciaId={dependenciaId ?? undefined}
-        esModificable={esModificable}
-      />
+  const toggleVista = (
+    <div className="flex items-center rounded-md border p-0.5">
+      <Button
+        type="button"
+        variant={vista === 'lista' ? 'secondary' : 'ghost'}
+        size="sm"
+        className="h-7 gap-1.5 px-2.5"
+        onClick={() => setVista('lista')}
+        aria-pressed={vista === 'lista'}
+      >
+        <List className="h-3.5 w-3.5" />
+        Lista
+      </Button>
+      <Button
+        type="button"
+        variant={esVistaAnio ? 'secondary' : 'ghost'}
+        size="sm"
+        className="h-7 gap-1.5 px-2.5"
+        onClick={() => setVista('anio')}
+        aria-pressed={esVistaAnio}
+      >
+        <CalendarRange className="h-3.5 w-3.5" />
+        Por año
+      </Button>
     </div>
   )
-}
 
+  return (
+    <AnexoCrudPage<AcervoDocumental>
+      numeroAnexo="Anexo 03"
+      tituloCorto="Inventario de Acervo Documental"
+      titulo="Inventario de Acervo Documental (Físico y Digital)"
+      subtitulo="Series documentales, expedientes custodiados y archivos de gestión de la unidad (Directiva N.° 001-2026-MDSJ/A §7.3)"
+      anexoObservable="acervo"
+      guiaSeleccion="Utilice el selector de dependencias en la barra superior para gestionar el acervo documental del despacho."
+      dependenciaId={dependenciaId}
+      dependencia={estadoData?.dependencia}
+      estadoEntrega={estadoEntrega}
+      esModificable={esModificable}
+      filas={series}
+      rowKey={(item) => item.id}
+      loading={isLoading}
+      error={error}
+      onReintentar={refetch}
+      meta={paginado?.meta}
+      onPageChange={setPagina}
+      columnas={columnas}
+      busqueda={busqueda}
+      onBuscar={(v) => {
+        setBusqueda(v)
+        setPagina(1)
+      }}
+      placeholderBusqueda="Buscar por serie documental, periodo o ubicación..."
+      filtrosExtra={
+        <>
+          {toggleVista}
+          <Select
+            className="w-56"
+            options={FILTRO_TIPO_OPCIONES}
+            value={tipoFiltro}
+            onChange={(v) => {
+              setTipoFiltro(v as TipoAcervo | '')
+              setPagina(1)
+            }}
+            placeholder="Todos los formatos"
+          />
+        </>
+      }
+      accionesExtra={
+        <BotonDescargarPdf
+          descargar={() => acervoService.descargarPdf(dependenciaId as number)}
+          disabled={!dependenciaId}
+          etiqueta="PDF oficial"
+        />
+      }
+      textoNuevo="Nueva Serie Documental"
+      iconoNuevo={Plus}
+      vacio={{
+        titulo: 'Sin series documentales',
+        descripcion: 'No se han registrado series de acervo para esta dependencia. Registre la primera.',
+      }}
+      confirmarEliminar={confirmarEliminarSerie}
+      onEliminar={(item) => eliminarMut.mutate(item.id)}
+      eliminando={eliminarMut.isPending}
+      vistaAlternativa={
+        esVistaAnio
+          ? ({ abrirAlta, abrirEdicion }) => (
+              <AcervoPorAnio
+                series={series}
+                loading={isLoading}
+                error={error}
+                onReintentar={refetch}
+                esModificable={esModificable}
+                onEditar={abrirEdicion}
+                onEliminar={eliminarConConfirmacion}
+                eliminando={eliminarMut.isPending}
+                total={paginado?.meta?.total}
+                accionNuevo={
+                  <Can permiso="anexos.registrar">
+                    <Button size="sm" className="gap-1.5" disabled={!esModificable} onClick={abrirAlta}>
+                      <Plus className="h-4 w-4" />
+                      Nueva Serie Documental
+                    </Button>
+                  </Can>
+                }
+              />
+            )
+          : undefined
+      }
+      renderModal={({ open, onClose, registro }) => (
+        <AcervoModal
+          open={open}
+          onClose={onClose}
+          acervo={registro}
+          dependenciaId={dependenciaId!}
+          loading={crearMut.isPending || actualizarMut.isPending}
+          onSave={(payload, { setError }) => {
+            const onError = (err: unknown) => {
+              if (aplicarErroresAFormulario(err, setError)) {
+                toast.error('Revise los campos marcados en el formulario.')
+              }
+            }
+            if (registro) {
+              actualizarMut.mutate(
+                { id: registro.id, payload },
+                { onSuccess: onClose, onError },
+              )
+            } else {
+              crearMut.mutate(payload, { onSuccess: onClose, onError })
+            }
+          }}
+        />
+      )}
+    />
+  )
+}

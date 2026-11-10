@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 import {
   Card,
   CardContent,
@@ -6,6 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { EditableTable, type ColumnaEditable, type FilaEditable } from '@/components/ui/editable-table'
+import { HelpTooltip } from '@/components/ui/tooltip'
 
 /** Columna de una sección del Anexo 02 (adaptador sobre `ColumnaEditable`). */
 export interface ColumnaFila {
@@ -21,6 +24,8 @@ interface SeccionFilasProps<T extends FilaEditable> {
   numero: number
   titulo: string
   descripcion?: string
+  /** Ayuda bajo demanda: ícono «?» junto al título con una frase/ejemplo. */
+  hint?: ReactNode
   colorNumero?: string
   columnas: ColumnaFila[]
   filas: T[]
@@ -40,6 +45,7 @@ export function SeccionFilas<T extends FilaEditable>({
   numero,
   titulo,
   descripcion,
+  hint,
   colorNumero = 'bg-primary/10 text-primary',
   columnas,
   filas,
@@ -68,7 +74,10 @@ export function SeccionFilas<T extends FilaEditable>({
             {numero}
           </div>
           <div>
-            <CardTitle className="text-base">{titulo}</CardTitle>
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-base">{titulo}</CardTitle>
+              {hint && <HelpTooltip>{hint}</HelpTooltip>}
+            </div>
             {descripcion ? (
               <CardDescription className="text-xs">{descripcion}</CardDescription>
             ) : null}

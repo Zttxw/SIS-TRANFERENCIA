@@ -70,6 +70,7 @@ api.interceptors.response.use(
         status,
         message,
         errors: data?.errors,
+        data,
       }),
     )
   },

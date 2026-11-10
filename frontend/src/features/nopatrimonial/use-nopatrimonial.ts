@@ -1,8 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
+import { notificarError } from '@/lib/api-errors'
 import type { FiltrosNoPatrimonial, GuardarBienNoPatrimonialPayload } from '@/types/nopatrimonial'
 import { noPatrimonialService } from './nopatrimonial.service'
+
+const CONFLICTO =
+  'No se puede guardar: la entrega de este centro de costo está bloqueada (remitida o consolidada).'
 
 export function useNoPatrimonial(filtros: FiltrosNoPatrimonial = {}) {
   return useQuery({
@@ -24,14 +28,7 @@ export function useCrearBienNoPatrimonial() {
       queryClient.invalidateQueries({ queryKey: ['bienes-no-patrimoniales'] })
       queryClient.invalidateQueries({ queryKey: ['transferencia-estado', vars.dependencia_id] })
     },
-    onError: (error: any) => {
-      if (error?.status === 409 || error?.response?.status === 409) {
-        toast.error('No se puede registrar: la entrega está bloqueada (remitida o consolidada).')
-        return
-      }
-      const msg = error?.response?.data?.message ?? 'Error al registrar el bien.'
-      toast.error(msg)
-    },
+    onError: (error) => notificarError(error, { conflicto: CONFLICTO }),
   })
 }
 
@@ -46,14 +43,7 @@ export function useActualizarBienNoPatrimonial() {
       queryClient.invalidateQueries({ queryKey: ['bienes-no-patrimoniales'] })
       queryClient.invalidateQueries({ queryKey: ['transferencia-estado', vars.payload.dependencia_id] })
     },
-    onError: (error: any) => {
-      if (error?.status === 409 || error?.response?.status === 409) {
-        toast.error('No se puede actualizar: la entrega está bloqueada (remitida o consolidada).')
-        return
-      }
-      const msg = error?.response?.data?.message ?? 'Error al actualizar el bien.'
-      toast.error(msg)
-    },
+    onError: (error) => notificarError(error, { conflicto: CONFLICTO }),
   })
 }
 
@@ -67,14 +57,10 @@ export function useEliminarBienNoPatrimonial() {
       queryClient.invalidateQueries({ queryKey: ['bienes-no-patrimoniales'] })
       queryClient.invalidateQueries({ queryKey: ['transferencia-estado'] })
     },
-    onError: (error: any) => {
-      if (error?.status === 409 || error?.response?.status === 409) {
-        toast.error('No se puede eliminar: la entrega está bloqueada (remitida o consolidada).')
-        return
-      }
-      const msg = error?.response?.data?.message ?? 'Error al eliminar el bien.'
-      toast.error(msg)
-    },
+    onError: (error) =>
+      notificarError(error, {
+        conflicto: 'No se puede eliminar: la entrega está bloqueada (remitida o consolidada).',
+      }),
   })
 }
 
