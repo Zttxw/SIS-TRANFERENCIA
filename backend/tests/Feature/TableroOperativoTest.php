@@ -47,11 +47,6 @@ class TableroOperativoTest extends TestCase
                 'data' => [
                     'metricas' => [
                         'total_dependencias',
-                        'consolidadas',
-                        'remitidas',
-                        'observadas',
-                        'borrador',
-                        'porcentaje_avance',
                         'patrimonio' => [
                             'total_bienes',
                             'verificados',

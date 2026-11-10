@@ -1,25 +1,8 @@
 /**
- * Tipos de transferencia y estado de entregas (plan §7.8, E3, E8).
+ * Tipos de apoyo a la generación de anexos: avance de los anexos de una
+ * dependencia y tablero de avance institucional. El sistema no orquesta el flujo
+ * de remisión/consolidación (eso lo lleva el SGD).
  */
-
-export type EstadoEntrega =
-  | 'borrador'
-  | 'remitida'
-  | 'en_revision'
-  | 'observada'
-  | 'subsanada'
-  | 'consolidada'
-
-export interface EntregaDetalle {
-  id: number
-  estado: EstadoEntrega
-  destino_id: number | null
-  hacia_etts: boolean
-  remitida_en: string | null
-  revisada_en: string | null
-  consolidada_en: string | null
-  comentario: string | null
-}
 
 export interface DependenciaResumen {
   id: number
@@ -58,65 +41,18 @@ export interface EstadoEntregaResponse {
   anexo06_nopatrimonial: {
     total_bienes: number
   }
-  entrega: EntregaDetalle | null
 }
 
-export interface ResumenDocumentosResponse {
-  dependencia_id: number
-  total_pendientes: number
-  por_estado: Array<{
-    estado: string
-    total: number
-  }>
+/** Presencia de cada anexo (clave `anexo_02`…`anexo_06`). */
+export interface PresenciaAnexos {
+  anexo_02: boolean
+  anexo_03: boolean
+  anexo_04: boolean
+  anexo_05: boolean
+  anexo_06: boolean
 }
 
-export interface RemitirEntregaPayload {
-  dependencia_id: number
-  comentario?: string
-}
-
-export interface RevisarEntregaPayload {
-  dependencia_id: number
-  accion: 'observar' | 'consolidar'
-  comentario?: string
-}
-
-export interface EntregaItem {
-  id: number
-  proceso_transferencia_id: number
-  dependencia_id: number
-  dependencia_destino_id: number | null
-  emisor_id: number | null
-  receptor_id: number | null
-  estado: EstadoEntrega
-  remitida_en: string | null
-  revisada_en: string | null
-  consolidada_en: string | null
-  comentario: string | null
-  created_at: string
-  updated_at: string
-  dependencia: DependenciaResumen
-  dependencia_destino?: DependenciaResumen | null
-  emisor?: {
-    id: number
-    name: string
-    dni: string
-  } | null
-  receptor?: {
-    id: number
-    name: string
-    dni: string
-  } | null
-}
-
-export interface FiltrosEntregas {
-  dependencia_id?: number
-  estado?: EstadoEntrega
-  per_page?: number
-  page?: number
-}
-
-export interface DependenciaSemaforoItem {
+export interface DependenciaAvanceItem {
   id: number
   codigo: string
   nombre: string
@@ -128,22 +64,15 @@ export interface DependenciaSemaforoItem {
     apellidos: string
     cargo: string | null
   } | null
-  estado_entrega: EstadoEntrega | 'sin_iniciar'
-  observaciones_abiertas: number
+  anexos: PresenciaAnexos
+  anexos_completos: number
   patrimonio_total: number
   patrimonio_confirmados: number
   patrimonio_porcentaje: number
-  remitida_en: string | null
-  consolidada_en: string | null
 }
 
 export interface MetricasTablero {
   total_dependencias: number
-  consolidadas: number
-  remitidas: number
-  observadas: number
-  borrador: number
-  porcentaje_avance: number
   patrimonio: {
     total_bienes: number
     verificados: number
@@ -155,5 +84,5 @@ export interface MetricasTablero {
 
 export interface TableroOperativoData {
   metricas: MetricasTablero
-  dependencias: DependenciaSemaforoItem[]
+  dependencias: DependenciaAvanceItem[]
 }

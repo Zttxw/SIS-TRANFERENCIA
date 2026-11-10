@@ -202,19 +202,19 @@ export function DespachoPersonalView() {
           </CardContent>
         </Card>
 
-        {/* KPI 4: Estado de la Entrega */}
+        {/* KPI 4: Informe de Gestión (Anexo 02) */}
         <Card className="border shadow-xs">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-nota font-semibold text-muted-foreground uppercase tracking-wider">
-                Estado de Entrega
+                Informe de Gestión
               </p>
               <p className="text-base font-bold text-foreground capitalize mt-1.5 flex items-center gap-1.5">
                 <ShieldCheck className="h-4 w-4 text-secondary" />
-                {estadoData?.entrega?.estado ?? 'Borrador'}
+                {estadoData?.anexo02_gestion?.existe ? 'Registrado' : 'Pendiente'}
               </p>
               <p className="text-nota text-muted-foreground mt-0.5">
-                Destino: {dep.parent_id ? 'Superior Jerárquico' : 'ETTS Institucional'}
+                Anexo 02 del centro de costo
               </p>
             </div>
             <div className="h-10 w-10 rounded-xl bg-warning-soft flex items-center justify-center text-warning-fg">

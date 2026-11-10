@@ -16,10 +16,8 @@ import {
 
 import { useAuth, useDependenciaActiva } from '@/auth/hooks'
 import { Can } from '@/auth/Can'
-import { AlertaBloqueoEntrega } from '@/components/anexos/AlertaBloqueoEntrega'
 import { AnexoHeader } from '@/components/anexos/AnexoHeader'
 import { BotonDescargarPdf } from '@/components/anexos/BotonDescargarPdf'
-import { ObservacionesAnexoPanel } from '@/components/anexos/ObservacionesAnexoPanel'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -108,9 +106,8 @@ export function PatrimonioPage() {
 
   const verificarMut = useVerificarBien()
 
-  const estadoEntrega = estadoData?.entrega?.estado ?? null
-  const esModificable =
-    !estadoEntrega || estadoEntrega === 'borrador' || estadoEntrega === 'observada'
+  // El anexo es siempre editable: el flujo de remisión lo lleva el SGD.
+  const esModificable = true
   const dependencia = estadoData?.dependencia
 
   const alternarFila = (bienId: number) =>
@@ -274,8 +271,6 @@ export function PatrimonioPage() {
           />
         }
       />
-
-      {dependenciaId && <AlertaBloqueoEntrega estadoEntrega={estadoEntrega} />}
 
       {/* Tarjetas de Resumen y Avance */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -470,14 +465,6 @@ export function PatrimonioPage() {
           />
         )}
       </Card>
-
-      {/* Panel de Observaciones */}
-      <ObservacionesAnexoPanel
-        anexo="patrimonio"
-        observableId={bienes[0]?.id}
-        dependenciaId={dependenciaId ?? undefined}
-        esModificable={esModificable}
-      />
     </div>
   )
 }

@@ -5,21 +5,21 @@ declare(strict_types=1);
 namespace App\Support\Services;
 
 use App\Modules\Organization\Models\Dependencia;
-use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
-use App\Support\Enums\EstadoEntrega;
 use Illuminate\Support\Carbon;
 
 /**
- * Contexto común de transferencia reutilizado por los generadores de PDF (F5) y
- * los reportes: resuelve el proceso activo, la dependencia y el estado de su
- * entrega. Centraliza la noción de «borrador» (entrega aún no consolidada), que
- * decide la marca de agua de los PDF y el estado mostrado en los consolidados.
+ * Contexto común de transferencia reutilizado por los generadores de PDF de cada
+ * anexo: resuelve el proceso activo y la cabecera de la dependencia.
+ *
+ * El sistema es una herramienta de apoyo para generar los anexos; el flujo de
+ * remisión/consolidación lo lleva el SGD. Por eso el PDF de cualquier anexo es
+ * siempre generable (sin marca de agua ni gate de estado de entrega).
  */
 class ContextoTransferencia
 {
     /**
-     * Devuelve la cabecera de contexto para un PDF/reporte de una dependencia.
+     * Devuelve la cabecera de contexto para un PDF de una dependencia.
      *
      * @return array<string, mixed>
      */
@@ -27,8 +27,6 @@ class ContextoTransferencia
     {
         $procesoId = $procesoId ?? $this->procesoActivoId();
         $dep = Dependencia::findOrFail($dependenciaId);
-        $entrega = $this->entregaDe($dependenciaId, $procesoId);
-        $estado = $entrega?->estado ?? EstadoEntrega::BORRADOR;
 
         return [
             'proceso_id' => $procesoId,
@@ -38,21 +36,8 @@ class ContextoTransferencia
                 'nombre' => $dep->nombre,
                 'nivel' => $dep->nivel,
             ],
-            'entrega_estado' => $estado->value,
-            'entrega_estado_etiqueta' => $estado->etiqueta(),
-            'es_borrador' => $estado !== EstadoEntrega::CONSOLIDADA && $estado !== EstadoEntrega::CERRADA,
             'emitido_en' => Carbon::now()->format('d/m/Y H:i'),
         ];
-    }
-
-    public function entregaDe(int $dependenciaId, ?int $procesoId = null): ?Entrega
-    {
-        $procesoId = $procesoId ?? $this->procesoActivoId();
-
-        return Entrega::where('proceso_transferencia_id', $procesoId)
-            ->where('dependencia_id', $dependenciaId)
-            ->latest('id')
-            ->first();
     }
 
     public function procesoActivoId(): int

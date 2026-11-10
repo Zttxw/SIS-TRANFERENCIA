@@ -7,12 +7,9 @@ namespace App\Modules\Gestion\Services;
 use App\Models\User;
 use App\Modules\Gestion\Models\InformeGestion;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
-use App\Support\Concerns\RespetaEstadoEntrega;
 
 class GestionService
 {
-    use RespetaEstadoEntrega;
-
     /**
      * Obtiene el informe de gestión de una dependencia para el proceso activo.
      */
@@ -20,7 +17,7 @@ class GestionService
     {
         $procesoId = $procesoId ?? $this->resolverProcesoActivoId();
 
-        return InformeGestion::with(['dependencia', 'responsable', 'elaboradoPor', 'evidencias', 'observaciones'])
+        return InformeGestion::with(['dependencia', 'responsable', 'elaboradoPor', 'evidencias'])
             ->where('dependencia_id', $dependenciaId)
             ->where('proceso_transferencia_id', $procesoId)
             ->first();
@@ -32,8 +29,6 @@ class GestionService
     public function guardarInforme(array $datos, User $usuario, ?int $procesoId = null): InformeGestion
     {
         $procesoId = $procesoId ?? $this->resolverProcesoActivoId();
-
-        $this->exigirEntregaModificable((int) $datos['dependencia_id'], $procesoId);
 
         return InformeGestion::updateOrCreate(
             [

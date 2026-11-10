@@ -10,7 +10,6 @@ use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Concerns\Auditable;
 use App\Support\Concerns\HasFuenteDato;
 use App\Support\Concerns\TieneEvidencias;
-use App\Support\Concerns\TieneObservaciones;
 use App\Support\Enums\FuenteDato;
 use App\Support\Models\BaseModel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,7 +24,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class BienPatrimonial extends BaseModel
 {
-    use Auditable, HasFuenteDato, SoftDeletes, TieneEvidencias, TieneObservaciones;
+    use Auditable, HasFuenteDato, SoftDeletes, TieneEvidencias;
 
     protected $table = 'bienes_patrimoniales';
 

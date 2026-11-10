@@ -23,8 +23,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
-import { construirArbol, filtrarArbol, type NodoArbol } from '@/features/entregas/arbol-utils'
-import { useCatalogoDependencias } from '@/features/entregas/use-entregas'
+import { construirArbol, filtrarArbol, type NodoArbol } from './arbol-utils'
+import { useCatalogoDependencias } from './use-organization'
 import { DespachoPersonalView } from './DespachoPersonalView'
 
 export function EstructuraOrganicaPage() {

@@ -9,7 +9,6 @@ use App\Modules\Organization\Models\Dependencia;
 use App\Support\Concerns\Auditable;
 use App\Support\Concerns\HasFuenteDato;
 use App\Support\Concerns\TieneEvidencias;
-use App\Support\Concerns\TieneObservaciones;
 use App\Support\Models\BaseModel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,7 +21,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class AcervoDocumental extends BaseModel
 {
-    use Auditable, HasFuenteDato, SoftDeletes, TieneEvidencias, TieneObservaciones;
+    use Auditable, HasFuenteDato, SoftDeletes, TieneEvidencias;
 
     protected $table = 'acervo_documental';
 

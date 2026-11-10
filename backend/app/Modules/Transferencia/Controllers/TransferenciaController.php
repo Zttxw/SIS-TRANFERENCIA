@@ -13,6 +13,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * Apoyo a la generación de los anexos: avance institucional (tablero), avance de
+ * los anexos de una dependencia y el Acta (Anexo 07). El flujo de remisión y
+ * consolidación lo lleva el SGD; este controlador no lo expone.
+ */
 class TransferenciaController extends Controller
 {
     use AutorizaAmbito;
@@ -23,33 +28,18 @@ class TransferenciaController extends Controller
     ) {}
 
     /**
-     * Lista entregas de información acotadas al ámbito del usuario (plan §7.8, E8).
-     */
-    public function index(Request $request): JsonResponse
-    {
-        $filtros = $this->acotarFiltrosAlAmbito(
-            $request->user(),
-            $request->only(['dependencia_id', 'estado', 'per_page'])
-        );
-
-        $entregas = $this->transferenciaService->listarEntregas($filtros);
-
-        return ApiResponse::paginated($entregas, 'Entregas recuperadas.');
-    }
-
-    /**
-     * Tablero operativo global de transferencia para monitoreo gerencial y toma de decisiones.
+     * Tablero de avance institucional de los anexos, acotado al ámbito.
      */
     public function tablero(Request $request): JsonResponse
     {
         $dependenciaIds = $this->idsDependenciaEnAmbito($request->user());
         $tablero = $this->transferenciaService->obtenerTableroOperativo($dependenciaIds);
 
-        return ApiResponse::success($tablero, 'Tablero operativo recuperado con éxito.');
+        return ApiResponse::success($tablero, 'Tablero de avance recuperado con éxito.');
     }
 
     /**
-     * Resumen del estado global de entrega de los Anexos por dependencia.
+     * Avance de los anexos de una dependencia (para el dashboard de «mi entrega»).
      */
     public function estado(Request $request): JsonResponse
     {
@@ -62,61 +52,11 @@ class TransferenciaController extends Controller
 
         $resumen = $this->transferenciaService->obtenerEstadoEntrega($dependenciaId);
 
-        return ApiResponse::success($resumen, 'Estado de entrega obtenido.');
+        return ApiResponse::success($resumen, 'Avance de los anexos obtenido.');
     }
 
     /**
-     * Remite la entrega de la dependencia al superior jerárquico (plan §7.8).
-     */
-    public function remitir(Request $request): JsonResponse
-    {
-        $request->validate([
-            'dependencia_id' => ['required', 'integer', 'exists:dependencias,id'],
-            'comentario' => ['nullable', 'string', 'max:500'],
-        ]);
-
-        $dependenciaId = (int) $request->input('dependencia_id');
-        $this->autorizarDependencia($request->user(), $dependenciaId);
-
-        $entrega = $this->transferenciaService->remitirEntrega(
-            dependenciaId: $dependenciaId,
-            usuario: $request->user(),
-            comentario: $request->input('comentario')
-        );
-
-        return ApiResponse::success($entrega, 'Entrega de información remitida con éxito al superior jerárquico.');
-    }
-
-    /**
-     * Revisa una entrega recibida de una dependencia subordinada: la observa
-     * (devuelve para subsanación) o la consolida (plan §6 Etapa 3-4, §7.8).
-     */
-    public function revisar(Request $request): JsonResponse
-    {
-        $datos = $request->validate([
-            'dependencia_id' => ['required', 'integer', 'exists:dependencias,id'],
-            'accion' => ['required', 'in:observar,consolidar'],
-            'comentario' => ['nullable', 'string', 'max:500'],
-        ]);
-
-        $dependenciaId = (int) $datos['dependencia_id'];
-
-        // El revisor opera sobre una dependencia subordinada: debe estar en su
-        // ámbito (dependencia propia + subárbol para consolidadores).
-        $this->autorizarDependencia($request->user(), $dependenciaId);
-
-        $entrega = $this->transferenciaService->revisarEntrega(
-            dependenciaId: $dependenciaId,
-            usuario: $request->user(),
-            accion: $datos['accion'],
-            comentario: $datos['comentario'] ?? null,
-        );
-
-        return ApiResponse::success($entrega, 'Revisión de la entrega registrada.');
-    }
-
-    /**
-     * Obtiene el Acta oficial de Transferencia (Anexo 07).
+     * Materializa o consulta el Acta oficial (Anexo 07) con los datos disponibles.
      */
     public function acta(Request $request): JsonResponse
     {
@@ -133,8 +73,7 @@ class TransferenciaController extends Controller
     }
 
     /**
-     * Descarga el PDF oficial del Acta (Anexo 07). Exige entrega CONSOLIDADA
-     * (409 en otro caso) a través del mismo generador que el resto de anexos.
+     * Descarga el PDF oficial del Acta (Anexo 07).
      */
     public function actaPdf(Request $request): StreamedResponse
     {

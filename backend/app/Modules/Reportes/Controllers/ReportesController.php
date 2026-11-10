@@ -7,7 +7,6 @@ namespace App\Modules\Reportes\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Reportes\Excel\ConciliacionPatrimonialExport;
 use App\Modules\Reportes\Excel\MatrizAnexosExport;
-use App\Modules\Reportes\Excel\ObservacionesExport;
 use App\Modules\Reportes\Services\ReportesService;
 use App\Support\Concerns\AutorizaAmbito;
 use App\Support\Http\ApiResponse;
@@ -33,7 +32,6 @@ class ReportesController extends Controller
     private const REPORTES = [
         'matriz-anexos' => 'Reporte — Matriz de Anexos y Avance por Dependencia',
         'conciliacion-patrimonial' => 'Reporte — Conciliación Patrimonial (SIGA)',
-        'observaciones' => 'Reporte — Observaciones por Dependencia',
     ];
 
     public function __construct(
@@ -93,7 +91,6 @@ class ReportesController extends Controller
         return match ($reporte) {
             'matriz-anexos' => $this->reportes->matrizAnexos($ambito),
             'conciliacion-patrimonial' => $this->reportes->conciliacionPatrimonial($ambito),
-            'observaciones' => $this->reportes->observaciones($ambito),
         };
     }
 
@@ -103,7 +100,6 @@ class ReportesController extends Controller
         return match ($reporte) {
             'matriz-anexos' => new MatrizAnexosExport($datos),
             'conciliacion-patrimonial' => new ConciliacionPatrimonialExport($datos),
-            'observaciones' => new ObservacionesExport($datos),
         };
     }
 
@@ -124,18 +120,18 @@ class ReportesController extends Controller
 
         [$headings, $filas, $metricas] = match ($reporte) {
             'matriz-anexos' => [
-                ['Código', 'Centro de costo', 'Nivel', 'Estado', 'A02', 'A03', 'A04', 'A05', 'A06', 'Obs.', 'Bienes', 'Verif.', '% Patr.'],
+                ['Código', 'Centro de costo', 'Nivel', 'A02', 'A03', 'A04', 'A05', 'A06', 'Completos', 'Bienes', 'Verif.', '% Patr.'],
                 array_map(fn (array $f): array => [
-                    $f['codigo'], $f['nombre'], $f['nivel'], ucfirst((string) $f['estado_entrega']),
+                    $f['codigo'], $f['nombre'], $f['nivel'],
                     $f['anexo_02'] ? 'Sí' : '—', $f['anexo_03'] ? 'Sí' : '—', $f['anexo_04'] ? 'Sí' : '—',
                     $f['anexo_05'] ? 'Sí' : '—', $f['anexo_06'] ? 'Sí' : '—',
-                    $f['observaciones_abiertas'], $f['patrimonio_total'], $f['patrimonio_confirmados'],
+                    $f['anexos_completos'].'/5', $f['patrimonio_total'], $f['patrimonio_confirmados'],
                     $f['patrimonio_porcentaje'].' %',
                 ], $datos['filas']),
                 [
                     'Dependencias' => $datos['metricas']['total_dependencias'] ?? 0,
-                    'Consolidadas' => $datos['metricas']['consolidadas'] ?? 0,
-                    '% Avance' => ($datos['metricas']['porcentaje_avance'] ?? 0).' %',
+                    'Bienes' => $datos['metricas']['patrimonio']['total_bienes'] ?? 0,
+                    '% Patrimonio' => ($datos['metricas']['patrimonio']['porcentaje'] ?? 0).' %',
                 ],
             ],
             'conciliacion-patrimonial' => [
@@ -147,17 +143,6 @@ class ReportesController extends Controller
                     'Bienes' => $datos['totales']['total_bienes'] ?? 0,
                     'Verificados' => $datos['totales']['verificados'] ?? 0,
                     '% Avance' => ($datos['totales']['porcentaje'] ?? 0).' %',
-                ],
-            ],
-            'observaciones' => [
-                ['Código', 'Centro de costo', 'Anexo', 'Observación', 'Estado', 'Registrada', 'Días'],
-                array_map(fn (array $f): array => [
-                    $f['codigo'], $f['nombre'], $f['anexo'], $f['descripcion'],
-                    $f['estado_etiqueta'], $f['registrada_en'] ?? '', $f['dias_subsanacion'] ?? '',
-                ], $datos['filas']),
-                [
-                    'Abiertas' => $datos['resumen']['abiertas'] ?? 0,
-                    'Subsanadas' => $datos['resumen']['subsanadas'] ?? 0,
                 ],
             ],
         };

@@ -6,14 +6,12 @@ import type {
   FormatoExport,
   ReporteConciliacion,
   ReporteMatriz,
-  ReporteObservaciones,
 } from '@/types/reportes'
 
 /** Mapa clave de reporte → payload JSON tipado. */
 interface DatosReporte {
   'matriz-anexos': ReporteMatriz
   'conciliacion-patrimonial': ReporteConciliacion
-  observaciones: ReporteObservaciones
 }
 
 export const reportesService = {

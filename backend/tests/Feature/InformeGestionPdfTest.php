@@ -8,9 +8,7 @@ use App\Models\User;
 use App\Modules\Auth\Models\AsignacionRol;
 use App\Modules\Gestion\Models\InformeGestion;
 use App\Modules\Organization\Models\Dependencia;
-use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
-use App\Support\Enums\EstadoEntrega;
 use App\Support\Enums\Rol;
 use Database\Seeders\RolesPermisosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -64,7 +62,7 @@ class InformeGestionPdfTest extends TestCase
         $this->assertStringStartsWith('%PDF', $respuesta->streamedContent());
     }
 
-    public function test_pdf_de_informe_consolidado_no_lleva_sufijo_borrador(): void
+    public function test_pdf_de_informe_con_datos_usa_nombre_oficial(): void
     {
         $this->servidorEn($this->dep);
 
@@ -77,19 +75,11 @@ class InformeGestionPdfTest extends TestCase
             'estado' => 'completado',
         ]);
 
-        Entrega::create([
-            'proceso_transferencia_id' => $this->proceso->id,
-            'dependencia_id' => $this->dep->id,
-            'dependencia_destino_id' => $this->dep->parent_id,
-            'estado' => EstadoEntrega::CONSOLIDADA,
-        ]);
-
         $respuesta = $this->get("/api/gestion/informe/pdf?dependencia_id={$this->dep->id}");
 
         $respuesta->assertOk();
         $disposition = $respuesta->headers->get('content-disposition');
         $this->assertStringContainsString('Anexo02-InformeGestion', (string) $disposition);
-        $this->assertStringNotContainsString('BORRADOR', (string) $disposition);
     }
 
     public function test_pdf_fuera_de_ambito_devuelve_403(): void

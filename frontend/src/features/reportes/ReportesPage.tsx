@@ -1,22 +1,17 @@
 import { useState } from 'react'
-import { BarChart3, Boxes, MessageSquareWarning } from 'lucide-react'
+import { BarChart3, Boxes } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { DataTable, type ColumnaTabla } from '@/components/ui/data-table'
 import { cn } from '@/lib/utils'
 import { BotonesExport } from './BotonesExport'
-import {
-  useConciliacionPatrimonial,
-  useMatrizAnexos,
-  useObservacionesReporte,
-} from './use-reportes'
-import type { ClaveReporte, FilaConciliacion, FilaMatriz, FilaObservacion } from '@/types/reportes'
+import { useConciliacionPatrimonial, useMatrizAnexos } from './use-reportes'
+import type { ClaveReporte, FilaConciliacion, FilaMatriz } from '@/types/reportes'
 
 const TABS: { clave: ClaveReporte; etiqueta: string; icono: typeof BarChart3 }[] = [
   { clave: 'matriz-anexos', etiqueta: 'Matriz de anexos', icono: BarChart3 },
   { clave: 'conciliacion-patrimonial', etiqueta: 'Conciliación patrimonial', icono: Boxes },
-  { clave: 'observaciones', etiqueta: 'Observaciones', icono: MessageSquareWarning },
 ]
 
 /** Chip de presencia de anexo (Sí / —) para la matriz. */
@@ -52,26 +47,16 @@ function MatrizView() {
   const columnas: ColumnaTabla<FilaMatriz>[] = [
     { id: 'codigo', header: 'Código', cell: (f) => <span className="font-mono">{f.codigo}</span> },
     { id: 'nombre', header: 'Centro de costo', cell: (f) => f.nombre },
-    {
-      id: 'estado',
-      header: 'Estado',
-      cell: (f) => <span className="capitalize">{f.estado_entrega}</span>,
-    },
     { id: 'a02', header: 'A02', align: 'center', cell: (f) => <Presencia ok={f.anexo_02} /> },
     { id: 'a03', header: 'A03', align: 'center', cell: (f) => <Presencia ok={f.anexo_03} /> },
     { id: 'a04', header: 'A04', align: 'center', cell: (f) => <Presencia ok={f.anexo_04} /> },
     { id: 'a05', header: 'A05', align: 'center', cell: (f) => <Presencia ok={f.anexo_05} /> },
     { id: 'a06', header: 'A06', align: 'center', cell: (f) => <Presencia ok={f.anexo_06} /> },
     {
-      id: 'obs',
-      header: 'Obs.',
+      id: 'completos',
+      header: 'Completos',
       align: 'center',
-      cell: (f) =>
-        f.observaciones_abiertas > 0 ? (
-          <span className="font-semibold text-warning-fg">{f.observaciones_abiertas}</span>
-        ) : (
-          <span className="text-muted-foreground">0</span>
-        ),
+      cell: (f) => <span className="font-mono font-semibold">{f.anexos_completos}/5</span>,
     },
     {
       id: 'patr',
@@ -87,11 +72,9 @@ function MatrizView() {
         <KpiStrip
           items={[
             { etiqueta: 'Dependencias', valor: m.total_dependencias },
-            { etiqueta: 'Consolidadas', valor: m.consolidadas },
-            { etiqueta: 'Remitidas', valor: m.remitidas },
-            { etiqueta: 'Observadas', valor: m.observadas },
-            { etiqueta: 'Borrador', valor: m.borrador },
-            { etiqueta: '% Avance', valor: `${m.porcentaje_avance} %` },
+            { etiqueta: 'Bienes SIGA', valor: m.patrimonio.total_bienes },
+            { etiqueta: 'Verificados', valor: m.patrimonio.verificados },
+            { etiqueta: '% Patrimonio', valor: `${m.patrimonio.porcentaje} %` },
           ]}
         />
       )}
@@ -149,57 +132,6 @@ function ConciliacionView() {
   )
 }
 
-function ObservacionesView() {
-  const { data, isLoading, error, refetch } = useObservacionesReporte()
-  const r = data?.resumen
-
-  const columnas: ColumnaTabla<FilaObservacion>[] = [
-    { id: 'codigo', header: 'Código', cell: (f) => <span className="font-mono">{f.codigo}</span> },
-    { id: 'nombre', header: 'Centro de costo', cell: (f) => f.nombre },
-    { id: 'anexo', header: 'Anexo', cell: (f) => f.anexo },
-    {
-      id: 'descripcion',
-      header: 'Observación',
-      cell: (f) => <span className="line-clamp-2">{f.descripcion}</span>,
-    },
-    { id: 'estado', header: 'Estado', cell: (f) => f.estado_etiqueta },
-    { id: 'registrada', header: 'Registrada', cell: (f) => f.registrada_en ?? '—' },
-    {
-      id: 'dias',
-      header: 'Días subsanación',
-      align: 'right',
-      cell: (f) => (f.dias_subsanacion ?? '—'),
-    },
-  ]
-
-  return (
-    <div className="space-y-4">
-      {r && (
-        <KpiStrip
-          items={[
-            { etiqueta: 'Abiertas', valor: r.abiertas },
-            { etiqueta: 'En subsanación', valor: r.en_subsanacion },
-            { etiqueta: 'Subsanadas', valor: r.subsanadas },
-            { etiqueta: 'Desestimadas', valor: r.desestimadas },
-          ]}
-        />
-      )}
-      <DataTable<FilaObservacion & { __k: number }>
-        columnas={columnas}
-        filas={data?.filas.map((f, i) => ({ ...f, __k: i }))}
-        rowKey={(f) => `${f.dependencia_id}-${f.__k}`}
-        loading={isLoading}
-        error={error}
-        onReintentar={() => refetch()}
-        vacio={{
-          titulo: 'Sin observaciones',
-          descripcion: 'No hay observaciones registradas en su ámbito.',
-        }}
-      />
-    </div>
-  )
-}
-
 export function ReportesPage() {
   const [tab, setTab] = useState<ClaveReporte>('matriz-anexos')
 
@@ -223,7 +155,7 @@ export function ReportesPage() {
             Consolidados de la Transferencia
           </h1>
           <p className="text-sm text-muted-foreground">
-            Matriz de anexos, conciliación patrimonial y observaciones — acotados a su ámbito.
+            Matriz de anexos y conciliación patrimonial — acotados a su ámbito.
           </p>
         </div>
         <BotonesExport reporte={tab} />
@@ -252,7 +184,6 @@ export function ReportesPage() {
       {/* Contenido del reporte activo */}
       {tab === 'matriz-anexos' && <MatrizView />}
       {tab === 'conciliacion-patrimonial' && <ConciliacionView />}
-      {tab === 'observaciones' && <ObservacionesView />}
     </div>
   )
 }

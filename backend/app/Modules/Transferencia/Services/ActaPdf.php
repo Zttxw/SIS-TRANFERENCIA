@@ -11,10 +11,10 @@ use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * PDF oficial del Anexo 07 (Acta de Transferencia). Unifica la impresión del
- * acta al generador del backend (F5): reutiliza TransferenciaService::obtenerActa,
- * que ya exige entrega CONSOLIDADA (409 en otro caso), de modo que el acta nunca
- * se emite como borrador. Sin marca de agua (siempre consolidada).
+ * PDF oficial del Anexo 07 (Acta de Transferencia). Reutiliza
+ * TransferenciaService::obtenerActa, que materializa el acta con los datos
+ * disponibles de la dependencia. El acta es un entregable que el sistema genera
+ * para la firma física; el flujo formal lo lleva el SGD.
  *
  * @var array<string, string> MESES
  */
@@ -42,7 +42,7 @@ class ActaPdf
 
     public function descargar(int $dependenciaId, User $usuario): StreamedResponse
     {
-        // Enforce CONSOLIDADA (lanza 409 si no) y materializa/actualiza el acta.
+        // Materializa/actualiza el acta con los datos disponibles.
         $acta = $this->transferenciaService->obtenerActa($dependenciaId, $usuario);
         $contexto = $this->contexto->paraDependencia($dependenciaId);
 

@@ -9,7 +9,6 @@ use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Organization\Models\Servidor;
 use App\Support\Concerns\Auditable;
 use App\Support\Concerns\HasFuenteDato;
-use App\Support\Concerns\TieneObservaciones;
 use App\Support\Enums\FuenteDato;
 use App\Support\Models\BaseModel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,7 +21,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Personal extends BaseModel
 {
-    use Auditable, HasFuenteDato, SoftDeletes, TieneObservaciones;
+    use Auditable, HasFuenteDato, SoftDeletes;
 
     protected $table = 'personal';
 

@@ -22,7 +22,6 @@ interface AcervoPorAnioProps {
   loading?: boolean
   error?: unknown
   onReintentar?: () => void
-  esModificable?: boolean
   onEditar: (serie: AcervoDocumental) => void
   onEliminar: (serie: AcervoDocumental) => void
   eliminando?: boolean
@@ -43,7 +42,6 @@ export function AcervoPorAnio({
   loading = false,
   error,
   onReintentar,
-  esModificable = true,
   onEditar,
   onEliminar,
   eliminando = false,
@@ -153,7 +151,6 @@ export function AcervoPorAnio({
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                    disabled={!esModificable}
                                     onClick={() => onEditar(item)}
                                     aria-label="Editar serie"
                                   >
@@ -163,7 +160,7 @@ export function AcervoPorAnio({
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                    disabled={!esModificable || eliminando}
+                                    disabled={eliminando}
                                     onClick={() => onEliminar(item)}
                                     aria-label="Eliminar serie"
                                   >

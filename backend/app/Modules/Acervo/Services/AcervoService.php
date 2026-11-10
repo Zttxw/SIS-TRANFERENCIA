@@ -7,14 +7,11 @@ namespace App\Modules\Acervo\Services;
 use App\Models\User;
 use App\Modules\Acervo\Models\AcervoDocumental;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
-use App\Support\Concerns\RespetaEstadoEntrega;
 use App\Support\Enums\FuenteDato;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class AcervoService
 {
-    use RespetaEstadoEntrega;
-
     /**
      * Lista los registros de acervo documental con filtros y paginación.
      */
@@ -58,8 +55,6 @@ class AcervoService
     {
         $procesoId = $procesoId ?? $this->resolverProcesoActivoId();
 
-        $this->exigirEntregaModificable((int) $datos['dependencia_id'], $procesoId);
-
         return AcervoDocumental::create([
             'proceso_transferencia_id' => $procesoId,
             'dependencia_id' => (int) $datos['dependencia_id'],
@@ -85,7 +80,6 @@ class AcervoService
     public function actualizar(int $id, array $datos): AcervoDocumental
     {
         $acervo = AcervoDocumental::findOrFail($id);
-        $this->exigirEntregaModificable((int) $acervo->dependencia_id);
         $acervo->update($datos);
 
         return $acervo->fresh(['dependencia', 'registradoPor']);
@@ -97,7 +91,6 @@ class AcervoService
     public function eliminar(int $id): bool
     {
         $acervo = AcervoDocumental::findOrFail($id);
-        $this->exigirEntregaModificable((int) $acervo->dependencia_id);
 
         return (bool) $acervo->delete();
     }

@@ -12,9 +12,7 @@ use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Organization\Models\Servidor;
 use App\Modules\Patrimonio\Models\BienPatrimonial;
 use App\Modules\Personal\Models\Personal;
-use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
-use App\Support\Enums\EstadoEntrega;
 use App\Support\Enums\Rol;
 use Database\Seeders\RolesPermisosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,8 +21,8 @@ use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
- * PDF oficiales de los anexos 03–06 y del acta 07 (F5). Verifica que cada
- * endpoint produce un PDF y que el acta respeta el gate de CONSOLIDADA.
+ * PDF oficiales de los anexos 03–06 y del acta 07. Verifica que cada endpoint
+ * produce un PDF.
  */
 class AnexosPdfTest extends TestCase
 {
@@ -136,33 +134,11 @@ class AnexosPdfTest extends TestCase
         $this->assertEsPdf($this->get("/api/nopatrimonial/pdf?dependencia_id={$this->dep->id}"));
     }
 
-    public function test_pdf_acta_exige_consolidada(): void
+    public function test_pdf_acta_produce_pdf(): void
     {
         $this->actuar(Rol::RESPONSABLE_CENTRO_COSTO);
 
-        // Sin entrega consolidada → 409.
-        Entrega::create([
-            'proceso_transferencia_id' => $this->proceso->id,
-            'dependencia_id' => $this->dep->id,
-            'dependencia_destino_id' => $this->dep->parent_id,
-            'estado' => EstadoEntrega::REMITIDA,
-        ]);
-
-        $this->get("/api/transferencia/acta/pdf?dependencia_id={$this->dep->id}")
-            ->assertStatus(409);
-    }
-
-    public function test_pdf_acta_consolidada_produce_pdf(): void
-    {
-        $this->actuar(Rol::RESPONSABLE_CENTRO_COSTO);
-
-        Entrega::create([
-            'proceso_transferencia_id' => $this->proceso->id,
-            'dependencia_id' => $this->dep->id,
-            'dependencia_destino_id' => $this->dep->parent_id,
-            'estado' => EstadoEntrega::CONSOLIDADA,
-        ]);
-
+        // El acta se genera con los datos disponibles, sin gate de estado de entrega.
         $this->assertEsPdf($this->get("/api/transferencia/acta/pdf?dependencia_id={$this->dep->id}"));
     }
 }

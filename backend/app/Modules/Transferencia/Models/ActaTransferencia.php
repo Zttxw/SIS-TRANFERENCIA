@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Transferencia\Models;
 
 use App\Models\User;
-use App\Modules\Expediente\Models\Expediente;
 use App\Modules\Organization\Models\Dependencia;
 use App\Support\Concerns\Auditable;
 use App\Support\Concerns\TieneEvidencias;
@@ -28,7 +27,6 @@ class ActaTransferencia extends BaseModel
     protected $fillable = [
         'proceso_transferencia_id',
         'dependencia_id',
-        'expediente_id',
         'numero_acta',
         'fecha_acta',
         'intervinientes',
@@ -53,12 +51,6 @@ class ActaTransferencia extends BaseModel
     public function dependencia(): BelongsTo
     {
         return $this->belongsTo(Dependencia::class);
-    }
-
-    /** @return BelongsTo<Expediente, $this> */
-    public function expediente(): BelongsTo
-    {
-        return $this->belongsTo(Expediente::class);
     }
 
     /** @return BelongsTo<User, $this> */
