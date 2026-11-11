@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ArrowRight,
-  Boxes,
   Check,
   ChevronDown,
   ChevronRight,
@@ -10,11 +8,9 @@ import {
   FolderOpen,
   FolderTree,
   List,
-  Package,
   Printer,
   RefreshCw,
   Search,
-  Users,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -156,11 +152,6 @@ export function EstructuraOrganicaPage() {
   const handleSeleccionarDespacho = (nodo: NodoArbol) => {
     setDependenciaId(nodo.id)
     toast.success(`Despacho activo establecido: [${nodo.codigo}] ${nodo.nombre}`)
-  }
-
-  const handleAbrirDashboard = (nodo: NodoArbol) => {
-    setDependenciaId(nodo.id)
-    navigate('/')
   }
 
   if (isLoading) {
@@ -423,54 +414,6 @@ export function EstructuraOrganicaPage() {
                           <span className="italic text-muted-foreground">Sin asignar</span>
                         )}
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Acciones directas sobre este centro de costo */}
-                  <div className="space-y-2 border-t border-border pt-3">
-                    <span className="text-nota font-bold text-muted-foreground uppercase tracking-wider block">
-                      Gestión del Centro de Costo
-                    </span>
-
-                    <div className="grid grid-cols-1 gap-1.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleAbrirDashboard(nodoEfectivo)}
-                        className="h-8 justify-start text-xs gap-2 font-medium cursor-pointer"
-                      >
-                        <Boxes className="h-3.5 w-3.5 text-primary" />
-                        <span>Abrir Dashboard de este centro</span>
-                        <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setDependenciaId(nodoEfectivo.id)
-                          navigate('/patrimonio')
-                        }}
-                        className="h-8 justify-start text-xs gap-2 font-medium cursor-pointer"
-                      >
-                        <Package className="h-3.5 w-3.5 text-primary" />
-                        <span>Ver Anexo 04 (Patrimonio SIGA)</span>
-                        <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setDependenciaId(nodoEfectivo.id)
-                          navigate('/personal')
-                        }}
-                        className="h-8 justify-start text-xs gap-2 font-medium cursor-pointer"
-                      >
-                        <Users className="h-3.5 w-3.5 text-primary" />
-                        <span>Ver Anexo 05 (Personal a cargo)</span>
-                        <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
-                      </Button>
                     </div>
                   </div>
                 </CardContent>
