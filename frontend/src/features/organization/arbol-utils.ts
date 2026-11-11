@@ -44,7 +44,7 @@ export function construirArbol(dependencias: DependenciaResumen[]): NodoArbol[] 
   const raices: NodoArbol[] = []
 
   for (const dep of ordenadas) {
-    const nodo = mapa.get(dep.codigo)!
+    const nodo = mapaPorId.get(dep.id)!
 
     // Si tiene parent_id explícito y existe en el mapa
     if (dep.parent_id && mapaPorId.has(dep.parent_id)) {

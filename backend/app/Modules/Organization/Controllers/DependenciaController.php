@@ -31,8 +31,10 @@ class DependenciaController extends Controller
             $query->where('activa', true);
         }
 
-        // Si el usuario no tiene ámbito global (admin/ETTS), acotar a su dependencia o subárbol
-        if ($request->user()) {
+        // Acotar al ámbito solo cuando se solicita explícitamente (ej. en el selector de despacho).
+        // Por defecto, el catálogo y el organigrama institucional (Anexo 01) son públicos para toda la entidad,
+        // permitiendo a cualquier servidor consultar el árbol completo e identificar su ubicación.
+        if ($request->boolean('solo_ambito', false) && $request->user()) {
             $idsAmbito = $this->idsDependenciaEnAmbito($request->user());
             if ($idsAmbito !== null) {
                 $query->whereIn('id', $idsAmbito);
