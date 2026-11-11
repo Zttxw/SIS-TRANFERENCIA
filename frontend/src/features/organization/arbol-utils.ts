@@ -23,8 +23,15 @@ export interface NodoArbol {
  * infiriendo la relación padre-hijo tanto por `parent_id` como por la estructura de código decimal (ej. 01.03 -> 01.03.07).
  */
 export function construirArbol(dependencias: DependenciaResumen[]): NodoArbol[] {
-  // Ordenar por código para garantizar que los padres se procesen antes
-  const ordenadas = [...dependencias].sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }))
+  // Ordenar priorizando el código oficial del Anexo 01 (01, 02, 03... 17.03)
+  const ordenadas = [...dependencias].sort((a, b) => {
+    if (a.codigo_anexo1 && b.codigo_anexo1) {
+      return a.codigo_anexo1.localeCompare(b.codigo_anexo1, undefined, { numeric: true })
+    }
+    if (a.codigo_anexo1 && !b.codigo_anexo1) return -1
+    if (!a.codigo_anexo1 && b.codigo_anexo1) return 1
+    return a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
+  })
 
   const mapa = new Map<string, NodoArbol>()
   const mapaPorId = new Map<number, NodoArbol>()
@@ -69,6 +76,21 @@ export function construirArbol(dependencias: DependenciaResumen[]): NodoArbol[] 
 
     // Si no tiene padre en el mapa, es una raíz institucional
     raices.push(nodo)
+  }
+
+  // Ordenar las raíces y los hijos de cada nodo por la jerarquía oficial
+  const comparador = (a: NodoArbol, b: NodoArbol) => {
+    if (a.codigo_anexo1 && b.codigo_anexo1) {
+      return a.codigo_anexo1.localeCompare(b.codigo_anexo1, undefined, { numeric: true })
+    }
+    if (a.codigo_anexo1 && !b.codigo_anexo1) return -1
+    if (!a.codigo_anexo1 && b.codigo_anexo1) return 1
+    return a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
+  }
+
+  raices.sort(comparador)
+  for (const nodo of mapaPorId.values()) {
+    nodo.hijos.sort(comparador)
   }
 
   return raices
