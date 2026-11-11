@@ -10,10 +10,10 @@ export function useCatalogoDependencias() {
     queryKey: ['dependencias', 'arbol-completo'],
     queryFn: async () => {
       const res = await api.get<ApiSuccess<DependenciaResumen[]>>('/dependencias', {
-        params: { all: true, solo_activas: true },
+        params: { all: true, solo_activas: true, solo_ambito: false },
       })
       return res.data.data
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 30, // 30 segundos para refresco ágil de estructura
   })
 }

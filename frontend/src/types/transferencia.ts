@@ -7,6 +7,8 @@
 export interface DependenciaResumen {
   id: number
   codigo: string
+  codigo_anexo1?: string | null
+  es_centro_costo_oficial?: boolean
   nombre: string
   nivel: number
   parent_id: number | null

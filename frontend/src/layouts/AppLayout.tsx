@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, FolderTree, LogOut, Menu, Users, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, LogOut, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 
@@ -8,37 +8,6 @@ import { DependenciaSelector } from '@/features/organization/DependenciaSelector
 import { cn } from '@/lib/utils'
 
 import { ITEMS_NAV } from './navegacion'
-
-function getInfoEstructura(
-  usuario: ReturnType<typeof useAuth>['usuario'],
-  esSubmenu = false,
-) {
-  if (usuario?.es_global) {
-    return {
-      etiqueta: esSubmenu ? 'Anexo 01 · Organigrama' : 'Estructura Orgánica',
-      icono: FolderTree,
-    }
-  }
-
-  const nombreDep = usuario?.servidor?.dependencia?.nombre || ''
-  let sufijo = 'Personal del Despacho'
-  if (/TECNOLOG[IÍ]AS DE LA INFORMACI[OÓ]N/i.test(nombreDep)) {
-    sufijo = 'Trabajadores de OTI'
-  } else if (/ABASTECIMIENTO/i.test(nombreDep)) {
-    sufijo = 'Trabajadores de Abastecimiento'
-  } else if (/CONTABILIDAD/i.test(nombreDep)) {
-    sufijo = 'Trabajadores de Contabilidad'
-  } else if (/TESORER[IÍ]A/i.test(nombreDep)) {
-    sufijo = 'Trabajadores de Tesorería'
-  } else if (/RECURSOS HUMANOS/i.test(nombreDep)) {
-    sufijo = 'Trabajadores de RRHH'
-  }
-
-  return {
-    etiqueta: esSubmenu ? `Anexo 01 · ${sufijo}` : sufijo,
-    icono: Users,
-  }
-}
 
 /**
  * Layout base autenticado: barra lateral de navegación (sidebar) con identidad
@@ -62,8 +31,6 @@ export function AppLayout() {
   const estaEnAnexo = rutasAnexos.some((r) => location.pathname.startsWith(r))
   const [anexosAbierto, setAnexosAbierto] = useState(true)
 
-  const infoEstructura = getInfoEstructura(usuario, false)
-  const infoEstructuraSubmenu = getInfoEstructura(usuario, true)
   const items = ITEMS_NAV.filter((item) => permisos.has(item.permiso))
 
   const nav = (
@@ -72,14 +39,12 @@ export function AppLayout() {
         {usuario?.es_global ? 'Administración' : 'Servidor Público'}
       </div>
       {items.map((item) => {
-        const Icono = item.ruta === '/organigrama' ? infoEstructura.icono : item.icono
+        const Icono = item.icono
         const etiquetaEfectiva =
           item.ruta === '/'
             ? usuario?.es_global
               ? 'Dashboard'
               : 'Mi entrega'
-            : item.ruta === '/organigrama'
-            ? infoEstructura.etiqueta
             : item.etiqueta
 
         // Si es un módulo contenedor con submódulos hijos (ej. "Anexos de Transferencia")
@@ -118,10 +83,7 @@ export function AppLayout() {
               {anexosAbierto && (
                 <div className="border-l border-white/20 ml-4 pl-2 space-y-1 pt-0.5 pb-1">
                   {hijosPermitidos.map((sub) => {
-                    const SubIcono =
-                      sub.ruta === '/organigrama' ? infoEstructuraSubmenu.icono : sub.icono
-                    const subEtiqueta =
-                      sub.ruta === '/organigrama' ? infoEstructuraSubmenu.etiqueta : sub.etiqueta
+                    const SubIcono = sub.icono
                     return (
                       <NavLink
                         key={sub.ruta}
@@ -137,7 +99,7 @@ export function AppLayout() {
                         }
                       >
                         <SubIcono className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{subEtiqueta}</span>
+                        <span className="truncate">{sub.etiqueta}</span>
                       </NavLink>
                     )
                   })}

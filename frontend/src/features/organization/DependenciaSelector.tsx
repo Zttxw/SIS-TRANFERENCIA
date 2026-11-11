@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Building2, UserCheck } from 'lucide-react'
 
@@ -23,6 +24,18 @@ export function DependenciaSelector({ className }: { className?: string }) {
     staleTime: 5 * 60_000,
   })
 
+  const listaDependencias = useMemo(() => {
+    return (
+      data?.filter(
+        (d) =>
+          Boolean(d.nombre) &&
+          d.nombre.trim() !== '' &&
+          d.nombre.trim().toUpperCase() !== 'NULL' &&
+          d.nombre.trim().toUpperCase() !== 'NONE',
+      ) ?? []
+    )
+  }, [data])
+
   if (isError) {
     return (
       <span className="text-xs text-muted-foreground">
@@ -44,16 +57,17 @@ export function DependenciaSelector({ className }: { className?: string }) {
 
   // Dependencia actualmente activa encontrada en los datos o en el perfil
   const dependenciaActual =
-    data?.find((d) => d.id === dependenciaId) ??
+    listaDependencias.find((d) => d.id === dependenciaId) ??
     (usuario?.servidor?.dependencia ? {
       id: usuario.servidor.dependencia.id,
       codigo: usuario.servidor.dependencia.codigo,
+      codigo_anexo1: usuario.servidor.dependencia.codigo_anexo1,
       nombre: usuario.servidor.dependencia.nombre,
       nivel: usuario.servidor.dependencia.nivel,
     } : null)
 
   // Caso 1: Usuario con ámbito restringido a una única dependencia (Jefe de OTI o Servidor)
-  if (!esGlobal && (!data || data.length <= 1)) {
+  if (!esGlobal && listaDependencias.length <= 1) {
     return (
       <div
         className={cn(
@@ -67,7 +81,9 @@ export function DependenciaSelector({ className }: { className?: string }) {
           {dependenciaActual ? (
             <>
               <span className="font-mono text-nota font-bold text-primary shrink-0">
-                [{dependenciaActual.codigo}]
+                {dependenciaActual.codigo_anexo1
+                  ? `[CC ${dependenciaActual.codigo_anexo1}]`
+                  : `[${dependenciaActual.codigo}]`}
               </span>
               <span className="truncate font-semibold uppercase tracking-tight text-foreground">
                 {dependenciaActual.nombre}
@@ -98,19 +114,19 @@ export function DependenciaSelector({ className }: { className?: string }) {
   }
 
   // Caso 2: Usuario responsable de múltiples unidades subordinadas (subárbol)
-  if (!esGlobal && data && data.length > 1) {
+  if (!esGlobal && listaDependencias.length > 1) {
     return (
       <div className={cn('relative flex items-center', className)}>
         <select
           aria-label="Dependencia subordinada activa"
           disabled={isLoading}
-          value={dependenciaId ?? data[0]?.id ?? ''}
+          value={dependenciaId ?? listaDependencias[0]?.id ?? ''}
           onChange={(e) => setDependenciaId(Number(e.target.value))}
           className="h-9 w-full max-w-sm rounded-lg border border-primary/30 bg-background px-3 text-xs font-medium text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
-          {data.map((d) => (
+          {listaDependencias.map((d) => (
             <option key={d.id} value={d.id}>
-              [{d.codigo}] · {d.nombre}
+              {d.codigo_anexo1 ? `[${d.codigo_anexo1}]` : `[${d.codigo}]`} · {d.nombre}
             </option>
           ))}
         </select>
@@ -131,11 +147,11 @@ export function DependenciaSelector({ className }: { className?: string }) {
         className="h-9 w-full max-w-sm rounded-lg border border-input bg-background px-3 text-xs font-medium text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
       >
         <option value="" className="font-semibold text-primary">
-          🏛️ Monitoreo Global (Todo el Municipio)
+          Monitoreo Global (Todo el Municipio)
         </option>
-        {data?.map((d) => (
+        {listaDependencias.map((d) => (
           <option key={d.id} value={d.id}>
-            [{d.codigo}] · {d.nombre}
+            {d.codigo_anexo1 ? `[${d.codigo_anexo1}]` : `[${d.codigo}]`} · {d.nombre}
           </option>
         ))}
       </select>

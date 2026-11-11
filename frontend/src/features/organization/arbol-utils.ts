@@ -3,6 +3,8 @@ import type { DependenciaResumen } from '@/types/transferencia'
 export interface NodoArbol {
   id: number
   codigo: string
+  codigo_anexo1?: string | null
+  es_centro_costo_oficial?: boolean
   nombre: string
   nivel: number
   parent_id: number | null
@@ -21,8 +23,15 @@ export interface NodoArbol {
  * infiriendo la relación padre-hijo tanto por `parent_id` como por la estructura de código decimal (ej. 01.03 -> 01.03.07).
  */
 export function construirArbol(dependencias: DependenciaResumen[]): NodoArbol[] {
-  // Ordenar por código para garantizar que los padres se procesen antes
-  const ordenadas = [...dependencias].sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }))
+  // Ordenar priorizando el código oficial del Anexo 01 (01, 02, 03... 17.03)
+  const ordenadas = [...dependencias].sort((a, b) => {
+    if (a.codigo_anexo1 && b.codigo_anexo1) {
+      return a.codigo_anexo1.localeCompare(b.codigo_anexo1, undefined, { numeric: true })
+    }
+    if (a.codigo_anexo1 && !b.codigo_anexo1) return -1
+    if (!a.codigo_anexo1 && b.codigo_anexo1) return 1
+    return a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
+  })
 
   const mapa = new Map<string, NodoArbol>()
   const mapaPorId = new Map<number, NodoArbol>()
@@ -31,6 +40,8 @@ export function construirArbol(dependencias: DependenciaResumen[]): NodoArbol[] 
     const nodo: NodoArbol = {
       id: dep.id,
       codigo: dep.codigo,
+      codigo_anexo1: dep.codigo_anexo1,
+      es_centro_costo_oficial: dep.es_centro_costo_oficial,
       nombre: dep.nombre,
       nivel: dep.nivel,
       parent_id: dep.parent_id,
@@ -44,7 +55,7 @@ export function construirArbol(dependencias: DependenciaResumen[]): NodoArbol[] 
   const raices: NodoArbol[] = []
 
   for (const dep of ordenadas) {
-    const nodo = mapa.get(dep.codigo)!
+    const nodo = mapaPorId.get(dep.id)!
 
     // Si tiene parent_id explícito y existe en el mapa
     if (dep.parent_id && mapaPorId.has(dep.parent_id)) {
@@ -67,6 +78,21 @@ export function construirArbol(dependencias: DependenciaResumen[]): NodoArbol[] 
     raices.push(nodo)
   }
 
+  // Ordenar las raíces y los hijos de cada nodo por la jerarquía oficial
+  const comparador = (a: NodoArbol, b: NodoArbol) => {
+    if (a.codigo_anexo1 && b.codigo_anexo1) {
+      return a.codigo_anexo1.localeCompare(b.codigo_anexo1, undefined, { numeric: true })
+    }
+    if (a.codigo_anexo1 && !b.codigo_anexo1) return -1
+    if (!a.codigo_anexo1 && b.codigo_anexo1) return 1
+    return a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
+  }
+
+  raices.sort(comparador)
+  for (const nodo of mapaPorId.values()) {
+    nodo.hijos.sort(comparador)
+  }
+
   return raices
 }
 
@@ -82,6 +108,7 @@ export function filtrarArbol(nodos: NodoArbol[], query: string): NodoArbol[] {
   for (const nodo of nodos) {
     const coincide =
       nodo.codigo.toLowerCase().includes(q) ||
+      (nodo.codigo_anexo1 && nodo.codigo_anexo1.toLowerCase().includes(q)) ||
       nodo.nombre.toLowerCase().includes(q) ||
       (nodo.encargado &&
         `${nodo.encargado.nombres} ${nodo.encargado.apellidos}`.toLowerCase().includes(q))
@@ -98,4 +125,22 @@ export function filtrarArbol(nodos: NodoArbol[], query: string): NodoArbol[] {
 
   return resultado
 }
+
+/**
+ * Obtiene la lista de IDs de todos los ancestros de una dependencia hasta la raíz.
+ */
+export function obtenerAncestrosIds(dependencias: DependenciaResumen[], targetId: number): number[] {
+  const mapaPorId = new Map<number, DependenciaResumen>()
+  for (const dep of dependencias) {
+    mapaPorId.set(dep.id, dep)
+  }
+  const ancestros: number[] = []
+  let actual = mapaPorId.get(targetId)
+  while (actual && actual.parent_id) {
+    ancestros.push(actual.parent_id)
+    actual = mapaPorId.get(actual.parent_id)
+  }
+  return ancestros
+}
+
 
