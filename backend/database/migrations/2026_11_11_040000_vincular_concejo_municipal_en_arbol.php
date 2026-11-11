@@ -28,8 +28,17 @@ return new class extends Migration
                     'activa' => true,
                     'es_centro_costo_oficial' => true,
                     'nivel' => 1,
+                    'deleted_at' => null,
                 ]);
         }
+
+        // Asegurar que la Unidad de Saneamiento Físico Legal (125) no esté soft-deleted
+        DB::table('dependencias')
+            ->where('id', 125)
+            ->update([
+                'deleted_at' => null,
+                'activa' => true,
+            ]);
     }
 
     /**
@@ -45,3 +54,4 @@ return new class extends Migration
             ]);
     }
 };
+

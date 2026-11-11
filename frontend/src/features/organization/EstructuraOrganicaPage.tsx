@@ -233,6 +233,19 @@ export function EstructuraOrganicaPage() {
           <Button
             variant="outline"
             size="sm"
+            onClick={async () => {
+              await refetch()
+              toast.success('Catálogo de centros de costo actualizado')
+            }}
+            className="h-8 gap-1.5 text-xs shadow-xs"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Actualizar
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => window.print()}
             className="h-8 gap-1.5 text-xs shadow-xs"
           >
