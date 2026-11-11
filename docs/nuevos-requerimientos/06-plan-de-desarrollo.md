@@ -62,7 +62,9 @@ la hija**; corregir una observada genera **nueva versión** y **re-firma** de ob
 
 - **B3a** ✅ HECHA: el acta se emite desde `borrador`/`observada` (antes exigía `consolidada`); su
   campo `declara` fija el momento (`suscripcion_hija` pre-remisión; `recepcion_consolidacion` tras
-  consolidar). Lleva `version` y arranca en `generada`. La ruta post-consolidación sigue válida.
+  consolidar). Lleva `version` y arranca en `generada`. La ruta post-consolidación sigue válida. El
+  PDF del acta pre-remisión sale con marca **BORRADOR** automáticamente (ya lo decide
+  `ContextoTransferencia::es_borrador`, compartido por todos los anexos; sin código nuevo).
 - **B3c** ✅ HECHA: re-remitir una entrega `observada` sube la `version` del acta e **invalida** las
   firmas obligatorias previas (pasan a `cancelada`), para que una firma vieja no ampare una versión
   corregida. La re-remisión automática tras cerrar observaciones no reutiliza firma/plazo sin re-chequear.
