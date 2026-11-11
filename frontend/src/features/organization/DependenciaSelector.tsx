@@ -131,7 +131,7 @@ export function DependenciaSelector({ className }: { className?: string }) {
         className="h-9 w-full max-w-sm rounded-lg border border-input bg-background px-3 text-xs font-medium text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
       >
         <option value="" className="font-semibold text-primary">
-          🏛️ Monitoreo Global (Todo el Municipio)
+          Monitoreo Global (Todo el Municipio)
         </option>
         {data?.map((d) => (
           <option key={d.id} value={d.id}>

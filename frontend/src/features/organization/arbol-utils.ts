@@ -99,3 +99,21 @@ export function filtrarArbol(nodos: NodoArbol[], query: string): NodoArbol[] {
   return resultado
 }
 
+/**
+ * Obtiene la lista de IDs de todos los ancestros de una dependencia hasta la raíz.
+ */
+export function obtenerAncestrosIds(dependencias: DependenciaResumen[], targetId: number): number[] {
+  const mapaPorId = new Map<number, DependenciaResumen>()
+  for (const dep of dependencias) {
+    mapaPorId.set(dep.id, dep)
+  }
+  const ancestros: number[] = []
+  let actual = mapaPorId.get(targetId)
+  while (actual && actual.parent_id) {
+    ancestros.push(actual.parent_id)
+    actual = mapaPorId.get(actual.parent_id)
+  }
+  return ancestros
+}
+
+

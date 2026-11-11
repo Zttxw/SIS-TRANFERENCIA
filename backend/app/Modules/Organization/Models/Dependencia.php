@@ -122,6 +122,7 @@ class Dependencia extends BaseModel
 
         while ($frontera !== []) {
             $hijas = self::query()
+                ->where('activa', true)
                 ->whereIn('parent_id', $frontera)
                 ->pluck('id')
                 ->all();

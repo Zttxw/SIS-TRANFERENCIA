@@ -38,7 +38,7 @@ export const ITEMS_NAV: ItemNav[] = [
     permiso: PERMISOS.VerAnexos,
   },
   {
-    etiqueta: 'Estructura Orgánica',
+    etiqueta: 'Centros de Costo',
     ruta: '/organigrama',
     icono: FolderTree,
     permiso: PERMISOS.VerAnexos,
@@ -55,7 +55,7 @@ export const ITEMS_NAV: ItemNav[] = [
     permiso: PERMISOS.VerAnexos,
     hijos: [
       {
-        etiqueta: 'Anexo 01 · Organigrama',
+        etiqueta: 'Anexo 01 · Centros de Costo',
         ruta: '/organigrama',
         icono: FolderTree,
         permiso: PERMISOS.VerAnexos,
