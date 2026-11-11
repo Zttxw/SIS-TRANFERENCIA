@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Documentos\Requests\GuardarDocumentoPendienteRequest;
 use App\Modules\Documentos\Services\DocumentoPendienteService;
 use App\Support\Concerns\AutorizaAmbito;
+use App\Support\Enums\Permiso;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -69,6 +70,27 @@ class DocumentoPendienteController extends Controller
         $this->documentoService->eliminar($id);
 
         return ApiResponse::success(null, 'Documento eliminado de Anexo 01.');
+    }
+
+    /**
+     * E2 (RF-002): drill-down de un indicador al listado documental que lo
+     * sustenta. Usa los MISMOS filtros/ámbito que el conteo, de modo que la cifra
+     * y el listado coinciden. El acceso a los originales SGD se marca por
+     * documento según el permiso del perfil (expediente.ver), sin servir el
+     * archivo (D-10).
+     */
+    public function drilldown(Request $request): JsonResponse
+    {
+        $filtros = $this->acotarFiltrosAlAmbito(
+            $request->user(),
+            $request->only(['dependencia_id', 'estado_atencion', 'search', 'per_page'])
+        );
+
+        $puedeVerOriginales = $request->user()->tienePermiso(Permiso::VerExpediente);
+
+        $listado = $this->documentoService->listarParaIndicador($filtros, $puedeVerOriginales);
+
+        return ApiResponse::success($listado, 'Listado documental del indicador recuperado.');
     }
 
     /**

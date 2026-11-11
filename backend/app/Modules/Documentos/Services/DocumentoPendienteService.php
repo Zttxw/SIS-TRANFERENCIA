@@ -53,6 +53,57 @@ class DocumentoPendienteService
     }
 
     /**
+     * E2 (RF-002, D-10): drill-down de un indicador al listado documental que lo
+     * sustenta. Comparte los MISMOS filtros/ámbito/periodo que el conteo del
+     * indicador (misma firma que `listar`), de modo que «35 enviados» abre
+     * exactamente esos 35 documentos y no una página arbitraria.
+     *
+     * Por documento se expone `original_sgd`: si el registro proviene del SGD, el
+     * original está «disponible según permiso» (enlace/indicador), SIN traer el
+     * archivo — la ingesta solo guarda agregados y el acceso al repositorio de
+     * archivos SGD y su difusión siguen pendientes (D-10). Un registro manual no
+     * tiene original en el SGD.
+     *
+     * @param  array<string, mixed>  $filtros
+     * @return array<string, mixed>
+     */
+    public function listarParaIndicador(array $filtros = [], bool $puedeVerOriginales = false): array
+    {
+        $pagina = $this->listar($filtros);
+
+        $items = collect($pagina->items())->map(function (DocumentoPendiente $doc) use ($puedeVerOriginales) {
+            $esSgd = $doc->fuente === FuenteDato::SGD;
+
+            return [
+                'id' => $doc->id,
+                'numero_documento' => $doc->numero_documento,
+                'tipo_documento' => $doc->tipo_documento,
+                'asunto' => $doc->asunto,
+                'sumilla' => $doc->sumilla,
+                'fecha_documento' => $doc->fecha_documento?->toDateString(),
+                'estado_atencion' => $doc->estado_atencion,
+                'dependencia_id' => $doc->dependencia_id,
+                'fuente' => $doc->fuente,
+                // Estado del original SGD, sin servir el archivo (D-10):
+                //  - disponible: existe en el SGD y el usuario está autorizado;
+                //  - restringido: existe pero el perfil no puede verlo;
+                //  - no_aplica: registro manual, no tiene original en el SGD.
+                'original_sgd' => ! $esSgd
+                    ? 'no_aplica'
+                    : ($puedeVerOriginales ? 'disponible' : 'restringido'),
+            ];
+        })->all();
+
+        return [
+            'total' => $pagina->total(),
+            'per_page' => $pagina->perPage(),
+            'current_page' => $pagina->currentPage(),
+            'last_page' => $pagina->lastPage(),
+            'items' => $items,
+        ];
+    }
+
+    /**
      * Registra o actualiza un documento/asunto pendiente (Anexo 01).
      */
     public function guardar(array $datos, User $usuario, ?int $id = null, ?int $procesoId = null): DocumentoPendiente
@@ -68,6 +119,8 @@ class DocumentoPendienteService
             'numero_documento' => $datos['numero_documento'] ?? null,
             'tipo_documento' => $datos['tipo_documento'] ?? null,
             'asunto' => $datos['asunto'],
+            'sumilla' => $datos['sumilla'] ?? null,
+            'justificacion_pendiente' => $datos['justificacion_pendiente'] ?? null,
             'fecha_documento' => $datos['fecha_documento'] ?? null,
             'estado_atencion' => $datos['estado_atencion'] ?? 'PENDIENTE',
             'accion_pendiente' => $datos['accion_pendiente'] ?? null,
