@@ -2,7 +2,7 @@
 
 > **Estado:** F2 ejecutada (2026-11-09). Única fuente de verdad visual del frontend.
 > Todos los colores, tamaños y neutrales viven como tokens en
-> [`frontend/src/index.css`](../frontend/src/index.css). **Cero hex sueltos** y
+> [`frontend/src/index.css`](../../../frontend/src/index.css). **Cero hex sueltos** y
 > **cero clases de color crudas de Tailwind** en el código de la app (excepciones
 > documentadas abajo).
 
@@ -53,7 +53,7 @@ Mapa semántico:
 </div>
 ```
 
-Referencia viva: [`AlertaBloqueoEntrega.tsx`](../frontend/src/components/anexos/AlertaBloqueoEntrega.tsx)
+Referencia viva: [`AlertaBloqueoEntrega.tsx`](../../../frontend/src/components/anexos/AlertaBloqueoEntrega.tsx)
 (remitida=info, observada=warning, consolidada=success).
 
 **Regla de contraste:** nunca `text-white` sobre `bg-warning` (amarillo). Para
@@ -89,10 +89,10 @@ Utilidades nombradas en `index.css` (`@utility`). **No usar `text-[Npx]` arbitra
 
 ## 5. Excepciones intencionales (no tokenizar)
 
-- [`FranjaAndina.tsx`](../frontend/src/components/common/FranjaAndina.tsx): el SVG del
+- [`FranjaAndina.tsx`](../../../frontend/src/components/common/FranjaAndina.tsx): el SVG del
   tejido andino ceremonial (Pallay Cusqueño). Sus hex son el **motivo cultural**, no
   tokens de UI.
-- [`ActaImprimible.tsx`](../frontend/src/features/acta/ActaImprimible.tsx): documento
+- [`ActaImprimible.tsx`](../../../frontend/src/features/acta/ActaImprimible.tsx): documento
   pensado para **impresión en papel** (`print:`); usa colores de tinta y `text-[13px]`
   serif deliberados.
 
