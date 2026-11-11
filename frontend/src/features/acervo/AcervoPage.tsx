@@ -113,6 +113,10 @@ export function AcervoPage() {
   const actualizarMut = useActualizarAcervo()
   const eliminarMut = useEliminarAcervo()
 
+  const estadoEntrega = estadoData?.entrega?.estado ?? null
+  const esModificable =
+    !estadoEntrega || estadoEntrega === 'borrador' || estadoEntrega === 'observada'
+
   const series = paginado?.data ?? []
 
   const confirmarEliminarSerie = (item: AcervoDocumental) => ({
@@ -164,9 +168,12 @@ export function AcervoPage() {
       tituloCorto="Inventario de Acervo Documental"
       titulo="Inventario de Acervo Documental (Físico y Digital)"
       subtitulo="Series documentales, expedientes custodiados y archivos de gestión de la unidad (Directiva N.° 001-2026-MDSJ/A §7.3)"
+      anexoObservable="acervo"
       guiaSeleccion="Utilice el selector de dependencias en la barra superior para gestionar el acervo documental del despacho."
       dependenciaId={dependenciaId}
       dependencia={estadoData?.dependencia}
+      estadoEntrega={estadoEntrega}
+      esModificable={esModificable}
       filas={series}
       rowKey={(item) => item.id}
       loading={isLoading}
@@ -220,13 +227,14 @@ export function AcervoPage() {
                 loading={isLoading}
                 error={error}
                 onReintentar={refetch}
+                esModificable={esModificable}
                 onEditar={abrirEdicion}
                 onEliminar={eliminarConConfirmacion}
                 eliminando={eliminarMut.isPending}
                 total={paginado?.meta?.total}
                 accionNuevo={
                   <Can permiso="anexos.registrar">
-                    <Button size="sm" className="gap-1.5" onClick={abrirAlta}>
+                    <Button size="sm" className="gap-1.5" disabled={!esModificable} onClick={abrirAlta}>
                       <Plus className="h-4 w-4" />
                       Nueva Serie Documental
                     </Button>

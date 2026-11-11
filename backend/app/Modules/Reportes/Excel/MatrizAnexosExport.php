@@ -28,9 +28,9 @@ class MatrizAnexosExport implements FromArray, ShouldAutoSize, WithHeadings, Wit
     public function headings(): array
     {
         return [
-            'Código', 'Centro de costo', 'Nivel', 'Encargado',
+            'Código', 'Centro de costo', 'Nivel', 'Encargado', 'Estado entrega',
             'A02', 'A03', 'A04', 'A05', 'A06',
-            'Completos', 'Bienes', 'Verificados', '% Patrimonio',
+            'Obs. abiertas', 'Bienes', 'Verificados', '% Patrimonio',
         ];
     }
 
@@ -42,12 +42,13 @@ class MatrizAnexosExport implements FromArray, ShouldAutoSize, WithHeadings, Wit
             $f['nombre'],
             $f['nivel'],
             $f['encargado'] ?? '',
+            ucfirst((string) $f['estado_entrega']),
             $f['anexo_02'] ? 'Sí' : '—',
             $f['anexo_03'] ? 'Sí' : '—',
             $f['anexo_04'] ? 'Sí' : '—',
             $f['anexo_05'] ? 'Sí' : '—',
             $f['anexo_06'] ? 'Sí' : '—',
-            $f['anexos_completos'].'/5',
+            $f['observaciones_abiertas'],
             $f['patrimonio_total'],
             $f['patrimonio_confirmados'],
             $f['patrimonio_porcentaje'].' %',

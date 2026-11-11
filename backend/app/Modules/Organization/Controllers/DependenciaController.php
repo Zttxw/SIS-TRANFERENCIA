@@ -25,21 +25,14 @@ class DependenciaController extends Controller
                 'encargado:id,dni,nombres,apellidos,cargo',
                 'servidores:id,dependencia_id,dni,nombres,apellidos,cargo,es_responsable',
             ])
-            ->orderByRaw('CASE WHEN es_centro_costo_oficial THEN 0 ELSE 1 END')
-            ->orderBy('codigo_anexo1')
             ->orderBy('codigo');
 
         if ($request->boolean('solo_activas', true)) {
-            $query->where('activa', true)
-                ->whereNotNull('nombre')
-                ->whereRaw("TRIM(nombre) != ''")
-                ->whereRaw("TRIM(UPPER(nombre)) NOT IN ('NULL', 'NONE', 'VACIO', 'SIN NOMBRE')");
+            $query->where('activa', true);
         }
 
-        // Acotar al ámbito solo cuando se solicita explícitamente (ej. en el selector de despacho).
-        // Por defecto, el catálogo y el organigrama institucional (Anexo 01) son públicos para toda la entidad,
-        // permitiendo a cualquier servidor consultar el árbol completo e identificar su ubicación.
-        if ($request->boolean('solo_ambito', false) && $request->user()) {
+        // Si el usuario no tiene ámbito global (admin/ETTS), acotar a su dependencia o subárbol
+        if ($request->user()) {
             $idsAmbito = $this->idsDependenciaEnAmbito($request->user());
             if ($idsAmbito !== null) {
                 $query->whereIn('id', $idsAmbito);
@@ -48,11 +41,9 @@ class DependenciaController extends Controller
 
         if ($request->filled('search')) {
             $term = trim((string) $request->input('search'));
-            $operador = \Illuminate\Support\Facades\DB::getDriverName() === 'pgsql' ? 'ilike' : 'like';
-            $query->where(function ($q) use ($term, $operador) {
-                $q->where('codigo', $operador, "%{$term}%")
-                    ->orWhere('codigo_anexo1', $operador, "%{$term}%")
-                    ->orWhere('nombre', $operador, "%{$term}%");
+            $query->where(function ($q) use ($term) {
+                $q->where('codigo', 'ilike', "%{$term}%")
+                    ->orWhere('nombre', 'ilike', "%{$term}%");
             });
         }
 

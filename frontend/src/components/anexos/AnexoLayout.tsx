@@ -2,7 +2,12 @@ import type { ReactNode } from 'react'
 import { Building2 } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
+import type { ClaveAnexoObservable } from '@/types/observaciones'
+import type { EstadoEntrega } from '@/types/transferencia'
+import { AlertaBloqueoEntrega } from './AlertaBloqueoEntrega'
 import { AnexoHeader } from './AnexoHeader'
+import { EstadoAnexoChip } from './EstadoAnexoChip'
+import { ObservacionesAnexoPanel } from './ObservacionesAnexoPanel'
 
 export interface DependenciaResumenAnexo {
   codigo?: string
@@ -22,20 +27,31 @@ interface AnexoLayoutProps {
 
   dependenciaId: number | null
   dependencia?: DependenciaResumenAnexo
+  estadoEntrega?: EstadoEntrega | null
+  /** `true` si el anexo admite edición (borrador/observada). Pinta el chip. */
+  esModificable?: boolean
 
-  /** Botón(es) de acción primaria (p. ej. «Nueva Serie», «PDF oficial»). */
+  /** Botón(es) de acción primaria (p. ej. «Nueva Serie»). */
   acciones?: ReactNode
   /** Contenido central del anexo (filtros + tabla + modal). */
   children: ReactNode
+
+  /** Clave para el panel de observaciones; omitir para ocultarlo. */
+  anexoObservable?: ClaveAnexoObservable
+  /** Id de la primera fila, para anclar las observaciones del anexo. */
+  observableId?: number
 }
 
 /**
- * Contenedor único de toda página de anexo.
+ * Contenedor único de toda página de anexo (F3, plan-mejoras-frontend §4).
  *
- * Compone el encabezado del anexo y resuelve el guard de «seleccione un centro de
- * costo». El sistema es una herramienta de apoyo para completar y generar los
- * anexos; el flujo de remisión/consolidación lo lleva el SGD, por lo que el anexo
- * es siempre editable (sin bloqueo por estado de entrega).
+ * Compone, en un solo lugar y en orden fijo:
+ *   AnexoHeader → chip de estado → AlertaBloqueoEntrega → contenido →
+ *   ObservacionesAnexoPanel.
+ *
+ * También resuelve el guard de «seleccione un centro de costo» que antes cada
+ * `*Page.tsx` reimplementaba a mano. Mejorar la UX del marco de un anexo pasa a
+ * ser tocar este archivo, no N páginas.
  */
 export function AnexoLayout({
   numeroAnexo,
@@ -45,8 +61,12 @@ export function AnexoLayout({
   guiaSeleccion = 'Utilice el selector de dependencias en la barra superior para gestionar la información de este anexo.',
   dependenciaId,
   dependencia,
+  estadoEntrega,
+  esModificable = true,
   acciones,
   children,
+  anexoObservable,
+  observableId,
 }: AnexoLayoutProps) {
   if (!dependenciaId) {
     return (
@@ -69,10 +89,26 @@ export function AnexoLayout({
         subtitulo={subtitulo}
         dependenciaCodigo={dependencia?.codigo}
         dependenciaNombre={dependencia?.nombre}
-        acciones={acciones}
+        acciones={
+          <>
+            <EstadoAnexoChip estadoEntrega={estadoEntrega} esModificable={esModificable} />
+            {acciones}
+          </>
+        }
       />
 
+      <AlertaBloqueoEntrega estadoEntrega={estadoEntrega} />
+
       {children}
+
+      {anexoObservable && (
+        <ObservacionesAnexoPanel
+          anexo={anexoObservable}
+          observableId={observableId}
+          dependenciaId={dependenciaId}
+          esModificable={esModificable}
+        />
+      )}
     </div>
   )
 }

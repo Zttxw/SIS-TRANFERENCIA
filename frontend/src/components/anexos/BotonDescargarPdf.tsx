@@ -4,7 +4,6 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { notificarError } from '@/lib/api-errors'
-import { cn } from '@/lib/utils'
 
 interface BotonDescargarPdfProps {
   /** Acción de descarga (normalmente `servicio.descargarPdf(dependenciaId)`). */
@@ -12,7 +11,6 @@ interface BotonDescargarPdfProps {
   /** Deshabilita el botón (p. ej. sin dependencia seleccionada). */
   disabled?: boolean
   etiqueta?: string
-  className?: string
 }
 
 /**
@@ -24,7 +22,6 @@ export function BotonDescargarPdf({
   descargar,
   disabled,
   etiqueta = 'Descargar PDF',
-  className,
 }: BotonDescargarPdfProps) {
   const [descargando, setDescargando] = useState(false)
 
@@ -45,7 +42,7 @@ export function BotonDescargarPdf({
       type="button"
       variant="outline"
       size="sm"
-      className={cn('gap-1.5', className)}
+      className="gap-1.5"
       disabled={disabled || descargando}
       onClick={alDescargar}
     >

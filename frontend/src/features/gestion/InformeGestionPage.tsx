@@ -37,8 +37,9 @@ export function InformeGestionPage() {
   const { data: informe, isLoading: cargandoInforme } = useInformeGestion(dependenciaId)
   const guardarMut = useGuardarInformeGestion()
 
-  // El anexo es siempre editable: el flujo de remisión lo lleva el SGD.
-  const esModificable = true
+  const estadoEntrega = estadoData?.entrega?.estado ?? null
+  const esModificable =
+    !estadoEntrega || estadoEntrega === 'borrador' || estadoEntrega === 'observada'
 
   // Estado de cabecera (Sección I) y de las cuatro tablas de filas.
   const [nivel, setNivel] = useState<NivelOrganizacional | ''>('')
@@ -153,7 +154,11 @@ export function InformeGestionPage() {
       guiaSeleccion="Utilice el selector de dependencias en la barra superior para elegir el despacho o centro de costo y gestionar su Anexo 02."
       dependenciaId={dependenciaId}
       dependencia={estadoData?.dependencia}
+      estadoEntrega={estadoEntrega}
+      esModificable={esModificable}
       acciones={acciones}
+      anexoObservable="gestion"
+      observableId={informe?.id}
     >
       {cargando ? (
         <CargaBloque texto="Cargando Informe de Gestión (Anexo 02)…" />

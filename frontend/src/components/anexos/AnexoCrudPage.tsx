@@ -10,6 +10,8 @@ import { DataTable, type ColumnaTabla } from '@/components/ui/data-table'
 import { Input } from '@/components/ui/input'
 import type { Permiso } from '@/auth/permisos'
 import type { PaginationMeta } from '@/types/api'
+import type { ClaveAnexoObservable } from '@/types/observaciones'
+import type { EstadoEntrega } from '@/types/transferencia'
 import { AnexoLayout, type DependenciaResumenAnexo } from './AnexoLayout'
 
 /** Props del modal de alta/edición que renderiza el patrón. */
@@ -27,10 +29,13 @@ interface AnexoCrudPageProps<T> {
   titulo: string
   subtitulo?: string
   guiaSeleccion?: string
+  anexoObservable?: ClaveAnexoObservable
 
-  // ── Contexto de dependencia ───────────────────────────────────────────────
+  // ── Contexto de dependencia / entrega ─────────────────────────────────────
   dependenciaId: number | null
   dependencia?: DependenciaResumenAnexo
+  estadoEntrega?: EstadoEntrega | null
+  esModificable?: boolean
 
   // ── Datos ─────────────────────────────────────────────────────────────────
   filas: T[] | undefined
@@ -93,7 +98,7 @@ interface AnexoCrudPageProps<T> {
  * Patrón declarativo para los anexos de listado (03, 05, 06, documentos…).
  * Recibe columnas, filtros, datos y el modal; aplica por sí mismo:
  *  - el marco de anexo (`AnexoLayout`: header, chip, alerta de bloqueo, panel),
- *  - la acción primaria de alta y la columna de acciones editar/eliminar,
+ *  - el bloqueo por estado de entrega (`esModificable` → botones deshabilitados),
  *  - permisos (`<Can>`), estados vacío/carga/error (`DataTable`),
  *  - la confirmación suave de borrado (`useConfirm`, no `confirm()` nativo).
  *
@@ -105,8 +110,11 @@ export function AnexoCrudPage<T>({
   titulo,
   subtitulo,
   guiaSeleccion,
+  anexoObservable,
   dependenciaId,
   dependencia,
+  estadoEntrega,
+  esModificable = true,
   filas,
   rowKey,
   loading,
@@ -170,6 +178,7 @@ export function AnexoCrudPage<T>({
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  disabled={!esModificable}
                   onClick={() => abrirEdicion(fila)}
                   aria-label="Editar registro"
                 >
@@ -180,7 +189,7 @@ export function AnexoCrudPage<T>({
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    disabled={eliminando}
+                    disabled={!esModificable || eliminando}
                     onClick={() => solicitarEliminar(fila)}
                     aria-label="Eliminar registro"
                   >
@@ -202,11 +211,15 @@ export function AnexoCrudPage<T>({
       guiaSeleccion={guiaSeleccion}
       dependenciaId={dependenciaId}
       dependencia={dependencia}
+      estadoEntrega={estadoEntrega}
+      esModificable={esModificable}
+      anexoObservable={anexoObservable}
+      observableId={filas?.[0] ? Number(rowKey(filas[0])) : undefined}
       acciones={
         <>
           {accionesExtra}
           <Can permiso={permiso}>
-            <Button size="sm" className="gap-1.5" onClick={abrirAlta}>
+            <Button size="sm" className="gap-1.5" disabled={!esModificable} onClick={abrirAlta}>
               <IconoNuevo className="h-4 w-4" />
               {textoNuevo}
             </Button>
@@ -250,7 +263,7 @@ export function AnexoCrudPage<T>({
             descripcion: vacio.descripcion,
             accion: (
               <Can permiso={permiso}>
-                <Button size="sm" className="gap-1.5" onClick={abrirAlta}>
+                <Button size="sm" className="gap-1.5" disabled={!esModificable} onClick={abrirAlta}>
                   <IconoNuevo className="h-4 w-4" />
                   {textoNuevo}
                 </Button>

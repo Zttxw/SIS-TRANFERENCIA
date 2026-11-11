@@ -42,8 +42,6 @@ class Dependencia extends BaseModel
         'proceso_transferencia_id',
         'parent_id',
         'codigo',
-        'codigo_anexo1',
-        'es_centro_costo_oficial',
         'codigo_sgd',
         'codigo_siga',
         'nombre',
@@ -64,7 +62,6 @@ class Dependencia extends BaseModel
         return [
             'nivel' => 'integer',
             'activa' => 'boolean',
-            'es_centro_costo_oficial' => 'boolean',
         ];
     }
 
@@ -125,7 +122,6 @@ class Dependencia extends BaseModel
 
         while ($frontera !== []) {
             $hijas = self::query()
-                ->where('activa', true)
                 ->whereIn('parent_id', $frontera)
                 ->pluck('id')
                 ->all();

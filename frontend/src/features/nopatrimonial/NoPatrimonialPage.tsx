@@ -100,6 +100,10 @@ export function NoPatrimonialPage() {
   const actualizarMut = useActualizarBienNoPatrimonial()
   const eliminarMut = useEliminarBienNoPatrimonial()
 
+  const estadoEntrega = estadoData?.entrega?.estado ?? null
+  const esModificable =
+    !estadoEntrega || estadoEntrega === 'borrador' || estadoEntrega === 'observada'
+
   const bienes = paginado?.data ?? []
 
   return (
@@ -108,9 +112,12 @@ export function NoPatrimonialPage() {
       tituloCorto="Bienes No Patrimoniales"
       titulo="Inventario de Bienes No Patrimoniales"
       subtitulo="Activos auxiliares, herramientas, suministros y bienes no inventariados en el SIGA oficial (Directiva N.° 001-2026-MDSJ/A §7.6)"
+      anexoObservable="nopatrimonial"
       guiaSeleccion="Utilice el selector de dependencias en la barra superior para gestionar los bienes no patrimoniales del área."
       dependenciaId={dependenciaId}
       dependencia={estadoData?.dependencia}
+      estadoEntrega={estadoEntrega}
+      esModificable={esModificable}
       filas={bienes}
       rowKey={(bien) => bien.id}
       loading={isLoading}

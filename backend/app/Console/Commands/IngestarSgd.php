@@ -23,7 +23,7 @@ class IngestarSgd extends Command
         {--proceso= : ID del proceso de transferencia (por defecto, el abierto más reciente)}
         {--dependencia= : Limitar la ingesta a una dependencia (piloto)}
         {--catalogos : Incluir catálogos del SGD (tipos documentales, estados)}
-        {--documental : Incluir ingesta documental (acervo digital del Anexo 03)}
+        {--documental : Incluir ingesta documental (acervo digital y documentos pendientes)}
         {--solo-catalogos : Ejecutar únicamente la ingesta de catálogos}
         {--sin-confirmar : Omitir la confirmación previa}';
 
@@ -78,6 +78,7 @@ class IngestarSgd extends Command
             if ($conDocumental) {
                 $m = IngestaDocumentalSgd::desdeConfig()->ejecutar($proceso, $dependencia);
                 $filas[] = ["Acervo digital (año {$m['anio']})", $m['acervo']];
+                $filas[] = ['Documentos pendientes', $m['pendientes']];
             }
         } catch (Throwable $error) {
             $this->error('No se pudo completar la ingesta: '.$error->getMessage());

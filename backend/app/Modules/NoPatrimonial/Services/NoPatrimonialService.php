@@ -7,18 +7,21 @@ namespace App\Modules\NoPatrimonial\Services;
 use App\Models\User;
 use App\Modules\NoPatrimonial\Models\BienNoPatrimonial;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Support\Concerns\RespetaEstadoEntrega;
 use App\Support\Enums\FuenteDato;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class NoPatrimonialService
 {
+    use RespetaEstadoEntrega;
+
     /**
      * Lista los bienes no patrimoniales con filtros y paginación (Anexo 06).
      */
     public function listar(array $filtros = []): LengthAwarePaginator
     {
         $query = BienNoPatrimonial::query()
-            ->with(['dependencia', 'servidor', 'registradoPor', 'evidencias'])
+            ->with(['dependencia', 'servidor', 'registradoPor', 'evidencias', 'observaciones'])
             ->orderBy('id', 'desc');
 
         if (! empty($filtros['dependencia_id'])) {
@@ -51,6 +54,8 @@ class NoPatrimonialService
     {
         $procesoId = $procesoId ?? $this->resolverProcesoActivoId();
 
+        $this->exigirEntregaModificable((int) $datos['dependencia_id'], $procesoId);
+
         return BienNoPatrimonial::create([
             'proceso_transferencia_id' => $procesoId,
             'dependencia_id' => (int) $datos['dependencia_id'],
@@ -73,6 +78,7 @@ class NoPatrimonialService
     public function actualizar(int $id, array $datos): BienNoPatrimonial
     {
         $bien = BienNoPatrimonial::findOrFail($id);
+        $this->exigirEntregaModificable((int) $bien->dependencia_id);
         $bien->update($datos);
 
         return $bien->fresh(['dependencia', 'servidor']);
@@ -84,6 +90,7 @@ class NoPatrimonialService
     public function eliminar(int $id): bool
     {
         $b = BienNoPatrimonial::findOrFail($id);
+        $this->exigirEntregaModificable((int) $b->dependencia_id);
 
         return (bool) $b->delete();
     }

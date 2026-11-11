@@ -86,6 +86,10 @@ export function PersonalPage() {
   const guardarMut = useGuardarPersonal()
   const eliminarMut = useEliminarPersonal()
 
+  const estadoEntrega = estadoData?.entrega?.estado ?? null
+  const esModificable =
+    !estadoEntrega || estadoEntrega === 'borrador' || estadoEntrega === 'observada'
+
   const colaboradores = paginado?.data ?? []
 
   return (
@@ -94,9 +98,12 @@ export function PersonalPage() {
       tituloCorto="Padrón de Personal Asignado"
       titulo="Personal y Colaboradores Asignados a la Unidad"
       subtitulo="Padrón oficial de servidores, regímenes laborales y situación contractual (Directiva N.° 001-2026-MDSJ/A §7.5)"
+      anexoObservable="personal"
       guiaSeleccion="Utilice el selector de dependencias en la barra superior para gestionar el padrón de servidores asignados."
       dependenciaId={dependenciaId}
       dependencia={estadoData?.dependencia}
+      estadoEntrega={estadoEntrega}
+      esModificable={esModificable}
       filas={colaboradores}
       rowKey={(s) => s.id}
       loading={isLoading}

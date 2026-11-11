@@ -7,17 +7,9 @@ import { api } from '@/lib/api'
 import type { ApiSuccess } from '@/types/api'
 import type { Dependencia } from '@/types/auth'
 
-export async function listarDependencias(
-  search?: string,
-  soloAmbito = true,
-): Promise<Dependencia[]> {
+export async function listarDependencias(search?: string): Promise<Dependencia[]> {
   const { data } = await api.get<ApiSuccess<Dependencia[]>>('/dependencias', {
-    params: {
-      all: true,
-      solo_activas: true,
-      solo_ambito: soloAmbito,
-      search: search || undefined,
-    },
+    params: { all: true, solo_activas: true, search: search || undefined },
   })
   return data.data
 }

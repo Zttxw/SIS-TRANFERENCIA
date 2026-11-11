@@ -8,9 +8,12 @@ import { ActaPage } from '@/features/acta/ActaPage'
 import { AdminPage } from '@/features/admin/AdminPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
+import { DocumentosPage } from '@/features/documentos/DocumentosPage'
+import { EntregasPage } from '@/features/entregas/EntregasPage'
 import { EstructuraOrganicaPage } from '@/features/organization/EstructuraOrganicaPage'
 import { InformeGestionPage } from '@/features/gestion/InformeGestionPage'
 import { NoPatrimonialPage } from '@/features/nopatrimonial/NoPatrimonialPage'
+import { ObservacionesPage } from '@/features/observaciones/ObservacionesPage'
 import { PatrimonioPage } from '@/features/patrimonio/PatrimonioPage'
 import { PersonalPage } from '@/features/personal/PersonalPage'
 import { ReportesPage } from '@/features/reportes/ReportesPage'
@@ -34,11 +37,14 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <DashboardPage /> },
           { path: 'organigrama', element: <EstructuraOrganicaPage /> },
+          { path: 'documentos', element: <DocumentosPage /> },
           { path: 'gestion', element: <InformeGestionPage /> },
           { path: 'acervo', element: <AcervoPage /> },
           { path: 'personal', element: <PersonalPage /> },
           { path: 'nopatrimonial', element: <NoPatrimonialPage /> },
           { path: 'patrimonio', element: <PatrimonioPage /> },
+          { path: 'observaciones', element: <ObservacionesPage /> },
+          { path: 'entregas', element: <EntregasPage /> },
           { path: 'acta', element: <ActaPage /> },
           { path: 'reportes', element: <ReportesPage /> },
           { path: 'usuarios', element: <AdminPage /> },

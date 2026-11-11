@@ -4,11 +4,14 @@ import {
   ClipboardList,
   FileCheck2,
   Files,
+  FileText,
   FolderTree,
   LayoutDashboard,
   type LucideIcon,
+  MessageSquareWarning,
   Package,
   PackageOpen,
+  Send,
   UserCog,
   Users,
 } from 'lucide-react'
@@ -38,7 +41,7 @@ export const ITEMS_NAV: ItemNav[] = [
     permiso: PERMISOS.VerAnexos,
   },
   {
-    etiqueta: 'Centros de Costo',
+    etiqueta: 'Estructura Orgánica',
     ruta: '/organigrama',
     icono: FolderTree,
     permiso: PERMISOS.VerAnexos,
@@ -55,7 +58,7 @@ export const ITEMS_NAV: ItemNav[] = [
     permiso: PERMISOS.VerAnexos,
     hijos: [
       {
-        etiqueta: 'Anexo 01 · Centros de Costo',
+        etiqueta: 'Anexo 01 · Organigrama',
         ruta: '/organigrama',
         icono: FolderTree,
         permiso: PERMISOS.VerAnexos,
@@ -97,6 +100,24 @@ export const ITEMS_NAV: ItemNav[] = [
         permiso: PERMISOS.VerAnexos,
       },
     ],
+  },
+  {
+    etiqueta: 'Documentos SGD',
+    ruta: '/documentos',
+    icono: FileText,
+    permiso: PERMISOS.VerAnexos,
+  },
+  {
+    etiqueta: 'Observaciones',
+    ruta: '/observaciones',
+    icono: MessageSquareWarning,
+    permiso: PERMISOS.VerAnexos,
+  },
+  {
+    etiqueta: 'Entregas',
+    ruta: '/entregas',
+    icono: Send,
+    permiso: PERMISOS.VerAnexos,
   },
   {
     etiqueta: 'Reportes',

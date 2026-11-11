@@ -9,6 +9,7 @@ use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Organization\Models\Servidor;
 use App\Support\Concerns\Auditable;
 use App\Support\Concerns\TieneEvidencias;
+use App\Support\Concerns\TieneObservaciones;
 use App\Support\Models\BaseModel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class InformeGestion extends BaseModel
 {
-    use Auditable, SoftDeletes, TieneEvidencias;
+    use Auditable, SoftDeletes, TieneEvidencias, TieneObservaciones;
 
     protected $table = 'informes_gestion';
 

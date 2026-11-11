@@ -1,3 +1,4 @@
+import type { Observacion } from './observaciones'
 
 export type EstadoInformeGestion = 'borrador' | 'completado'
 
@@ -71,6 +72,7 @@ export interface InformeGestion {
     name: string
     dni: string
   }
+  observaciones?: Observacion[]
 }
 
 export interface GuardarInformeGestionPayload {

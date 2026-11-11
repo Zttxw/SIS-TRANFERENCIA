@@ -9,6 +9,7 @@ use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Organization\Models\Servidor;
 use App\Support\Concerns\Auditable;
 use App\Support\Concerns\TieneEvidencias;
+use App\Support\Concerns\TieneObservaciones;
 use App\Support\Enums\EstadoConservacion;
 use App\Support\Models\BaseModel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,7 +23,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class BienNoPatrimonial extends BaseModel
 {
-    use Auditable, SoftDeletes, TieneEvidencias;
+    use Auditable, SoftDeletes, TieneEvidencias, TieneObservaciones;
 
     protected $table = 'bienes_no_patrimoniales';
 

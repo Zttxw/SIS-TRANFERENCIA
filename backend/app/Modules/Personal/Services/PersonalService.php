@@ -7,18 +7,21 @@ namespace App\Modules\Personal\Services;
 use App\Models\User;
 use App\Modules\Personal\Models\Personal;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Support\Concerns\RespetaEstadoEntrega;
 use App\Support\Enums\FuenteDato;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class PersonalService
 {
+    use RespetaEstadoEntrega;
+
     /**
      * Lista el personal declarado con filtros y paginación (Anexo 05).
      */
     public function listar(array $filtros = []): LengthAwarePaginator
     {
         $query = Personal::query()
-            ->with(['dependencia', 'servidor'])
+            ->with(['dependencia', 'servidor', 'observaciones'])
             ->orderBy('apellidos');
 
         if (! empty($filtros['dependencia_id'])) {
@@ -52,6 +55,8 @@ class PersonalService
     {
         $procesoId = $procesoId ?? $this->resolverProcesoActivoId();
 
+        $this->exigirEntregaModificable((int) $datos['dependencia_id'], $procesoId);
+
         return Personal::updateOrCreate(
             [
                 'proceso_transferencia_id' => $procesoId,
@@ -80,6 +85,7 @@ class PersonalService
     public function eliminar(int $id): bool
     {
         $p = Personal::findOrFail($id);
+        $this->exigirEntregaModificable((int) $p->dependencia_id);
 
         return (bool) $p->delete();
     }

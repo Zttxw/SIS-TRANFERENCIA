@@ -80,12 +80,12 @@ class AutorizacionPermisosTest extends TestCase
         $this->postJson('/api/gestion/informe', [])->assertForbidden();
     }
 
-    public function test_coordinador_consulta_pero_no_registra_anexos(): void
+    public function test_coordinador_puede_registrar_observaciones_pero_no_remitir(): void
     {
         $this->usuarioConRol(Rol::COORDINADOR);
 
-        // El coordinador verifica y revisa, pero no registra/edita anexos.
-        $this->postJson('/api/gestion/informe', [])->assertForbidden();
+        // Remitir entrega exige entregas.remitir, que el coordinador no tiene.
+        $this->postJson('/api/transferencia/remitir', [])->assertForbidden();
     }
 
     public function test_cuenta_inactiva_es_rechazada_aunque_tenga_rol(): void

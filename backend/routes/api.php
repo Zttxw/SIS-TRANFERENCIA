@@ -3,12 +3,15 @@
 use App\Modules\Acervo\Controllers\AcervoController;
 use App\Modules\Auth\Controllers\ActivacionController;
 use App\Modules\Auth\Controllers\AuthController;
+use App\Modules\Documentos\Controllers\DocumentoPendienteController;
+use App\Modules\Expediente\Controllers\ExpedienteController;
 use App\Modules\Gestion\Controllers\GestionController;
 use App\Modules\NoPatrimonial\Controllers\NoPatrimonialController;
 use App\Modules\Organization\Controllers\DependenciaController;
 use App\Modules\Patrimonio\Controllers\PatrimonioController;
 use App\Modules\Personal\Controllers\PersonalController;
 use App\Modules\Reportes\Controllers\ReportesController;
+use App\Modules\Transferencia\Controllers\ObservacionController;
 use App\Modules\Transferencia\Controllers\TransferenciaController;
 use App\Support\Http\EvidenciaController;
 use Illuminate\Http\Request;
@@ -35,6 +38,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/servidores', [ActivacionController::class, 'index']);
         Route::post('/servidores/{servidor}/preparar-activacion', [ActivacionController::class, 'preparar']);
         Route::post('/servidores/{servidor}/activar', [ActivacionController::class, 'activar']);
+    });
+
+    // Anexo 01: Reporte de Asuntos Pendientes y Prioritarios (SGD) (plan §7.7).
+    Route::prefix('documentos-pendientes')->group(function () {
+        Route::get('/', [DocumentoPendienteController::class, 'index'])->middleware('permiso:anexos.ver');
+        Route::get('/resumen', [DocumentoPendienteController::class, 'resumen'])->middleware('permiso:anexos.ver,reportes.ver');
+        Route::post('/', [DocumentoPendienteController::class, 'store'])->middleware('permiso:anexos.registrar');
+        Route::put('/{id}', [DocumentoPendienteController::class, 'update'])->middleware('permiso:anexos.registrar');
+        Route::delete('/{id}', [DocumentoPendienteController::class, 'destroy'])->middleware('permiso:anexos.registrar');
     });
 
     // Anexo 02: Informe de Gestión por Centro de Costo (plan §7.2).
@@ -79,20 +91,33 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}', [NoPatrimonialController::class, 'destroy'])->middleware('permiso:anexos.registrar');
     });
 
-    // Apoyo a la generación de anexos: avance institucional (tablero), avance de
-    // una dependencia (estado) y Acta (Anexo 07). El flujo de remisión lo lleva el SGD.
+    // Anexo 07: Entrega Jerárquica y Acta de Transferencia (plan §7.8, §7.10).
     Route::prefix('transferencia')->group(function () {
         Route::get('/tablero', [TransferenciaController::class, 'tablero'])->middleware('permiso:anexos.ver');
+        Route::get('/entregas', [TransferenciaController::class, 'index'])->middleware('permiso:anexos.ver');
         Route::get('/estado', [TransferenciaController::class, 'estado'])->middleware('permiso:anexos.ver');
+        Route::post('/remitir', [TransferenciaController::class, 'remitir'])->middleware('permiso:entregas.remitir');
+        Route::post('/revisar', [TransferenciaController::class, 'revisar'])->middleware('permiso:entregas.revisar');
         Route::get('/acta', [TransferenciaController::class, 'acta'])->middleware('permiso:actas.generar');
         Route::get('/acta/pdf', [TransferenciaController::class, 'actaPdf'])->middleware('permiso:actas.generar');
     });
 
-    // Reportes de avance y exportación (matriz de anexos, conciliación patrimonial).
-    // La vista requiere reportes.ver; la descarga Excel/PDF requiere reportes.exportar.
+    // Expediente de entrega: paquete PDF único con todos los anexos (F5).
+    Route::get('/expediente/pdf', [ExpedienteController::class, 'pdf'])->middleware('permiso:expediente.ver');
+
+    // Reportes consolidados y exportación (plan §7.11, F5). La vista requiere
+    // reportes.ver; la descarga Excel/PDF requiere reportes.exportar.
     Route::prefix('reportes')->group(function () {
         Route::get('/{reporte}', [ReportesController::class, 'mostrar'])->middleware('permiso:reportes.ver');
         Route::get('/{reporte}/export', [ReportesController::class, 'exportar'])->middleware('permiso:reportes.exportar');
+    });
+
+    // Observaciones y subsanaciones sobre los anexos (plan §7.9).
+    Route::prefix('observaciones')->group(function () {
+        Route::get('/', [ObservacionController::class, 'index'])->middleware('permiso:anexos.ver');
+        Route::post('/', [ObservacionController::class, 'store'])->middleware('permiso:observaciones.registrar');
+        Route::post('/{id}/subsanar', [ObservacionController::class, 'subsanar'])->middleware('permiso:observaciones.subsanar');
+        Route::post('/{id}/desestimar', [ObservacionController::class, 'desestimar'])->middleware('permiso:observaciones.registrar');
     });
 
     // Storage Seguro de Evidencias Documentales y Fotográficas (plan §9).
