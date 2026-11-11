@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\Expediente\Models\Expediente;
 use App\Modules\Organization\Models\Dependencia;
 use App\Support\Concerns\Auditable;
+use App\Support\Enums\DeclaracionActa;
 use App\Support\Concerns\TieneEvidencias;
 use App\Support\Models\BaseModel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,6 +19,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  *
  * @property ?array<int, array<string, mixed>> $intervinientes
  * @property ?array<int, array<string, mixed>> $anexos_entregados
+ * @property DeclaracionActa $declara
+ * @property int $version
  */
 class ActaTransferencia extends BaseModel
 {
@@ -35,6 +38,8 @@ class ActaTransferencia extends BaseModel
         'anexos_entregados',
         'observaciones',
         'estado',
+        'declara',
+        'version',
         'ruta_pdf',
         'ruta_pdf_suscrito',
         'generada_por_id',
@@ -46,6 +51,8 @@ class ActaTransferencia extends BaseModel
             'fecha_acta' => 'date',
             'intervinientes' => 'array',
             'anexos_entregados' => 'array',
+            'declara' => DeclaracionActa::class,
+            'version' => 'integer',
         ];
     }
 

@@ -136,11 +136,12 @@ class AnexosPdfTest extends TestCase
         $this->assertEsPdf($this->get("/api/nopatrimonial/pdf?dependencia_id={$this->dep->id}"));
     }
 
-    public function test_pdf_acta_exige_consolidada(): void
+    public function test_pdf_acta_disponible_antes_de_remitir(): void
     {
+        // B3/D-06: el acta se emite antes de remitir, por lo que su PDF se
+        // obtiene desde la suscripción de la hija (antes exigía CONSOLIDADA/409).
         $this->actuar(Rol::RESPONSABLE_CENTRO_COSTO);
 
-        // Sin entrega consolidada → 409.
         Entrega::create([
             'proceso_transferencia_id' => $this->proceso->id,
             'dependencia_id' => $this->dep->id,
@@ -148,8 +149,7 @@ class AnexosPdfTest extends TestCase
             'estado' => EstadoEntrega::REMITIDA,
         ]);
 
-        $this->get("/api/transferencia/acta/pdf?dependencia_id={$this->dep->id}")
-            ->assertStatus(409);
+        $this->assertEsPdf($this->get("/api/transferencia/acta/pdf?dependencia_id={$this->dep->id}"));
     }
 
     public function test_pdf_acta_consolidada_produce_pdf(): void

@@ -14,9 +14,13 @@ use App\Modules\Patrimonio\Models\BienPatrimonial;
 use App\Modules\Personal\Models\Personal;
 use App\Modules\Transferencia\Models\ActaTransferencia;
 use App\Modules\Transferencia\Models\Entrega;
+use App\Modules\Transferencia\Models\FirmaAnexo;
 use App\Modules\Transferencia\Models\Observacion;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Support\Enums\CaracterFirma;
+use App\Support\Enums\DeclaracionActa;
 use App\Support\Enums\EstadoEntrega;
+use App\Support\Enums\EstadoFirma;
 use App\Support\Enums\EstadoObservacion;
 use App\Support\Enums\EstadoVerificacionBien;
 use App\Support\Http\ApiResponse;
@@ -328,6 +332,16 @@ class TransferenciaService
                 );
             }
 
+            // B3c (D-06): corregir una entrega OBSERVADA produce una nueva versión
+            // del acta. La re-remisión no reutiliza las firmas de la versión
+            // anterior: las firmas obligatorias previas se invalidan (cancelada) y
+            // la versión del acta sube, para que una firma vieja no ampare la
+            // versión corregida. Las firmas previas quedan históricas sobre su
+            // propia versión (no se borran).
+            if ($entrega !== null && $entrega->estado === EstadoEntrega::OBSERVADA) {
+                $this->versionarActaPorCorreccion($procesoId, $dep->id);
+            }
+
             return Entrega::updateOrCreate(
                 [
                     'proceso_transferencia_id' => $procesoId,
@@ -407,10 +421,22 @@ class TransferenciaService
     /**
      * Genera o consulta el Acta oficial de Transferencia (Anexo 07, §7.10).
      *
-     * El acta solo puede emitirse cuando la entrega de la dependencia está
-     * CONSOLIDADA (409 en otro caso). Su relación de anexos entregados refleja
-     * la presencia real de cada anexo (no un hardcode): se apoya en
-     * `obtenerEstadoEntrega()` y en la presencia de documentos pendientes.
+     * B3 (D-05/D-06): el acta se emite ANTES de remitir. En ese momento solo
+     * declara la *suscripción de la hija* (`DeclaracionActa::SUSCRIPCION_HIJA`):
+     * la recepción y la consolidación del padre todavía no ocurren y el acta no
+     * debe afirmarlas. Tras consolidar, el mismo endpoint actualiza la
+     * declaración a `RECEPCION_CONSOLIDACION`.
+     *
+     * Momentos admitidos para emitir/consultar:
+     *  - sin entrega / BORRADOR / OBSERVADA ⇒ pre-remisión, suscripción de la hija;
+     *  - REMITIDA / EN_REVISION ⇒ ya remitida: se conserva la declaración de
+     *    suscripción (no se degrada ni se adelanta la consolidación);
+     *  - CONSOLIDADA ⇒ recepción y consolidación.
+     *
+     * Su relación de anexos entregados refleja la presencia real de cada anexo
+     * (no un hardcode): se apoya en `obtenerEstadoEntrega()` y en la presencia de
+     * documentos pendientes. El *gate* que exige el acta suscrita como condición
+     * de remitir queda pendiente de la matriz de firmantes obligatorios (D-02).
      */
     public function obtenerActa(int $dependenciaId, ?User $usuario = null): ActaTransferencia
     {
@@ -422,14 +448,13 @@ class TransferenciaService
             ->latest('id')
             ->first();
 
-        if ($entrega === null || $entrega->estado !== EstadoEntrega::CONSOLIDADA) {
-            throw new HttpResponseException(
-                ApiResponse::error(
-                    'El acta solo puede emitirse cuando la entrega de la dependencia está consolidada.',
-                    409,
-                )
-            );
-        }
+        $estado = $entrega?->estado ?? EstadoEntrega::BORRADOR;
+
+        // Tras consolidar, el acta declara recepción/consolidación; en cualquier
+        // momento anterior solo declara la suscripción de la hija (D-06).
+        $declara = $estado === EstadoEntrega::CONSOLIDADA
+            ? DeclaracionActa::RECEPCION_CONSOLIDACION
+            : DeclaracionActa::SUSCRIPCION_HIJA;
 
         $anexos = $this->presenciaAnexos($dep->id, $procesoId);
 
@@ -447,11 +472,53 @@ class TransferenciaService
             ],
             'anexos_entregados' => $anexos,
             'estado' => $acta->estado === 'suscrita' ? 'suscrita' : 'generada',
+            'declara' => $declara,
+            'version' => $acta->version ?? 1,
             'generada_por_id' => $usuario?->id ?? $acta->generada_por_id,
         ]);
         $acta->save();
 
         return $acta->load(['evidencias.subidoPor', 'generadaPor', 'dependencia']);
+    }
+
+    /**
+     * B3c (D-06): sube la versión del acta de la dependencia e invalida las
+     * firmas OBLIGATORIAS de la versión anterior cuando se corrige una entrega
+     * observada y se vuelve a remitir.
+     *
+     * - El acta (si existe) incrementa `version` y vuelve a `generada` (debe
+     *   re-suscribirse). Las firmas previas se conservan ligadas a su versión.
+     * - Las firmas obligatorias en estado PENDIENTE o FIRMADA de la versión
+     *   vigente pasan a CANCELADA: una firma de una versión observada no ampara
+     *   la versión corregida. Las opcionales (p. ej. ETTE) no se tocan aquí.
+     *
+     * No presupone la matriz de firmantes (D-02): solo invalida lo ya registrado
+     * como obligatorio; no crea firmas ni decide quién debe firmar.
+     */
+    private function versionarActaPorCorreccion(int $procesoId, int $dependenciaId): void
+    {
+        $acta = ActaTransferencia::where('proceso_transferencia_id', $procesoId)
+            ->where('dependencia_id', $dependenciaId)
+            ->first();
+
+        if ($acta === null) {
+            return;
+        }
+
+        $versionAnterior = $acta->version ?? 1;
+
+        FirmaAnexo::query()
+            ->where('firmable_type', $acta->getMorphClass())
+            ->where('firmable_id', $acta->id)
+            ->where('version', $versionAnterior)
+            ->where('caracter', CaracterFirma::OBLIGATORIA->value)
+            ->whereIn('estado', [EstadoFirma::PENDIENTE->value, EstadoFirma::FIRMADA->value])
+            ->update(['estado' => EstadoFirma::CANCELADA->value]);
+
+        $acta->fill([
+            'version' => $versionAnterior + 1,
+            'estado' => 'generada',
+        ])->save();
     }
 
     /**
