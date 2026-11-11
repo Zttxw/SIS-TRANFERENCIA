@@ -42,6 +42,15 @@ class ActaPdf
 
     public function descargar(int $dependenciaId, User $usuario): StreamedResponse
     {
+        $datos = $this->datos($dependenciaId, $usuario);
+        $codigo = str_replace('.', '', (string) ($datos['contexto']['dependencia']['codigo'] ?? 's-c'));
+
+        return $this->pdf->descargar('pdf.acta', $datos, "Anexo07-Acta-{$codigo}.pdf");
+    }
+
+    /** @return array<string, mixed> */
+    public function datos(int $dependenciaId, User $usuario): array
+    {
         // Enforce CONSOLIDADA (lanza 409 si no) y materializa/actualiza el acta.
         $acta = $this->transferenciaService->obtenerActa($dependenciaId, $usuario);
         $contexto = $this->contexto->paraDependencia($dependenciaId);
@@ -49,7 +58,7 @@ class ActaPdf
         $fecha = $acta->fecha_acta ?? Carbon::now();
         $intervinientes = $acta->intervinientes ?? [];
 
-        $datos = [
+        return [
             'contexto' => $contexto,
             'acta' => [
                 'numero_acta' => $acta->numero_acta ?? '',
@@ -68,9 +77,6 @@ class ActaPdf
             ],
         ];
 
-        $codigo = str_replace('.', '', (string) ($contexto['dependencia']['codigo'] ?? 's-c'));
-
-        return $this->pdf->descargar('pdf.acta', $datos, "Anexo07-Acta-{$codigo}.pdf");
     }
 
     /**
