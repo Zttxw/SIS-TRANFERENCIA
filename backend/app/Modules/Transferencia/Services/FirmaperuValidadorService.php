@@ -12,10 +12,16 @@ use Symfony\Component\Process\Process;
 
 class FirmaperuValidadorService
 {
-    public function comprobarConfiguracion(): void
+    public function tieneConfiguracion(): bool
     {
         $bundle = config('firmaperu.ca_bundle');
-        abort_unless(is_string($bundle) && is_file($bundle) && is_readable($bundle), 503,
+
+        return is_string($bundle) && is_file($bundle) && is_readable($bundle);
+    }
+
+    public function comprobarConfiguracion(): void
+    {
+        abort_unless($this->tieneConfiguracion(), 503,
             'Configure FIRMAPERU_CA_BUNDLE con las autoridades de confianza institucionales.');
     }
 

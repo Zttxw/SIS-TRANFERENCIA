@@ -28,7 +28,6 @@ class FirmaperuSesionService
     public function preparar(User $usuario, string $tipo, int $dependenciaId, ?string $previoId = null): array
     {
         abort_unless(preg_match('/^\d{8}$/', (string) $usuario->dni), 422, 'La cuenta debe tener un DNI válido para firmar.');
-        $this->validador->comprobarConfiguracion();
         $this->jwt();
         $procesoId = ProcesoTransferencia::where('estado', 'abierto')->value('id');
         abort_unless($procesoId, 409, 'No existe un proceso de transferencia abierto.');
@@ -132,6 +131,16 @@ class FirmaperuSesionService
                 && $usuario->puedeAccederDependencia($sesion->dependencia_id)
                 && ($sesion->tipo_documento !== 'anexo07' || $usuario->tienePermiso(Permiso::GenerarActas)),
                 403, 'La cuenta que inició la firma ya no está autorizada para este documento.');
+            if (! $this->validador->tieneConfiguracion()) {
+                abort_unless(Storage::disk('local')->put($ruta, $firmado), 503, 'No se pudo conservar el PDF recibido.');
+                $sesion->update(['estado' => 'pendiente_validacion', 'firmado_path' => $ruta,
+                    'firmado_sha256' => hash('sha256', $firmado),
+                    'mensaje' => 'PDF recibido. La verificación del certificado está pendiente de configuración institucional.',
+                    'detalles' => ['recibido_en' => now()->toIso8601String(), 'integridad_verificada' => false,
+                        'cadena_verificada' => false]]);
+
+                return $sesion;
+            }
             $detalles = $this->validador->validar($original, $firmado, $sesion->firmante_dni);
             abort_unless(Storage::disk('local')->put($ruta, $firmado), 503, 'No se pudo conservar el PDF firmado.');
             $sesion->update(['estado' => 'firmada', 'firmado_path' => $ruta,
@@ -142,6 +151,35 @@ class FirmaperuSesionService
         } catch (Throwable $exception) {
             Storage::disk('local')->delete($ruta);
             $sesion->update(['estado' => 'emitida', 'mensaje' => 'No se pudo procesar el archivo. Puede reintentar mientras la sesión esté vigente.']);
+            throw $exception;
+        }
+
+        return $sesion;
+    }
+
+    public function validarPendiente(string $id): FirmaSesion
+    {
+        $this->validador->comprobarConfiguracion();
+        $sesion = DB::transaction(function () use ($id): FirmaSesion {
+            $sesion = FirmaSesion::whereKey($id)->lockForUpdate()->firstOrFail();
+            abort_unless($sesion->estado === 'pendiente_validacion', 409, 'La sesión no tiene una validación pendiente.');
+            $sesion->update(['estado' => 'validando']);
+
+            return $sesion;
+        });
+        try {
+            $original = Storage::disk('local')->get($sesion->pdf_path);
+            $firmado = Storage::disk('local')->get($sesion->firmado_path);
+            abort_unless(hash_equals($sesion->original_sha256, hash('sha256', $original))
+                && hash_equals($sesion->firmado_sha256, hash('sha256', $firmado)), 409, 'Un archivo conservado no coincide con su huella.');
+            $detalles = $this->validador->validar($original, $firmado, $sesion->firmante_dni);
+            $sesion->update(['estado' => 'firmada', 'firmado_en' => now(), 'mensaje' => null,
+                'detalles' => array_merge($sesion->detalles ?? [], $detalles)]);
+        } catch (ValidationException $exception) {
+            $sesion->update(['estado' => 'rechazada', 'mensaje' => $exception->errors()['signed_file'][0] ?? 'Firma rechazada.']);
+            throw $exception;
+        } catch (Throwable $exception) {
+            $sesion->update(['estado' => 'pendiente_validacion']);
             throw $exception;
         }
 

@@ -34,6 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/sesiones/{id}', [FirmaperuController::class, 'sesion'])->whereUuid('id');
             Route::get('/estado/{tipo}/{dependenciaId}', [FirmaperuController::class, 'estado'])->whereNumber('dependenciaId');
             Route::get('/documentos/{id}/descargar', [FirmaperuController::class, 'descargar'])->whereUuid('id');
+            Route::get('/documentos/{id}/recibido', [FirmaperuController::class, 'descargarRecibido'])->whereUuid('id');
         });
     });
     Route::post('/auth/logout', [AuthController::class, 'logout']);

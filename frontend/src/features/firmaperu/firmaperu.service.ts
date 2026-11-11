@@ -23,4 +23,7 @@ export const firmaperuService = {
   descargar(id: string) {
     return descargarArchivo(`/firmaperu/documentos/${id}/descargar`, undefined, 'Anexo-firmado.pdf')
   },
+  descargarRecibido(id: string) {
+    return descargarArchivo(`/firmaperu/documentos/${id}/recibido`, undefined, 'Anexo-recibido-sin-verificar.pdf')
+  },
 }

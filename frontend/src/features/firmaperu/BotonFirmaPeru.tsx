@@ -52,7 +52,7 @@ function ControlFirma({ tipoDocumento, dependenciaId }: PropsFirma) {
         confirmText: 'Abrir Firma Perú',
       })
       if (!aceptar || scope.signal.aborted) return
-      await firmarConCliente({
+      const resultado = await firmarConCliente({
         preparar: () => firmaperuService.preparar(tipoDocumento, dependenciaId, scope.signal, previoId),
         consultar: firmaperuService.sesion,
         signal: scope.signal,
@@ -60,7 +60,11 @@ function ControlFirma({ tipoDocumento, dependenciaId }: PropsFirma) {
       })
       if (!scope.signal.aborted) {
         await cliente.invalidateQueries({ queryKey: clave })
-        toast.success('PDF firmado recibido. Puede descargarlo.')
+        if (resultado.estado === 'pendiente_validacion') {
+          toast.info('PDF recibido. Su verificación institucional está pendiente.')
+        } else {
+          toast.success('PDF firmado recibido. Puede descargarlo.')
+        }
       }
     } catch (error) {
       if (!scope.signal.aborted) toast.error(error instanceof Error ? error.message : 'No se pudo completar la firma.')
@@ -72,10 +76,14 @@ function ControlFirma({ tipoDocumento, dependenciaId }: PropsFirma) {
     }
   }
 
-  const descargar = async () => {
-    if (!estado?.documento_id) return
+  const descargar = async (pendiente = false) => {
+    const id = pendiente ? estado?.sesion_pendiente_id : estado?.documento_id
+    if (!id) return
     setDescargando(true)
-    try { await firmaperuService.descargar(estado.documento_id) }
+    try {
+      if (pendiente) await firmaperuService.descargarRecibido(id)
+      else await firmaperuService.descargar(id)
+    }
     catch (error) { toast.error(error instanceof Error ? error.message : 'No se pudo descargar el PDF.') }
     finally { setDescargando(false) }
   }
@@ -98,6 +106,12 @@ function ControlFirma({ tipoDocumento, dependenciaId }: PropsFirma) {
         </>
       )}
       {mensaje && <span role="status" className="text-xs text-muted-foreground">{mensaje}</span>}
+      {estado?.pendiente_validacion && (
+        <Button size="sm" variant="outline" onClick={() => void descargar(true)} disabled={descargando}
+          title="El archivo fue recibido. La firma aún no ha sido verificada por el servidor." className="gap-2">
+          <Download className="h-4 w-4" /> PDF recibido · sin verificar
+        </Button>
+      )}
     </div>
   )
 }

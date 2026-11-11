@@ -38,6 +38,16 @@ test('rechazo del backend se propaga aunque el cliente informe éxito', async ()
   assert.equal(window.signatureOk, undefined)
 })
 
+test('recepción pendiente termina la espera sin declarar el documento verificado', async () => {
+  globalThis.window = { startSignature: () => window.signatureOk() }
+
+  const recibido = await firmarConCliente(opciones({ consultar: async () => resultado('pendiente_validacion') }))
+
+  assert.equal(recibido.estado, 'pendiente_validacion')
+  assert.equal(recibido.documento_id, null)
+  assert.equal(window.signatureOk, undefined)
+})
+
 test('cancelar desde el firmador libera la operación para un reintento', async () => {
   globalThis.window = { startSignature: () => window.signatureCancel() }
   await assert.rejects(firmarConCliente(opciones()), /cancelada/)

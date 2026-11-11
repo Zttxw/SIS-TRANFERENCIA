@@ -10,7 +10,7 @@ export interface PreparacionFirma {
 
 export interface SesionFirma {
   sesion_id: string
-  estado: 'pendiente' | 'emitida' | 'validando' | 'firmada' | 'rechazada' | 'expirada'
+  estado: 'pendiente' | 'emitida' | 'validando' | 'pendiente_validacion' | 'firmada' | 'rechazada' | 'expirada'
   documento_id: string | null
   firmado_en: string | null
   mensaje: string | null
@@ -20,6 +20,8 @@ export interface EstadoFirma {
   firmado: boolean
   documento_id: string | null
   firmado_en: string | null
+  pendiente_validacion: boolean
+  sesion_pendiente_id: string | null
 }
 
 declare global {

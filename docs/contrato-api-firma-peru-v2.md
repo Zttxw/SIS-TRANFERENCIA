@@ -64,6 +64,10 @@ disponible según restricciones existentes, 503 conector sin configuración.
 ```
 
 Estados: `pendiente`, `emitida`, `validando`, `firmada`, `rechazada`, `expirada`.
+Se agrega `pendiente_validacion` para un PDF recibido cuando todavía no hay CA
+institucional configurada en el servidor. Es un resultado terminal de recepción;
+la UI informa la espera y no lo declara verificado. Puede verificarse después
+mediante `firmaperu:validar-pendientes`.
 `documento_id` se informa cuando el firmado está validado y disponible.
 Tras `signatureOk`, consultar esta sesión hasta estado terminal, con espera entre
 consultas y timeout. No mostrar «firmado» al recibir únicamente el callback.
@@ -74,6 +78,7 @@ consultas y timeout. No mostrar «firmado» al recibir únicamente el callback.
 `GET /estado/{tipo_documento}/{dependencia_id}` con permiso y ámbito.
 
 `data`: `{firmado:boolean, documento_id:string|null, firmado_en:string|null}`.
+Incluye además `pendiente_validacion:boolean` y `sesion_pendiente_id:string|null`.
 Siempre se acota al proceso activo. `firmado` se refiere al PDF conservado;
 no implica automáticamente que el contenido editable actual tenga esa firma.
 Mostrar «Ver PDF firmado» y fecha; no etiquetar datos editables como firmados.
@@ -82,6 +87,10 @@ Mostrar «Ver PDF firmado» y fecha; no etiquetar datos editables como firmados.
 
 `GET /documentos/{documento_id}/descargar` → binario `application/pdf`.
 Usar la descarga autenticada del proyecto, no `window.open` con un token privado.
+
+`GET /documentos/{sesion_id}/recibido` permite descargar exclusivamente un archivo
+`pendiente_validacion`, autenticado y con ámbito. El nombre lleva el sufijo
+`recibido-sin-verificar.pdf`. No habilita la ruta de descarga de firmas verificadas.
 
 ## Rutas de intercambio exclusivas del firmador
 
@@ -109,6 +118,10 @@ incremental CMS separada (`adbe.pkcs7.detached` o `ETSI.CAdES.detached`). Se com
 la cobertura de bytes de la última revisión, la firma CMS con OpenSSL, la cadena
 del certificado contra `FIRMAPERU_CA_BUNDLE` y el DNI del iniciador en el sujeto del
 certificado. El DNI de inicio se conserva en la sesión.
+
+Si no hay CA configurada, se conserva la recepción sin ejecutar esa verificación,
+en estado `pendiente_validacion`. El PDF no se declara firmado/verificado en la API.
+Los certificados y claves privadas de los usuarios permanecen en sus equipos.
 
 Este control no es una validación integral del formato PDF ni una comparación
 visual de sus revisiones. No comprueba OCSP/CRL ni ofrece validación a largo plazo.

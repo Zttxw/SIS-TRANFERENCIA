@@ -84,6 +84,7 @@ export async function firmarConCliente({ preparar, consultar, signal, onMensaje,
       operacion.throwIfAborted()
       const resultado = await consultar(sesion.sesion_id, operacion)
       if (resultado.estado === 'firmada' && resultado.documento_id) return resultado
+      if (resultado.estado === 'pendiente_validacion') return resultado
       if (resultado.estado === 'rechazada' || resultado.estado === 'expirada') {
         throw new Error(resultado.mensaje ?? 'La sesión fue rechazada o expiró. Inicie una nueva firma.')
       }

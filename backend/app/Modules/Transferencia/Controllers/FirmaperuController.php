@@ -71,7 +71,8 @@ class FirmaperuController extends Controller
             'max:'.(int) config('firmaperu.max_upload_kb', 20480)]]);
         $sesion = $this->sesiones->recibir($token, $request->file('signed_file'));
 
-        return ApiResponse::success(['sesion_id' => $sesion->id, 'estado' => $sesion->estado], 'PDF firmado recibido y comprobado.');
+        return ApiResponse::success(['sesion_id' => $sesion->id, 'estado' => $sesion->estado],
+            $sesion->estado === 'firmada' ? 'PDF firmado recibido y comprobado.' : 'PDF recibido. Verificación pendiente.');
     }
 
     public function sesion(Request $request, string $id): JsonResponse
@@ -97,19 +98,35 @@ class FirmaperuController extends Controller
             ->where('proceso_transferencia_id', app(ContextoTransferencia::class)->procesoActivoId())
             ->where('estado', 'firmada')->latest('firmado_en')->latest('created_at')->orderByDesc('id')->first();
 
+        $pendiente = FirmaSesion::where('tipo_documento', $tipo === 'acta' ? 'anexo07' : $tipo)
+            ->where('dependencia_id', $dependenciaId)
+            ->where('proceso_transferencia_id', app(ContextoTransferencia::class)->procesoActivoId())
+            ->where('estado', 'pendiente_validacion')->latest('created_at')->orderByDesc('id')->first();
+
         return ApiResponse::success(['firmado' => $sesion !== null, 'documento_id' => $sesion?->id,
-            'firmado_en' => $sesion?->firmado_en?->toIso8601String()]);
+            'firmado_en' => $sesion?->firmado_en?->toIso8601String(),
+            'pendiente_validacion' => $pendiente !== null, 'sesion_pendiente_id' => $pendiente?->id]);
     }
 
     public function descargar(Request $request, string $id): StreamedResponse
     {
-        $sesion = FirmaSesion::whereKey($id)->where('estado', 'firmada')->firstOrFail();
+        return $this->descargarEstado($request, $id, 'firmada', 'firmado');
+    }
+
+    public function descargarRecibido(Request $request, string $id): StreamedResponse
+    {
+        return $this->descargarEstado($request, $id, 'pendiente_validacion', 'recibido-sin-verificar');
+    }
+
+    private function descargarEstado(Request $request, string $id, string $estado, string $sufijo): StreamedResponse
+    {
+        $sesion = FirmaSesion::whereKey($id)->where('estado', $estado)->firstOrFail();
         $this->autorizarDependencia($request->user(), $sesion->dependencia_id);
         abort_unless(Storage::disk('local')->exists($sesion->firmado_path), 404);
         abort_unless(hash_equals($sesion->firmado_sha256, hash('sha256', Storage::disk('local')->get($sesion->firmado_path))),
             409, 'El PDF conservado no coincide con su huella de integridad.');
 
-        return Storage::disk('local')->download($sesion->firmado_path, strtoupper($sesion->tipo_documento).'-firmado.pdf',
+        return Storage::disk('local')->download($sesion->firmado_path, strtoupper($sesion->tipo_documento).'-'.$sufijo.'.pdf',
             ['Content-Type' => 'application/pdf', 'Cache-Control' => 'no-store']);
     }
 }

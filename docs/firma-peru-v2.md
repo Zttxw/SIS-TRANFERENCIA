@@ -15,6 +15,10 @@ intervinientes y cierre se ajustarán posteriormente.
   autenticada y autorizada por dependencia, comprobando la huella conservada.
 - Recepción multipart `signed_file`, límite 20 MiB por defecto, comprobación de
   firma CMS, cadena de confianza configurada y DNI del iniciador.
+- El certificado personal y su clave privada permanecen en el equipo del usuario.
+  Sin CA configurada en el servidor se permite abrir Firma Perú y recibir el PDF:
+  se conserva como `pendiente_validacion`, con descarga «PDF recibido · sin verificar».
+  No se publica como firma verificada ni se utiliza como base para agregar firmas.
 - Agregar firmas sobre el PDF firmado anterior, con una sesión nueva y conservación
   del resultado anterior. Firmar datos actuales genera una nueva copia independiente.
 - La UI espera confirmación del backend. `signatureOk` no marca éxito por sí solo.
@@ -51,6 +55,17 @@ es la que ve el contenedor; el ejemplo corresponde a
 `backend/storage/app/private/firmaperu-ca.pem` en Windows. No versionar credenciales,
 archivos privados ni certificados de prueba como autoridades de producción.
 
+`FIRMAPERU_CA_BUNDLE` se necesita para la comprobación adicional del servidor, no
+para abrir el firmador ni usar el certificado local del usuario. Cuando se configure,
+los archivos recibidos previamente se pueden comprobar sin volver a pedir la firma:
+
+```sh
+docker compose exec -T backend php artisan firmaperu:validar-pendientes
+```
+
+Para comprobar solo uno, agregar `--id=UUID_DE_LA_SESION`. El comando no publica como
+verificado un archivo cuya firma, identidad o confianza resulte inválida.
+
 Migración nueva (solo crea la tabla de sesiones):
 
 ```sh
@@ -70,7 +85,8 @@ del proxy externo y permitir el acceso del firmador a las rutas efímeras.
    entrega consolidada; los demás anexos no reciben restricciones nuevas.
 3. Pulsar «Firmar con Firma Perú». Revisar la copia guardada en el firmador,
    posicionar la representación visual y completar la firma en el equipo.
-4. Esperar la confirmación del backend y descargar «PDF firmado».
+4. Esperar la confirmación del backend. Descargar «PDF firmado» cuando esté
+   verificado, o «PDF recibido · sin verificar» si la comprobación está pendiente.
 5. Comprobar la firma con un lector/validador institucional. Para una segunda
    firma, otro interviniente inicia sesión con su propia cuenta y pulsa «Agregar firma».
 
@@ -115,12 +131,16 @@ vigencia, limpieza de callbacks y exclusión de operaciones simultáneas.
 
 ## Resultado de esta implementación
 
-- Suite backend completa: 108 pruebas aprobadas, 284 aserciones.
-- Cliente: 6 pruebas aprobadas con Node 24.
+- Pruebas del conector aprobadas; la última comprobación de sesiones incluye
+  16 pruebas y 101 aserciones, con recepción pendiente, verificación posterior y rechazo.
+- Cliente: 7 pruebas aprobadas con Node 24.
 - TypeScript y compilación de producción aprobados. Lint sin errores; se mantienen
   las seis advertencias preexistentes en los formularios y componentes de UI.
 - Nginx validado y recargado con el límite de subida actualizado.
 - Migración de sesiones aplicada en PostgreSQL local. La autorreferencia al PDF
   anterior se crea después de la clave primaria para ser compatible con PostgreSQL.
-- La configuración privada actual no contiene valores FIRMAPERU. Falta configurar
-  las credenciales y las autoridades de confianza, y ejecutar la firma institucional real.
+- Las credenciales institucionales se cargaron localmente desde el archivo del
+  usuario y la autenticación real con Firma Perú fue comprobada. La firma real
+  desde el equipo del usuario sigue pendiente de probar.
+- El inicio ya no exige un bundle CA. Su ausencia mantiene los PDF recibidos
+  pendientes de verificación; la confianza institucional se configura después.

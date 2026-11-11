@@ -38,6 +38,7 @@ class FirmaperuSesionTest extends TestCase
         $this->mock(FirmaperuPdfService::class, fn (MockInterface $mock) => $mock->shouldReceive('generar')->andReturn(self::PDF));
         $this->mock(FirmaperuValidadorService::class, function (MockInterface $mock): void {
             $mock->shouldReceive('comprobarConfiguracion')->andReturnNull();
+            $mock->shouldReceive('tieneConfiguracion')->andReturnTrue();
             $mock->shouldReceive('validar')->andReturn(['integridad_verificada' => true]);
         });
     }
@@ -174,8 +175,10 @@ class FirmaperuSesionTest extends TestCase
         $dep = $this->iniciarUsuario();
         $preparacion = $this->preparar($dep);
         $parametros = $this->emitir($preparacion);
-        $this->mock(FirmaperuValidadorService::class, fn (MockInterface $mock) => $mock->shouldReceive('validar')
-            ->andThrow(ValidationException::withMessages(['signed_file' => ['Firma inválida.']])));
+        $this->mock(FirmaperuValidadorService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('tieneConfiguracion')->andReturnTrue();
+            $mock->shouldReceive('validar')->andThrow(ValidationException::withMessages(['signed_file' => ['Firma inválida.']]));
+        });
 
         $this->postJson($this->subir($parametros), ['signed_file' => UploadedFile::fake()->createWithContent('firmado.pdf', self::PDF)])
             ->assertUnprocessable();
@@ -235,5 +238,66 @@ class FirmaperuSesionTest extends TestCase
         $this->postJson($this->subir($parametros), ['signed_file' => UploadedFile::fake()->createWithContent('firmado.pdf', self::PDF)])
             ->assertForbidden();
         $this->assertDatabaseHas('firma_sesiones', ['id' => $sesion->id, 'firmado_path' => null]);
+    }
+
+    public function test_sin_bundle_permite_iniciar_y_conserva_recepcion_sin_declarar_firma_verificada(): void
+    {
+        $dep = $this->iniciarUsuario();
+        $this->mock(FirmaperuValidadorService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('tieneConfiguracion')->once()->andReturnFalse();
+            $mock->shouldNotReceive('comprobarConfiguracion');
+            $mock->shouldNotReceive('validar');
+        });
+        $preparacion = $this->preparar($dep);
+        $parametros = $this->emitir($preparacion);
+
+        $this->post($this->subir($parametros), ['signed_file' => UploadedFile::fake()->createWithContent('firmado.pdf', self::PDF)])
+            ->assertOk()->assertJsonPath('data.estado', 'pendiente_validacion');
+
+        $id = $preparacion['sesion_id'];
+        $this->getJson('/api/firmaperu/sesiones/'.$id)->assertJsonPath('data.estado', 'pendiente_validacion')->assertJsonPath('data.documento_id', null);
+        $this->getJson('/api/firmaperu/estado/anexo03/'.$dep->id)->assertJsonPath('data.firmado', false)
+            ->assertJsonPath('data.pendiente_validacion', true)->assertJsonPath('data.sesion_pendiente_id', $id);
+        $this->get('/api/firmaperu/documentos/'.$id.'/recibido')->assertOk()->assertDownload('ANEXO03-recibido-sin-verificar.pdf');
+        $this->getJson('/api/firmaperu/documentos/'.$id.'/descargar')->assertNotFound();
+        $this->post($this->subir($parametros), ['signed_file' => UploadedFile::fake()->createWithContent('firmado.pdf', self::PDF)])->assertConflict();
+
+        $this->mock(FirmaperuValidadorService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('comprobarConfiguracion')->andReturnNull();
+            $mock->shouldReceive('validar')->once()->andReturn(['integridad_verificada' => true, 'cadena_verificada' => true]);
+        });
+        $this->artisan('firmaperu:validar-pendientes', ['--id' => $id])->assertSuccessful();
+        $this->assertDatabaseHas('firma_sesiones', ['id' => $id, 'estado' => 'firmada', 'mensaje' => null]);
+        $this->get('/api/firmaperu/documentos/'.$id.'/descargar')->assertOk()->assertDownload('ANEXO03-firmado.pdf');
+    }
+
+    public function test_descarga_de_recibidos_pendientes_respeta_ambito(): void
+    {
+        $dep = $this->iniciarUsuario();
+        $otra = Dependencia::factory()->create(['proceso_transferencia_id' => $dep->proceso_transferencia_id]);
+        $sesion = FirmaSesion::factory()->create(['proceso_transferencia_id' => $dep->proceso_transferencia_id,
+            'dependencia_id' => $otra->id, 'estado' => 'pendiente_validacion']);
+
+        $this->getJson('/api/firmaperu/documentos/'.$sesion->id.'/recibido')->assertForbidden();
+    }
+
+    public function test_verificacion_diferida_rechaza_firma_invalida_sin_publicarla_como_verificada(): void
+    {
+        $dep = $this->iniciarUsuario();
+        $ruta = 'firmaperu/prueba/recibido.pdf';
+        Storage::disk('local')->put($ruta, self::PDF);
+        Storage::disk('local')->put('firmaperu/prueba/original.pdf', self::PDF);
+        $sesion = FirmaSesion::factory()->create(['proceso_transferencia_id' => $dep->proceso_transferencia_id,
+            'dependencia_id' => $dep->id, 'estado' => 'pendiente_validacion', 'firmado_path' => $ruta,
+            'original_sha256' => hash('sha256', self::PDF), 'firmado_sha256' => hash('sha256', self::PDF)]);
+        $this->mock(FirmaperuValidadorService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('comprobarConfiguracion')->andReturnNull();
+            $mock->shouldReceive('validar')->once()->andThrow(ValidationException::withMessages(['signed_file' => ['Firma inválida.']]));
+        });
+
+        $this->artisan('firmaperu:validar-pendientes', ['--id' => $sesion->id])->assertFailed();
+
+        $this->assertDatabaseHas('firma_sesiones', ['id' => $sesion->id, 'estado' => 'rechazada', 'firmado_en' => null]);
+        $this->getJson('/api/firmaperu/documentos/'.$sesion->id.'/descargar')->assertNotFound();
     }
 }
