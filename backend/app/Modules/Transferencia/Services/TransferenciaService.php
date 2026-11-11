@@ -312,6 +312,12 @@ class TransferenciaService
             CronogramaService::OPERACION_REMISION,
         );
 
+        // B3b (D-02): gate de remisión. Si el proceso lo exige, el acta (Anexo
+        // 07) debe tener su firma OBLIGATORIA del responsable del centro de costo
+        // antes de remitir. Configurable por proceso y APAGADO por defecto: el
+        // flujo actual sigue vigente mientras no haya proveedor real de firma.
+        $this->exigirActaFirmada($procesoId, $dep->id);
+
         return DB::transaction(function () use ($dep, $procesoId, $usuario, $comentario) {
             $entrega = Entrega::where('proceso_transferencia_id', $procesoId)
                 ->where('dependencia_id', $dep->id)
@@ -519,6 +525,44 @@ class TransferenciaService
             'version' => $versionAnterior + 1,
             'estado' => 'generada',
         ])->save();
+    }
+
+    /**
+     * B3b (D-02): gate de remisión. Cuando el proceso tiene encendido
+     * `exige_firma_acta`, remitir exige que el acta (Anexo 07) de la dependencia
+     * exista y tenga al menos una firma OBLIGATORIA en estado FIRMADA sobre su
+     * versión vigente (la del responsable del centro de costo). Si falta, 409.
+     *
+     * Por defecto el gate está APAGADO: no bloquea el flujo actual ni presupone
+     * un proveedor de firma. No impone orden entre firmantes (un solo obligatorio).
+     */
+    private function exigirActaFirmada(int $procesoId, int $dependenciaId): void
+    {
+        $proceso = ProcesoTransferencia::find($procesoId);
+        if ($proceso === null || ! $proceso->exige_firma_acta) {
+            return;
+        }
+
+        $acta = ActaTransferencia::where('proceso_transferencia_id', $procesoId)
+            ->where('dependencia_id', $dependenciaId)
+            ->first();
+
+        $firmada = $acta !== null && FirmaAnexo::query()
+            ->where('firmable_type', $acta->getMorphClass())
+            ->where('firmable_id', $acta->id)
+            ->where('version', $acta->version ?? 1)
+            ->obligatorias()
+            ->validas()
+            ->exists();
+
+        if (! $firmada) {
+            throw new HttpResponseException(
+                ApiResponse::error(
+                    'El acta (Anexo 07) debe estar firmada por el responsable antes de remitir.',
+                    409,
+                )
+            );
+        }
     }
 
     /**

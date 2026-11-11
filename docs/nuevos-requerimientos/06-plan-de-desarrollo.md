@@ -68,9 +68,12 @@ la hija**; corregir una observada genera **nueva versión** y **re-firma** de ob
 - **B3c** ✅ HECHA: re-remitir una entrega `observada` sube la `version` del acta e **invalida** las
   firmas obligatorias previas (pasan a `cancelada`), para que una firma vieja no ampare una versión
   corregida. La re-remisión automática tras cerrar observaciones no reutiliza firma/plazo sin re-chequear.
-- **B3b (gate duro)** — BLOQUEADO por **D-02**: exigir el acta *suscrita* como precondición de remitir
-  presupone la **matriz de firmantes obligatorios** (quién debe firmar el acta), aún abierta. No se
-  inventa: el andamiaje (`declara`, `version`, invalidación) admite activar el gate sin rehacerlo.
+- **B3b (gate de remisión)** ✅ HECHA (D-02 cerrado 2026-11-11): remitir exige la firma **obligatoria
+  del acta (Anexo 07)** por el **responsable del centro de costo**. El gate es **configurable y por
+  defecto APAGADO** (`procesos_transferencia.exige_firma_acta`): no rompe el flujo actual ni los tests;
+  se enciende por proceso cuando se integre el proveedor real. Sin orden de firmas impuesto (un solo
+  firmante obligatorio). Pendiente la matriz ETTS (qué cuenta ETTS firma cada dependencia) y el orden
+  multi-firmante, que no bloquean este gate de un firmante.
 
 ---
 
@@ -119,7 +122,7 @@ Indicador y listado comparten filtros/ámbito/periodo. **Bloqueado** por D-10 (a
 | A3 | Base | ✅ Hecha | D-06 (parcial) |
 | B1 | Firma | ✅ Hecha (andamiaje) | matriz/proveedor → D-02 |
 | B3a,B3c | Firma | ✅ Hecha | D-05/D-06 cerrados |
-| B3b (gate) | Firma | Bloqueado | D-02 (matriz firmantes) |
+| B3b (gate) | Firma | ✅ Hecha | D-02 cerrado (gate OFF por defecto) |
 | B2 | Firma | Bloqueado | D-12 |
 | C1–C3 | Cronograma | ✅ Hecha | ampliación → D-03 |
 | D1–D2 | ETTE | ✅ Hecha | ampliación → D-08 |

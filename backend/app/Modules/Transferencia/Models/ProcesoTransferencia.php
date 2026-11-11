@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property int $anio
  * @property Carbon $fecha_corte
  * @property string $estado
+ * @property bool $exige_firma_acta
  */
 class ProcesoTransferencia extends BaseModel
 {
@@ -37,6 +38,7 @@ class ProcesoTransferencia extends BaseModel
         'anio',
         'fecha_corte',
         'estado',
+        'exige_firma_acta',
         'descripcion',
         'cerrado_en',
     ];
@@ -47,6 +49,7 @@ class ProcesoTransferencia extends BaseModel
             'fecha_corte' => 'date',
             'cerrado_en' => 'datetime',
             'anio' => 'integer',
+            'exige_firma_acta' => 'boolean',
         ];
     }
 
