@@ -1,8 +1,8 @@
-# Contrato API Firma Perú v2 — v1
+# Contrato API Firma Perú v2 — v2
 
-Contrato para que frontend y backend avancen en paralelo. Las rutas de este
-documento son el objetivo acordado, NO una afirmación de que ya estén implementadas.
-Consultar el buzón Codex para conocer disponibilidad. Prefijo: `/api/firmaperu`.
+Implementación a cargo de Codex en la rama `feature/firma-peru-v2`.
+Las rutas están implementadas. Su uso requiere migración y configuración privada.
+Prefijo: `/api/firmaperu`.
 Se usa el cliente API actual, con el envoltorio `ApiResponse` del proyecto.
 
 ## Preparar una sesión (autenticado)
@@ -13,8 +13,13 @@ Se usa el cliente API actual, con el envoltorio `ApiResponse` del proyecto.
 {"tipo_documento":"anexo03","dependencia_id":12}
 ```
 
-Tipos iniciales: `anexo02`, `anexo03`, `anexo04`, `anexo05`, `anexo06`, `anexo07`.
-`acta` puede normalizarse a `anexo07`. No ofrecer `anexo01` en esta etapa.
+Tipos: `anexo01`, `anexo02`, `anexo03`, `anexo04`, `anexo05`, `anexo06`, `anexo07`.
+`acta` se normaliza a `anexo07`. El Anexo 01 contiene el catálogo institucional
+del proceso; los restantes corresponden a la dependencia seleccionada.
+
+Para agregar una firma, enviar además `documento_previo_id` con el ID de un PDF
+firmado del mismo proceso, tipo y dependencia. Se conservan sus bytes como base;
+no se regenera desde datos editables. Cada sesión conserva su propio resultado.
 
 Respuesta `201`:
 
@@ -96,5 +101,22 @@ La integración oficial requiere jQuery 3.6.0, `jqFirmaPeru`, `startSignature`,
 Una sola firma activa por pestaña para evitar sobrescribir callbacks globales.
 Restaurar callbacks/limpiar temporizadores al finalizar o desmontar. No hacer que
 una caída del script externo impida utilizar el resto de la aplicación.
+
+## Comprobación del archivo recibido
+
+Se exige que el PDF preserve exactamente la revisión enviada y agregue una firma
+incremental CMS separada (`adbe.pkcs7.detached` o `ETSI.CAdES.detached`). Se comprueba
+la cobertura de bytes de la última revisión, la firma CMS con OpenSSL, la cadena
+del certificado contra `FIRMAPERU_CA_BUNDLE` y el DNI del iniciador en el sujeto del
+certificado. El DNI de inicio se conserva en la sesión.
+
+Este control no es una validación integral del formato PDF ni una comparación
+visual de sus revisiones. No comprueba OCSP/CRL ni ofrece validación a largo plazo.
+Los tests criptográficos usan certificados efímeros, no credenciales institucionales.
+La compatibilidad exacta con el firmador instalado se confirma con una firma real.
+
+No se cambia el estado de la entrega ni se declara el acta `suscrita` automáticamente:
+la definición de intervinientes y del momento de suscripción pertenece a la etapa
+de integración con el flujo institucional.
 
 Referencia: https://resources.firmaperu.gob.pe/documentos/firmador-componente-web.pdf

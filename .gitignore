@@ -59,3 +59,5 @@ Thumbs.db
 /.worktrees/
 /.coordination/
 fwAuthorization.json
+/backend/storage/app/private/firmaperu/
+/backend/storage/app/private/firmaperu-ca.pem

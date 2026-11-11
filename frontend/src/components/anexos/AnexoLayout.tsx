@@ -2,12 +2,18 @@ import type { ReactNode } from 'react'
 import { Building2 } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
+import { BotonFirmaPeru } from '@/features/firmaperu/BotonFirmaPeru'
+import type { TipoDocumentoFirma } from '@/features/firmaperu/firmaperu.types'
 import type { ClaveAnexoObservable } from '@/types/observaciones'
 import type { EstadoEntrega } from '@/types/transferencia'
 import { AlertaBloqueoEntrega } from './AlertaBloqueoEntrega'
 import { AnexoHeader } from './AnexoHeader'
 import { EstadoAnexoChip } from './EstadoAnexoChip'
 import { ObservacionesAnexoPanel } from './ObservacionesAnexoPanel'
+
+const TIPOS_FIRMA: Partial<Record<ClaveAnexoObservable, TipoDocumentoFirma>> = {
+  gestion: 'anexo02', acervo: 'anexo03', patrimonio: 'anexo04', personal: 'anexo05', nopatrimonial: 'anexo06',
+}
 
 export interface DependenciaResumenAnexo {
   codigo?: string
@@ -92,6 +98,9 @@ export function AnexoLayout({
         acciones={
           <>
             <EstadoAnexoChip estadoEntrega={estadoEntrega} esModificable={esModificable} />
+            {anexoObservable && TIPOS_FIRMA[anexoObservable] && (
+              <BotonFirmaPeru key={`${anexoObservable}-${dependenciaId}`} tipoDocumento={TIPOS_FIRMA[anexoObservable]!} dependenciaId={dependenciaId} />
+            )}
             {acciones}
           </>
         }

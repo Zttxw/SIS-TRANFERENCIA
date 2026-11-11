@@ -32,6 +32,7 @@ import { Select } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
+import { BotonFirmaPeru } from '@/features/firmaperu/BotonFirmaPeru'
 import {
   useBienesPatrimoniales,
   useResumenPatrimonial,
@@ -267,11 +268,14 @@ export function PatrimonioPage() {
         dependenciaCodigo={dependencia?.codigo}
         dependenciaNombre={dependencia?.nombre ?? (esGlobal ? 'Municipalidad Distrital de San Jerónimo (Visión Global)' : undefined)}
         acciones={
-          <BotonDescargarPdf
-            descargar={() => patrimonioService.descargarPdf(dependenciaId as number)}
-            disabled={!dependenciaId}
-            etiqueta="PDF oficial"
-          />
+          <>
+            <BotonFirmaPeru key={dependenciaId} tipoDocumento="anexo04" dependenciaId={dependenciaId} />
+            <BotonDescargarPdf
+              descargar={() => patrimonioService.descargarPdf(dependenciaId as number)}
+              disabled={!dependenciaId}
+              etiqueta="PDF oficial"
+            />
+          </>
         }
       />
 

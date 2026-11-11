@@ -1,0 +1,103 @@
+import { useEffect, useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Download, Loader2, PenLine, Plus } from 'lucide-react'
+import { toast } from 'sonner'
+
+import { usePermiso } from '@/auth/hooks'
+import { Button } from '@/components/ui/button'
+import { useConfirm } from '@/components/ui/confirm-dialog'
+import { firmaperuService } from './firmaperu.service'
+import { firmarConCliente } from './firmaperu-runtime'
+import type { TipoDocumentoFirma } from './firmaperu.types'
+
+interface PropsFirma { tipoDocumento: TipoDocumentoFirma; dependenciaId: number | null }
+
+export function BotonFirmaPeru(props: PropsFirma) {
+  return <ControlFirma key={`${props.tipoDocumento}-${props.dependenciaId}`} {...props} />
+}
+
+function ControlFirma({ tipoDocumento, dependenciaId }: PropsFirma) {
+  const puedeRegistrar = usePermiso('anexos.registrar')
+  const puedeActa = usePermiso('actas.generar')
+  const puedeFirmar = puedeRegistrar && (tipoDocumento !== 'anexo07' || puedeActa)
+  const confirmar = useConfirm()
+  const cliente = useQueryClient()
+  const [mensaje, setMensaje] = useState<string | null>(null)
+  const [descargando, setDescargando] = useState(false)
+  const operacion = useRef<AbortController | null>(null)
+  const clave = ['firmaperu', tipoDocumento, dependenciaId]
+  const { data: estado } = useQuery({
+    queryKey: clave,
+    queryFn: ({ signal }) => firmaperuService.estado(tipoDocumento, dependenciaId!, signal),
+    enabled: Boolean(dependenciaId),
+    retry: false,
+    staleTime: 15000,
+  })
+  useEffect(() => {
+    return () => { operacion.current?.abort(); operacion.current = null }
+  }, [])
+
+  if (!dependenciaId) return null
+
+  const firmar = async (previoId?: string) => {
+    if (operacion.current) return
+    const scope = new AbortController()
+    operacion.current = scope
+    try {
+      const aceptar = await confirmar({
+        title: previoId ? 'Agregar firma al PDF conservado' : 'Firmar el PDF guardado',
+        description: previoId
+          ? 'Se abrirá el PDF firmado conservado para agregar su firma. Sus firmas anteriores se mantienen.'
+          : 'Se generará una copia de los datos guardados. Guarde primero cualquier cambio pendiente. Use el certificado correspondiente a su DNI de acceso.',
+        confirmText: 'Abrir Firma Perú',
+      })
+      if (!aceptar || scope.signal.aborted) return
+      await firmarConCliente({
+        preparar: () => firmaperuService.preparar(tipoDocumento, dependenciaId, scope.signal, previoId),
+        consultar: firmaperuService.sesion,
+        signal: scope.signal,
+        onMensaje: (texto) => { if (!scope.signal.aborted) setMensaje(texto) },
+      })
+      if (!scope.signal.aborted) {
+        await cliente.invalidateQueries({ queryKey: clave })
+        toast.success('PDF firmado recibido. Puede descargarlo.')
+      }
+    } catch (error) {
+      if (!scope.signal.aborted) toast.error(error instanceof Error ? error.message : 'No se pudo completar la firma.')
+    } finally {
+      if (operacion.current === scope) {
+        operacion.current = null
+        setMensaje(null)
+      }
+    }
+  }
+
+  const descargar = async () => {
+    if (!estado?.documento_id) return
+    setDescargando(true)
+    try { await firmaperuService.descargar(estado.documento_id) }
+    catch (error) { toast.error(error instanceof Error ? error.message : 'No se pudo descargar el PDF.') }
+    finally { setDescargando(false) }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {puedeFirmar && (
+        <Button size="sm" variant="outline" onClick={() => void firmar()} disabled={Boolean(mensaje)} className="gap-2">
+          {mensaje ? <Loader2 className="h-4 w-4 animate-spin" /> : <PenLine className="h-4 w-4" />}
+          {mensaje ? 'Firmando…' : 'Firmar con Firma Perú'}
+        </Button>
+      )}
+      {estado?.firmado && (
+        <>
+          <Button size="sm" variant="outline" onClick={() => void descargar()} disabled={descargando} className="gap-2"
+            title={estado.firmado_en ? `PDF conservado el ${new Date(estado.firmado_en).toLocaleString('es-PE')}` : undefined}>
+            <Download className="h-4 w-4" /> PDF firmado
+          </Button>
+          {puedeFirmar && <Button size="sm" variant="ghost" disabled={Boolean(mensaje)} onClick={() => void firmar(estado.documento_id!)} className="gap-1"><Plus className="h-4 w-4" /> Agregar firma</Button>}
+        </>
+      )}
+      {mensaje && <span role="status" className="text-xs text-muted-foreground">{mensaje}</span>}
+    </div>
+  )
+}

@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Modules\Acervo\Models\AcervoDocumental;
 use App\Modules\Organization\Models\Dependencia;
+use App\Modules\Organization\Services\CentrosCostoPdf;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Modules\Transferencia\Services\FirmaperuPdfService;
 use App\Support\Services\PdfService;
@@ -35,7 +36,7 @@ class FirmaperuPdfTest extends TestCase
 
     public static function anexosDisponibles(): array
     {
-        return ['informe' => ['anexo02'], 'acervo' => ['anexo03'], 'patrimonio' => ['anexo04'],
+        return ['centros de costo' => ['anexo01'], 'informe' => ['anexo02'], 'acervo' => ['anexo03'], 'patrimonio' => ['anexo04'],
             'personal' => ['anexo05'], 'no patrimonial' => ['anexo06']];
     }
 
@@ -91,6 +92,19 @@ class FirmaperuPdfTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        app(FirmaperuPdfService::class)->generar('anexo01', 1, User::factory()->make());
+        app(FirmaperuPdfService::class)->generar('desconocido', 1, User::factory()->make());
+    }
+
+    public function test_catalogo_del_anexo01_incluye_solo_centros_del_proceso_activo(): void
+    {
+        $proceso = ProcesoTransferencia::factory()->create();
+        $anterior = ProcesoTransferencia::factory()->cerrado()->create();
+        $dep = Dependencia::factory()->create(['proceso_transferencia_id' => $proceso->id, 'codigo' => '01']);
+        $otra = Dependencia::factory()->create(['proceso_transferencia_id' => $proceso->id, 'codigo' => '02']);
+        Dependencia::factory()->create(['proceso_transferencia_id' => $anterior->id]);
+
+        $datos = app(CentrosCostoPdf::class)->datos($dep->id);
+
+        $this->assertSame([$dep->id, $otra->id], $datos['centros']->pluck('id')->all());
     }
 }

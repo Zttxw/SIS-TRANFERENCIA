@@ -1,5 +1,8 @@
 # Mensaje para iniciar Gemini en Antigravity
 
+> ARCHIVADO: el usuario canceló la coordinación con Gemini. Codex implementa
+> backend y frontend en `feature/firma-peru-v2`. No ejecutar estas instrucciones.
+
 Copia el siguiente mensaje en Gemini, después de abrir en Antigravity la carpeta
 `C:/Users/Jeanpier/Documents/OTI/Transferencia/.worktrees/firma-peru-frontend`:
 

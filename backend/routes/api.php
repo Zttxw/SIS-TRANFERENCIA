@@ -11,6 +11,7 @@ use App\Modules\Organization\Controllers\DependenciaController;
 use App\Modules\Patrimonio\Controllers\PatrimonioController;
 use App\Modules\Personal\Controllers\PersonalController;
 use App\Modules\Reportes\Controllers\ReportesController;
+use App\Modules\Transferencia\Controllers\FirmaperuController;
 use App\Modules\Transferencia\Controllers\ObservacionController;
 use App\Modules\Transferencia\Controllers\TransferenciaController;
 use App\Support\Http\EvidenciaController;
@@ -20,7 +21,21 @@ use Illuminate\Support\Facades\Route;
 // Autenticación por DNI + contraseña (plan §5).
 Route::post('/auth/login', [AuthController::class, 'login']);
 
+Route::prefix('firmaperu')->middleware('throttle:60,1')->group(function () {
+    Route::post('/param', [FirmaperuController::class, 'param']);
+    Route::get('/documento/{token}', [FirmaperuController::class, 'documento'])->where('token', '[A-Za-z0-9]{64}');
+    Route::post('/subir-firmado/{token}', [FirmaperuController::class, 'subir'])->where('token', '[A-Za-z0-9]{64}');
+});
+
 Route::middleware('auth:sanctum')->group(function () {
+    Route::prefix('firmaperu')->group(function () {
+        Route::post('/preparar', [FirmaperuController::class, 'preparar'])->middleware('permiso:anexos.registrar')->middleware('throttle:10,1');
+        Route::middleware('permiso:anexos.ver')->group(function () {
+            Route::get('/sesiones/{id}', [FirmaperuController::class, 'sesion'])->whereUuid('id');
+            Route::get('/estado/{tipo}/{dependenciaId}', [FirmaperuController::class, 'estado'])->whereNumber('dependenciaId');
+            Route::get('/documentos/{id}/descargar', [FirmaperuController::class, 'descargar'])->whereUuid('id');
+        });
+    });
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
 

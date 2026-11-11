@@ -104,13 +104,12 @@ export function FirmaDigitalSeamModal({
               <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning-fg" />
               <div className="space-y-1">
                 <span className="font-semibold text-foreground">
-                  Seam de Integración PKI / Firma Digital (Directiva N.° 001-2026-MDSJ/A §7.10)
+                  Adjuntar un acta suscrita
                 </span>
                 <p className="leading-relaxed">
-                  El conector de firma digital nativa con token criptográfico / RENIEC se encuentra en proceso de
-                  despliegue normativo. Como mecanismo oficial de contingencia, los intervinientes pueden
-                  imprimir el acta, formalizar la suscripción (física o con firma electrónica) y adjuntar el PDF
-                  suscrito para su custodia y hashing en el storage seguro del expediente.
+                  Para firmar desde el sistema, use «Firmar con Firma Perú» en el acta.
+                  Este formulario permite adjuntar un PDF suscrito fuera del sistema para su custodia.
+                  La carga de una evidencia y su huella SHA-256 no comprueban por sí solas una firma digital.
                 </p>
               </div>
             </div>

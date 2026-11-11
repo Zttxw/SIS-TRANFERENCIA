@@ -26,6 +26,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { construirArbol, filtrarArbol, type NodoArbol } from '@/features/entregas/arbol-utils'
 import { useCatalogoDependencias } from '@/features/entregas/use-entregas'
 import { DespachoPersonalView } from './DespachoPersonalView'
+import { BotonFirmaPeru } from '@/features/firmaperu/BotonFirmaPeru'
 
 export function EstructuraOrganicaPage() {
   const { usuario } = useAuth()
@@ -149,6 +150,7 @@ function ArbolOrganicoAdminView() {
           </p>
         </div>
 
+        <BotonFirmaPeru tipoDocumento="anexo01" dependenciaId={dependenciaId} />
         {/* Aviso de homologación con SGD */}
         <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-warning-soft border border-warning-border text-warning-fg text-xs font-medium">
           <Sparkles className="h-3.5 w-3.5 text-warning-fg shrink-0" />

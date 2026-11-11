@@ -23,6 +23,7 @@ import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
 import type { Servidor } from '@/types/auth'
 
 import { obtenerDependencia } from './dependencias.service'
+import { BotonFirmaPeru } from '@/features/firmaperu/BotonFirmaPeru'
 
 /**
  * Vista de Despacho Operativo y Personal Asignado.
@@ -126,7 +127,8 @@ export function DespachoPersonalView() {
         </div>
 
         {/* Acciones principales */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <BotonFirmaPeru tipoDocumento="anexo01" dependenciaId={idEfectivo} />
           <Button
             size="sm"
             onClick={() => navigate('/')}

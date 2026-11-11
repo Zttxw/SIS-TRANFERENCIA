@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\Acervo\Services\AcervoPdf;
 use App\Modules\Gestion\Services\InformeGestionPdf;
 use App\Modules\NoPatrimonial\Services\NoPatrimonialPdf;
+use App\Modules\Organization\Services\CentrosCostoPdf;
 use App\Modules\Patrimonio\Services\PatrimonioPdf;
 use App\Modules\Personal\Services\PersonalPdf;
 use App\Support\Services\PdfService;
@@ -23,6 +24,7 @@ class FirmaperuPdfService
         private readonly PersonalPdf $personal,
         private readonly NoPatrimonialPdf $noPatrimonial,
         private readonly ActaPdf $acta,
+        private readonly CentrosCostoPdf $centros,
     ) {}
 
     /**
@@ -32,6 +34,7 @@ class FirmaperuPdfService
     public function generar(string $tipoDocumento, int $dependenciaId, User $usuario): string
     {
         [$vista, $datos, $orientacion] = match ($tipoDocumento) {
+            'anexo01' => ['pdf.anexo01', $this->centros->datos($dependenciaId), 'portrait'],
             'anexo02' => ['pdf.anexo02', $this->gestion->datos($dependenciaId), 'portrait'],
             'anexo03' => ['pdf.anexo03', $this->acervo->datos($dependenciaId), 'portrait'],
             'anexo04' => ['pdf.anexo04', $this->patrimonio->datos($dependenciaId), 'landscape'],

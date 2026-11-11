@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
+import { BotonFirmaPeru } from '@/features/firmaperu/BotonFirmaPeru'
 import { actaService } from './acta.service'
 import { ActaImprimible } from './ActaImprimible'
 import { FirmaDigitalSeamModal } from './FirmaDigitalSeamModal'
@@ -238,6 +239,7 @@ export function ActaPage() {
         dependenciaNombre={depActual.nombre}
         acciones={
           <div className="flex flex-wrap items-center gap-2">
+            <BotonFirmaPeru key={dependenciaId} tipoDocumento="anexo07" dependenciaId={dependenciaId} />
             <BotonDescargarPdf
               descargar={() => actaService.descargarPdf(dependenciaId)}
               etiqueta="Acta PDF"
@@ -266,7 +268,7 @@ export function ActaPage() {
                 className="gap-2 border shadow-sm"
               >
                 <ShieldCheck className="h-4 w-4 text-success-fg" />
-                Firma Digital / Suscripción
+                Adjuntar PDF suscrito
               </Button>
             </Can>
 

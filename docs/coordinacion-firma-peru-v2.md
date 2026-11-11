@@ -1,5 +1,11 @@
 # Coordinación Firma Perú v2
 
+> ACTUALIZACIÓN VIGENTE: el usuario canceló el trabajo con Gemini. Codex asume
+> backend y frontend en `feature/firma-peru-v2`. Los buzones y el worktree de Gemini
+> quedan inactivos; no son un requisito para continuar. El plan de coordinación
+> que sigue es histórico. La implementación actual se describe en
+> [firma-peru-v2.md](firma-peru-v2.md) y el contrato API v2.
+
 ## Objetivo y alcance autorizado
 
 Hacer funcionar Firma Perú sobre los PDF actuales. El usuario encargó el conector;
