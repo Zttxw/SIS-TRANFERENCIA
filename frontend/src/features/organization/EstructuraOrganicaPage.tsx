@@ -46,11 +46,23 @@ export function EstructuraOrganicaPage() {
   const [busqueda, setBusqueda] = useState('')
   const [nodoSeleccionado, setNodoSeleccionado] = useState<NodoArbol | null>(null)
 
+  // Catálogo depurado (excluir registros 'NULL', sin nombre o anómalos de migraciones SGD)
+  const dependenciasValidas = useMemo(() => {
+    if (!dependencias) return []
+    return dependencias.filter(
+      (d) =>
+        Boolean(d.nombre) &&
+        d.nombre.trim() !== '' &&
+        d.nombre.trim().toUpperCase() !== 'NULL' &&
+        d.nombre.trim().toUpperCase() !== 'NONE',
+    )
+  }, [dependencias])
+
   // Nodos expandidos por defecto (incluye la ruta hacia el despacho asignado del usuario)
   const ancestrosUsuario = useMemo(() => {
-    if (!dependencias || !miDespachoId) return []
-    return obtenerAncestrosIds(dependencias, miDespachoId)
-  }, [dependencias, miDespachoId])
+    if (!dependenciasValidas.length || !miDespachoId) return []
+    return obtenerAncestrosIds(dependenciasValidas, miDespachoId)
+  }, [dependenciasValidas, miDespachoId])
 
   const [nodosExpandidosManuales, setNodosExpandidosManuales] = useState<Set<number>>(new Set())
   const [nodosColapsadosManuales, setNodosColapsadosManuales] = useState<Set<number>>(new Set())
@@ -65,8 +77,8 @@ export function EstructuraOrganicaPage() {
 
   // Construir el árbol jerárquico
   const arbolCompleto = useMemo(() => {
-    return dependencias ? construirArbol(dependencias) : []
-  }, [dependencias])
+    return dependenciasValidas.length ? construirArbol(dependenciasValidas) : []
+  }, [dependenciasValidas])
 
   // Filtrar el árbol reactivamente
   const arbolFiltrado = useMemo(() => {
@@ -75,28 +87,28 @@ export function EstructuraOrganicaPage() {
 
   // Lista plana filtrada para la vista tabular oficial
   const tablaFiltrada = useMemo(() => {
-    if (!dependencias) return []
-    if (!busqueda.trim()) return dependencias
+    if (!dependenciasValidas.length) return []
+    if (!busqueda.trim()) return dependenciasValidas
     const q = busqueda.toLowerCase().trim()
-    return dependencias.filter(
+    return dependenciasValidas.filter(
       (d) =>
         d.codigo.toLowerCase().includes(q) ||
         d.nombre.toLowerCase().includes(q) ||
         (d.encargado &&
           `${d.encargado.nombres} ${d.encargado.apellidos}`.toLowerCase().includes(q)),
     )
-  }, [dependencias, busqueda])
+  }, [dependenciasValidas, busqueda])
 
   // Nodo seleccionado o activo
   const nodoEfectivo = useMemo(() => {
     if (nodoSeleccionado) return nodoSeleccionado
-    if (!dependencias || dependencias.length === 0) return null
+    if (dependenciasValidas.length === 0) return null
     if (miDespachoId) {
-      const match = dependencias.find((d) => d.id === miDespachoId)
+      const match = dependenciasValidas.find((d) => d.id === miDespachoId)
       if (match) return match as unknown as NodoArbol
     }
     return arbolCompleto[0] ?? null
-  }, [nodoSeleccionado, miDespachoId, dependencias, arbolCompleto])
+  }, [nodoSeleccionado, miDespachoId, dependenciasValidas, arbolCompleto])
 
   const toggleExpandido = (id: number) => {
     if (nodosExpandidos.has(id)) {

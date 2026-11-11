@@ -28,7 +28,10 @@ class DependenciaController extends Controller
             ->orderBy('codigo');
 
         if ($request->boolean('solo_activas', true)) {
-            $query->where('activa', true);
+            $query->where('activa', true)
+                ->whereNotNull('nombre')
+                ->whereRaw("TRIM(nombre) != ''")
+                ->whereRaw("TRIM(UPPER(nombre)) NOT IN ('NULL', 'NONE', 'VACIO', 'SIN NOMBRE')");
         }
 
         // Acotar al ámbito solo cuando se solicita explícitamente (ej. en el selector de despacho).
