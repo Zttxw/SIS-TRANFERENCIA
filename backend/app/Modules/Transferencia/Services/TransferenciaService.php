@@ -27,6 +27,10 @@ use Illuminate\Support\Facades\DB;
 
 class TransferenciaService
 {
+    public function __construct(
+        protected CronogramaService $cronograma = new CronogramaService,
+    ) {}
+
     /**
      * Lista entregas acotadas al ámbito institucional (filtros: dependencia_id, estado, dependencia_ids).
      *
@@ -296,7 +300,34 @@ class TransferenciaService
         $procesoId = $this->resolverProcesoActivoId();
         $dep = Dependencia::findOrFail($dependenciaId);
 
+        // C2: el vencimiento del cronograma bloquea la remisión (RF-007, C-03).
+        // Se cumple en la API, no solo en la interfaz; 409 con causa y plazo.
+        $this->cronograma->exigirPlazoVigente(
+            $procesoId,
+            $dep->id,
+            CronogramaService::OPERACION_REMISION,
+        );
+
         return DB::transaction(function () use ($dep, $procesoId, $usuario, $comentario) {
+            $entrega = Entrega::where('proceso_transferencia_id', $procesoId)
+                ->where('dependencia_id', $dep->id)
+                ->first();
+
+            // H-01: transiciones estrictas. Solo puede remitirse una entrega que
+            // aún no existe (primera remisión) o que está en un estado que admite
+            // (re)envío: BORRADOR (preparación) u OBSERVADA (tras subsanar). Una
+            // entrega ya REMITIDA/EN_REVISION/CONSOLIDADA/CERRADA no vuelve a
+            // remitirse por este endpoint; evita re-remitir lo ya consolidado.
+            $estadosRemisibles = [EstadoEntrega::BORRADOR, EstadoEntrega::OBSERVADA];
+            if ($entrega !== null && ! in_array($entrega->estado, $estadosRemisibles, true)) {
+                throw new HttpResponseException(
+                    ApiResponse::error(
+                        'La entrega no puede remitirse desde el estado "'.$entrega->estado->etiqueta().'".',
+                        409,
+                    )
+                );
+            }
+
             return Entrega::updateOrCreate(
                 [
                     'proceso_transferencia_id' => $procesoId,
@@ -341,6 +372,19 @@ class TransferenciaService
 
         if (! in_array($entrega->estado, [EstadoEntrega::REMITIDA, EstadoEntrega::EN_REVISION], true)) {
             throw new \DomainException('Solo pueden revisarse entregas remitidas o en revisión.');
+        }
+
+        // H-02: quien revisa debe ser el receptor del destino de la entrega, no
+        // cualquiera cuyo subárbol contenga a la dependencia que remitió (eso
+        // incluiría a la propia dependencia emisora, que no puede revisarse a sí
+        // misma). El destino es el padre jerárquico; NULL = ETTS institucional.
+        if (! $this->esReceptorDelDestino($usuario, $entrega)) {
+            throw new HttpResponseException(
+                ApiResponse::error(
+                    'Solo el receptor del destino de la entrega puede revisarla.',
+                    403,
+                )
+            );
         }
 
         $nuevoEstado = $accion === 'consolidar'
@@ -435,6 +479,28 @@ class TransferenciaService
             'anexo_06' => ($estado['anexo06_nopatrimonial']['total_bienes'] ?? 0) > 0,
             'anexo_07' => true,
         ];
+    }
+
+    /**
+     * ¿El usuario ocupa el destino de la entrega y puede por tanto revisarla?
+     *
+     * - Destino NULL ⇒ ETTS institucional: solo un rol de ámbito global (ETTS/
+     *   administrador) recibe y revisa en la cima de la cadena.
+     * - Destino concreto ⇒ el revisor debe tener esa dependencia *destino* en su
+     *   ámbito (se ubica en el padre receptor o por encima), no basta con que su
+     *   subárbol contenga a la dependencia emisora.
+     *
+     * Regla mínima segura (H-02). El receptor formal exacto por cuenta queda
+     * pendiente de D-06; aquí se impide, al menos, que la emisora se revise a sí
+     * misma o que un par en el mismo subárbol tome la revisión del destino.
+     */
+    private function esReceptorDelDestino(User $usuario, Entrega $entrega): bool
+    {
+        if ($entrega->dependencia_destino_id === null) {
+            return $usuario->tieneAmbitoGlobal();
+        }
+
+        return $usuario->puedeAccederDependencia($entrega->dependencia_destino_id);
     }
 
     private function resolverProcesoActivoId(): int
