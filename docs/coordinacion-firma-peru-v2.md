@@ -66,9 +66,9 @@ buzón antes de implementarlo.
 ## Entregables y comprobación
 
 - [x] Rama v2 desde main actualizado.
-- [ ] Canal común y worktree frontend preparados.
-- [ ] Configuración y autenticación Firma Perú probadas con HTTP simulado.
-- [ ] Generación binaria reutilizando PDF de main.
+- [x] Canal común y worktree frontend preparados.
+- [x] Configuración y autenticación Firma Perú probadas con HTTP simulado.
+- [x] Generación binaria reutilizando PDF de main.
 - [ ] Endpoints de sesiones, parámetros, recepción y descarga.
 - [ ] Frontend integrado por Gemini.
 - [ ] Validación del firmado en backend e identidad autorizada.
@@ -76,6 +76,28 @@ buzón antes de implementarlo.
 
 Los checks se marcan solo con evidencia. Un test simulado no sustituye la firma
 real. Las pruebas automatizadas usan SQLite y HTTP simulado, nunca la base real.
+
+### Checkpoint backend inicial — 2026-11-11
+
+- Boost 2.10.4 instalado con PHP 8.4.27 del contenedor; guías en
+  `backend/AGENTS.md`. No es necesario instalar otro PHP para trabajar aquí.
+- `FirmaperuAuthService`: obtiene JWT desde configuración privada, maneja errores
+  sin propagar respuestas sensibles, cachea hasta 30 segundos antes de `exp` y
+  separa la caché cuando cambian credenciales. Las pruebas usan JWT sintéticos.
+- `FirmaperuPdfService`: genera binarios 02–06 con las vistas de main. Reutiliza
+  el acta mediante `ActaPdf::datos()`, manteniendo su restricción previa.
+- 25 pruebas nuevas aprobadas (52 aserciones) con `php artisan test --compact
+  --filter=Firmaperu`, dentro del contenedor. No se conectó con Firma Perú real.
+- Comprobación final con las pruebas existentes de anexos y acta: 33 pruebas
+  aprobadas, 80 aserciones. Se ejecutaron los cuatro archivos de pruebas
+  `AnexosPdfTest`, `ActaTransferenciaTest`, `FirmaperuAuthTest` y `FirmaperuPdfTest`.
+- Pint aplicado a los seis archivos PHP del cambio. `--dirty` no está disponible
+  dentro del contenedor porque el volumen backend no incluye `.git`; se usaron
+  rutas explícitas.
+- Siguiente implementación backend: sesiones/documentos persistidos y endpoints
+  del contrato. Aún no hay rutas `/firmaperu` operativas ni firma real verificada.
+- Instrucción para activar a Gemini: `docs/inicio-gemini-firma-peru-v2.md`, en la
+  carpeta principal. El buzón de Gemini sigue pendiente de ACK.
 
 ## Instrucción inicial para Gemini
 
