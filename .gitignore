@@ -54,3 +54,8 @@ Thumbs.db
 
 # Claude Code local memory (no versionar)
 /memory/
+
+# Worktrees locales y credenciales de Firma Peru
+/.worktrees/
+/.coordination/
+fwAuthorization.json
