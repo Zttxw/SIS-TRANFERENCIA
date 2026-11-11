@@ -63,18 +63,19 @@ export function EstructuraOrganicaPage() {
   const [nodosExpandidosManuales, setNodosExpandidosManuales] = useState<Set<number>>(new Set())
   const [nodosColapsadosManuales, setNodosColapsadosManuales] = useState<Set<number>>(new Set())
 
-  const nodosExpandidos = useMemo(() => {
-    const set = new Set<number>([1, 48, ...ancestrosUsuario])
-    if (miDespachoId) set.add(miDespachoId)
-    nodosExpandidosManuales.forEach((id) => set.add(id))
-    nodosColapsadosManuales.forEach((id) => set.delete(id))
-    return set
-  }, [ancestrosUsuario, miDespachoId, nodosExpandidosManuales, nodosColapsadosManuales])
-
   // Construir el árbol jerárquico
   const arbolCompleto = useMemo(() => {
     return dependenciasValidas.length ? construirArbol(dependenciasValidas) : []
   }, [dependenciasValidas])
+
+  const nodosExpandidos = useMemo(() => {
+    const idsRaices = arbolCompleto.map((r) => r.id)
+    const set = new Set<number>([...idsRaices, ...ancestrosUsuario])
+    if (miDespachoId) set.add(miDespachoId)
+    nodosExpandidosManuales.forEach((id) => set.add(id))
+    nodosColapsadosManuales.forEach((id) => set.delete(id))
+    return set
+  }, [arbolCompleto, ancestrosUsuario, miDespachoId, nodosExpandidosManuales, nodosColapsadosManuales])
 
   // Filtrar el árbol reactivamente
   const arbolFiltrado = useMemo(() => {
