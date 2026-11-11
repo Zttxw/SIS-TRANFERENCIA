@@ -21,6 +21,9 @@ enum Permiso: string
     case GestionarParametros = 'parametros.gestionar';
     case EjecutarIngestaSgd = 'ingesta.ejecutar';
 
+    // Cronograma del proceso (RF-007, C-03): administrador y ETTS lo modifican.
+    case GestionarCronograma = 'cronograma.gestionar';
+
     // Anexos: ver, registrar/editar, verificar bienes.
     case VerAnexos = 'anexos.ver';
     case RegistrarAnexos = 'anexos.registrar';
@@ -30,6 +33,16 @@ enum Permiso: string
     case RemitirEntrega = 'entregas.remitir';
     case RevisarEntrega = 'entregas.revisar';
     case ConsolidarEntrega = 'entregas.consolidar';
+
+    // Firma de anexos 02–07 (RF-004/005). La capacidad del delegado ETTE se
+    // restringe a las dependencias/documentos para los que está designado
+    // (acotado por asignación, no por la sola pertenencia al comité).
+    case FirmarAnexos = 'firmas.firmar';
+
+    // Gestión del equipo ETTE (RF-008): alta/designación/revocación de delegados
+    // por el comité, limitada a su equipo; no es la administración general de
+    // usuarios ni de roles institucionales.
+    case GestionarDelegados = 'delegados.gestionar';
 
     // Observaciones y subsanaciones.
     case RegistrarObservaciones = 'observaciones.registrar';
@@ -49,12 +62,15 @@ enum Permiso: string
             self::GestionarRoles => 'Gestionar roles y permisos',
             self::GestionarParametros => 'Gestionar parámetros y configuración',
             self::EjecutarIngestaSgd => 'Ejecutar la ingesta del SGD',
+            self::GestionarCronograma => 'Gestionar el cronograma del proceso',
             self::VerAnexos => 'Consultar anexos dentro del ámbito',
             self::RegistrarAnexos => 'Registrar y complementar anexos',
             self::VerificarBienes => 'Verificar bienes patrimoniales',
             self::RemitirEntrega => 'Remitir la entrega al responsable inmediato',
             self::RevisarEntrega => 'Revisar entregas recibidas',
             self::ConsolidarEntrega => 'Consolidar y remitir al nivel superior',
+            self::FirmarAnexos => 'Firmar anexos (según designación)',
+            self::GestionarDelegados => 'Gestionar delegados ETTE',
             self::RegistrarObservaciones => 'Registrar observaciones',
             self::SubsanarObservaciones => 'Atender y subsanar observaciones',
             self::GenerarActas => 'Generar actas de transferencia',
@@ -81,6 +97,7 @@ enum Permiso: string
                 self::GestionarRoles,
                 self::GestionarParametros,
                 self::EjecutarIngestaSgd,
+                self::GestionarCronograma,
                 self::VerReportes,
                 self::ExportarReportes,
             ],
@@ -144,16 +161,28 @@ enum Permiso: string
                 self::RevisarEntrega,
                 self::ConsolidarEntrega,
                 self::GenerarActas,
+                self::GestionarCronograma,
                 self::VerExpediente,
                 self::VerReportes,
                 self::ExportarReportes,
             ],
-            // ETTE: consulta y verifica dentro de sus atribuciones.
+            // Comité ETTE: seguimiento institucional (ámbito global) y gestión de
+            // su propio equipo de delegados. No firma por sí mismo ni edita datos.
             Rol::ETTE => [
                 self::AccederPlataforma,
                 self::VerAnexos,
                 self::VerExpediente,
                 self::VerReportes,
+                self::GestionarDelegados,
+            ],
+            // Delegado ETTE: consulta y firma OPCIONAL acotadas a las
+            // dependencias designadas (ámbito por asignación, no global). No
+            // edita/elimina datos, no remite, no da visto bueno ni consolida.
+            Rol::DELEGADO_ETTE => [
+                self::AccederPlataforma,
+                self::VerAnexos,
+                self::VerExpediente,
+                self::FirmarAnexos,
             ],
         };
     }

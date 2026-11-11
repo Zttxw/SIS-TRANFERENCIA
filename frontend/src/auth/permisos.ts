@@ -20,6 +20,7 @@ export const PERMISOS = {
   GestionarRoles: 'roles.gestionar',
   GestionarParametros: 'parametros.gestionar',
   EjecutarIngestaSgd: 'ingesta.ejecutar',
+  GestionarCronograma: 'cronograma.gestionar',
   // Anexos.
   VerAnexos: 'anexos.ver',
   RegistrarAnexos: 'anexos.registrar',
@@ -28,6 +29,9 @@ export const PERMISOS = {
   RemitirEntrega: 'entregas.remitir',
   RevisarEntrega: 'entregas.revisar',
   ConsolidarEntrega: 'entregas.consolidar',
+  // Firma y gestión de delegados ETTE.
+  FirmarAnexos: 'firmas.firmar',
+  GestionarDelegados: 'delegados.gestionar',
   // Observaciones.
   RegistrarObservaciones: 'observaciones.registrar',
   SubsanarObservaciones: 'observaciones.subsanar',
@@ -49,6 +53,7 @@ export const ROLES = {
   Coordinador: 'coordinador',
   Etts: 'etts',
   Ette: 'ette',
+  DelegadoEtte: 'delegado_ette',
 } as const
 
 export type RolCodigo = (typeof ROLES)[keyof typeof ROLES]
@@ -65,6 +70,7 @@ const PERMISOS_POR_ROL: Record<RolCodigo, readonly Permiso[]> = {
     PERMISOS.GestionarRoles,
     PERMISOS.GestionarParametros,
     PERMISOS.EjecutarIngestaSgd,
+    PERMISOS.GestionarCronograma,
     PERMISOS.VerReportes,
     PERMISOS.ExportarReportes,
   ],
@@ -119,6 +125,7 @@ const PERMISOS_POR_ROL: Record<RolCodigo, readonly Permiso[]> = {
     PERMISOS.RevisarEntrega,
     PERMISOS.ConsolidarEntrega,
     PERMISOS.GenerarActas,
+    PERMISOS.GestionarCronograma,
     PERMISOS.VerExpediente,
     PERMISOS.VerReportes,
     PERMISOS.ExportarReportes,
@@ -128,6 +135,13 @@ const PERMISOS_POR_ROL: Record<RolCodigo, readonly Permiso[]> = {
     PERMISOS.VerAnexos,
     PERMISOS.VerExpediente,
     PERMISOS.VerReportes,
+    PERMISOS.GestionarDelegados,
+  ],
+  [ROLES.DelegadoEtte]: [
+    PERMISOS.AccederPlataforma,
+    PERMISOS.VerAnexos,
+    PERMISOS.VerExpediente,
+    PERMISOS.FirmarAnexos,
   ],
 }
 

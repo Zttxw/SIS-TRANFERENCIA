@@ -17,6 +17,7 @@ enum Rol: string
     case COORDINADOR = 'coordinador';
     case ETTS = 'etts';
     case ETTE = 'ette';
+    case DELEGADO_ETTE = 'delegado_ette';
 
     public function etiqueta(): string
     {
@@ -27,7 +28,8 @@ enum Rol: string
             self::RESPONSABLE_CENTRO_COSTO => 'Responsable de centro de costo',
             self::COORDINADOR => 'Coordinador acreditado',
             self::ETTS => 'Equipo de Transferencia del Titular Saliente',
-            self::ETTE => 'Equipo de Transferencia del Titular Entrante',
+            self::ETTE => 'Comité del Equipo de Transferencia del Titular Entrante',
+            self::DELEGADO_ETTE => 'Delegado ETTE por dependencia',
         };
     }
 }
