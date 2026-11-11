@@ -3,6 +3,8 @@ import type { DependenciaResumen } from '@/types/transferencia'
 export interface NodoArbol {
   id: number
   codigo: string
+  codigo_anexo1?: string | null
+  es_centro_costo_oficial?: boolean
   nombre: string
   nivel: number
   parent_id: number | null
@@ -31,6 +33,8 @@ export function construirArbol(dependencias: DependenciaResumen[]): NodoArbol[] 
     const nodo: NodoArbol = {
       id: dep.id,
       codigo: dep.codigo,
+      codigo_anexo1: dep.codigo_anexo1,
+      es_centro_costo_oficial: dep.es_centro_costo_oficial,
       nombre: dep.nombre,
       nivel: dep.nivel,
       parent_id: dep.parent_id,
@@ -82,6 +86,7 @@ export function filtrarArbol(nodos: NodoArbol[], query: string): NodoArbol[] {
   for (const nodo of nodos) {
     const coincide =
       nodo.codigo.toLowerCase().includes(q) ||
+      (nodo.codigo_anexo1 && nodo.codigo_anexo1.toLowerCase().includes(q)) ||
       nodo.nombre.toLowerCase().includes(q) ||
       (nodo.encargado &&
         `${nodo.encargado.nombres} ${nodo.encargado.apellidos}`.toLowerCase().includes(q))

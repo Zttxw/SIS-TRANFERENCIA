@@ -85,14 +85,27 @@ export function EstructuraOrganicaPage() {
     return filtrarArbol(arbolCompleto, busqueda)
   }, [arbolCompleto, busqueda])
 
-  // Lista plana filtrada para la vista tabular oficial
+  // Lista plana filtrada para la vista tabular oficial, priorizando centros de costo oficiales
   const tablaFiltrada = useMemo(() => {
     if (!dependenciasValidas.length) return []
-    if (!busqueda.trim()) return dependenciasValidas
+    const ordenadas = [...dependenciasValidas].sort((a, b) => {
+      // 1. Oficiales de la Directiva primero
+      if (a.es_centro_costo_oficial && !b.es_centro_costo_oficial) return -1
+      if (!a.es_centro_costo_oficial && b.es_centro_costo_oficial) return 1
+      // 2. Ordenar por codigo_anexo1 si ambos tienen
+      if (a.codigo_anexo1 && b.codigo_anexo1) {
+        return a.codigo_anexo1.localeCompare(b.codigo_anexo1, undefined, { numeric: true })
+      }
+      // 3. Fallback por codigo SGD
+      return a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
+    })
+
+    if (!busqueda.trim()) return ordenadas
     const q = busqueda.toLowerCase().trim()
-    return dependenciasValidas.filter(
+    return ordenadas.filter(
       (d) =>
         d.codigo.toLowerCase().includes(q) ||
+        (d.codigo_anexo1 && d.codigo_anexo1.toLowerCase().includes(q)) ||
         d.nombre.toLowerCase().includes(q) ||
         (d.encargado &&
           `${d.encargado.nombres} ${d.encargado.apellidos}`.toLowerCase().includes(q)),
@@ -188,7 +201,7 @@ export function EstructuraOrganicaPage() {
               Relación de Centros de Costo
             </h1>
             <Badge variant="outline" className="text-xs font-semibold border-primary/30 text-primary bg-primary/5">
-              {dependencias.length} Centros de Costo
+              64 Centros de Costo Oficiales (POI) · 32 Buzones Auxiliares
             </Badge>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
@@ -321,10 +334,21 @@ export function EstructuraOrganicaPage() {
                 <CardHeader className="p-4 border-b border-border bg-muted/30">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <span className="text-mini font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
-                        [{nodoEfectivo.codigo}]
-                      </span>
-                      <h3 className="text-sm font-bold text-foreground mt-1.5 leading-snug">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {nodoEfectivo.codigo_anexo1 ? (
+                          <span className="text-mini font-mono font-bold text-primary bg-primary/10 border border-primary/25 px-2 py-0.5 rounded">
+                            CC {nodoEfectivo.codigo_anexo1}
+                          </span>
+                        ) : (
+                          <span className="text-mini font-mono text-muted-foreground bg-muted border border-border px-1.5 py-0.5 rounded">
+                            Buzón Operativo
+                          </span>
+                        )}
+                        <span className="text-mini font-mono text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded">
+                          [{nodoEfectivo.codigo}]
+                        </span>
+                      </div>
+                      <h3 className="text-sm font-bold text-foreground mt-2 leading-snug">
                         {nodoEfectivo.nombre}
                       </h3>
                     </div>
@@ -354,9 +378,25 @@ export function EstructuraOrganicaPage() {
                   {/* Metadatos institucionales */}
                   <div className="space-y-2.5 border-t border-border pt-3">
                     <div className="flex justify-between items-center text-muted-foreground">
-                      <span>Código formal:</span>
+                      <span>Código Anexo 01 (Directiva):</span>
+                      <span className="font-mono font-bold text-primary">
+                        {nodoEfectivo.codigo_anexo1 ? `CC ${nodoEfectivo.codigo_anexo1}` : '— (Buzón Auxiliar)'}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-muted-foreground">
+                      <span>Código SGD:</span>
                       <span className="font-mono font-semibold text-foreground">
                         {nodoEfectivo.codigo}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-muted-foreground">
+                      <span>Clasificación:</span>
+                      <span className="font-semibold text-foreground">
+                        {nodoEfectivo.es_centro_costo_oficial
+                          ? 'Centro de Costo Oficial (Directiva §7)'
+                          : 'Buzón Operativo SGD'}
                       </span>
                     </div>
 
@@ -459,18 +499,20 @@ export function EstructuraOrganicaPage() {
             <table className="w-full text-xs text-left">
               <thead className="bg-muted text-muted-foreground uppercase text-mini font-semibold border-b border-border">
                 <tr>
-                  <th className="px-4 py-2.5 w-24">Código</th>
+                  <th className="px-3 py-2.5 w-28">CC Directiva</th>
+                  <th className="px-3 py-2.5 w-24">Código SGD</th>
                   <th className="px-4 py-2.5">Descripción del Centro de Costo</th>
-                  <th className="px-4 py-2.5 text-center w-28">Nivel</th>
-                  <th className="px-4 py-2.5 w-40">Titular / Encargado</th>
-                  <th className="px-4 py-2.5 text-center w-24">Estado</th>
-                  <th className="px-4 py-2.5 text-right w-24 print:hidden">Acción</th>
+                  <th className="px-3 py-2.5 text-center w-36">Clasificación</th>
+                  <th className="px-3 py-2.5 text-center w-20">Nivel</th>
+                  <th className="px-3 py-2.5 w-40">Titular / Encargado</th>
+                  <th className="px-3 py-2.5 text-center w-20">Estado</th>
+                  <th className="px-3 py-2.5 text-right w-20 print:hidden">Acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {tablaFiltrada.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
                       No se encontraron centros de costo.
                     </td>
                   </tr>
@@ -486,7 +528,16 @@ export function EstructuraOrganicaPage() {
                             : 'hover:bg-muted/30 text-foreground'
                         }`}
                       >
-                        <td className="px-4 py-2.5 font-mono font-bold text-primary">
+                        <td className="px-3 py-2.5 font-mono">
+                          {dep.codigo_anexo1 ? (
+                            <span className="font-bold text-primary px-2 py-0.5 rounded bg-primary/10 border border-primary/25">
+                              {dep.codigo_anexo1}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground font-mono text-nota">—</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 font-mono text-muted-foreground font-medium">
                           [{dep.codigo}]
                         </td>
                         <td className="px-4 py-2.5">
@@ -499,27 +550,44 @@ export function EstructuraOrganicaPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-2.5 text-center font-mono">
+                        <td className="px-3 py-2.5 text-center">
+                          {dep.es_centro_costo_oficial ? (
+                            <Badge
+                              variant="outline"
+                              className="border-primary/40 bg-primary/10 text-primary font-semibold text-mini"
+                            >
+                              Oficial · Directiva
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="border-border bg-muted/60 text-muted-foreground font-medium text-mini"
+                            >
+                              Buzón Operativo SGD
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-center font-mono">
                           Nivel {dep.nivel}
                         </td>
-                        <td className="px-4 py-2.5 text-muted-foreground">
+                        <td className="px-3 py-2.5 text-muted-foreground">
                           {dep.encargado
                             ? `${dep.encargado.nombres} ${dep.encargado.apellidos}`
                             : '—'}
                         </td>
-                        <td className="px-4 py-2.5 text-center">
+                        <td className="px-3 py-2.5 text-center">
                           <span className="inline-block px-2 py-0.5 rounded text-mini font-mono font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
                             Activo
                           </span>
                         </td>
-                        <td className="px-4 py-2.5 text-right print:hidden">
+                        <td className="px-3 py-2.5 text-right print:hidden">
                           <button
                             type="button"
                             onClick={() => {
                               setDependenciaId(dep.id)
                               navigate('/')
                             }}
-                            className="font-medium text-primary hover:underline text-xs"
+                            className="font-medium text-primary hover:underline text-xs cursor-pointer"
                           >
                             Abrir
                           </button>
@@ -621,6 +689,16 @@ function CarpetaNodoItem({
         )}
 
         {/* Código y Nombre */}
+        {nodo.codigo_anexo1 ? (
+          <span className="font-mono text-mini font-bold bg-primary/10 text-primary border border-primary/25 px-1.5 py-0.5 rounded shrink-0">
+            {nodo.codigo_anexo1}
+          </span>
+        ) : (
+          <span className="font-mono text-mini text-muted-foreground bg-muted border border-border px-1 py-0.5 rounded shrink-0">
+            SGD
+          </span>
+        )}
+
         <span
           className={`font-mono text-nota shrink-0 ${
             esMiDespacho ? 'text-emerald-700 dark:text-emerald-300 font-bold' : 'text-muted-foreground'

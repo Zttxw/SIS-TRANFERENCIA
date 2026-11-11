@@ -61,6 +61,7 @@ export function DependenciaSelector({ className }: { className?: string }) {
     (usuario?.servidor?.dependencia ? {
       id: usuario.servidor.dependencia.id,
       codigo: usuario.servidor.dependencia.codigo,
+      codigo_anexo1: usuario.servidor.dependencia.codigo_anexo1,
       nombre: usuario.servidor.dependencia.nombre,
       nivel: usuario.servidor.dependencia.nivel,
     } : null)
@@ -80,7 +81,9 @@ export function DependenciaSelector({ className }: { className?: string }) {
           {dependenciaActual ? (
             <>
               <span className="font-mono text-nota font-bold text-primary shrink-0">
-                [{dependenciaActual.codigo}]
+                {dependenciaActual.codigo_anexo1
+                  ? `[CC ${dependenciaActual.codigo_anexo1}]`
+                  : `[${dependenciaActual.codigo}]`}
               </span>
               <span className="truncate font-semibold uppercase tracking-tight text-foreground">
                 {dependenciaActual.nombre}
@@ -123,7 +126,7 @@ export function DependenciaSelector({ className }: { className?: string }) {
         >
           {listaDependencias.map((d) => (
             <option key={d.id} value={d.id}>
-              [{d.codigo}] · {d.nombre}
+              {d.codigo_anexo1 ? `[${d.codigo_anexo1}]` : `[${d.codigo}]`} · {d.nombre}
             </option>
           ))}
         </select>
@@ -148,7 +151,7 @@ export function DependenciaSelector({ className }: { className?: string }) {
         </option>
         {listaDependencias.map((d) => (
           <option key={d.id} value={d.id}>
-            [{d.codigo}] · {d.nombre}
+            {d.codigo_anexo1 ? `[${d.codigo_anexo1}]` : `[${d.codigo}]`} · {d.nombre}
           </option>
         ))}
       </select>

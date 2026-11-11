@@ -25,6 +25,8 @@ class DependenciaController extends Controller
                 'encargado:id,dni,nombres,apellidos,cargo',
                 'servidores:id,dependencia_id,dni,nombres,apellidos,cargo,es_responsable',
             ])
+            ->orderByRaw('CASE WHEN es_centro_costo_oficial THEN 0 ELSE 1 END')
+            ->orderBy('codigo_anexo1')
             ->orderBy('codigo');
 
         if ($request->boolean('solo_activas', true)) {
@@ -46,9 +48,11 @@ class DependenciaController extends Controller
 
         if ($request->filled('search')) {
             $term = trim((string) $request->input('search'));
-            $query->where(function ($q) use ($term) {
-                $q->where('codigo', 'ilike', "%{$term}%")
-                    ->orWhere('nombre', 'ilike', "%{$term}%");
+            $operador = \Illuminate\Support\Facades\DB::getDriverName() === 'pgsql' ? 'ilike' : 'like';
+            $query->where(function ($q) use ($term, $operador) {
+                $q->where('codigo', $operador, "%{$term}%")
+                    ->orWhere('codigo_anexo1', $operador, "%{$term}%")
+                    ->orWhere('nombre', $operador, "%{$term}%");
             });
         }
 
