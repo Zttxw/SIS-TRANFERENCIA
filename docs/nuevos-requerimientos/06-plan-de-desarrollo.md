@@ -50,10 +50,17 @@ Tabla `firmas_anexo` **polimórfica** (apunta a cualquier anexo, como `evidencia
 **Aceptación cumplida:** registra múltiples firmas sobre un mismo documento/versión sin perder las previas; distingue obligatoria/opcional y firmada/cancelada/ausente; cancelada y ausente no cuentan como válidas.
 **Nota — lo que sigue BLOQUEADO (D-02):** *qué* persona firma *cada* anexo (matriz documental ETTS), el *orden* de firmas y el proveedor real Firma Perú/RENIEC. El andamiaje de datos no los presupone.
 
-### Tarea B2 — Constancia de ausencia de firma ETTE + copia digital (C-08, D-12)
-Registrar cuándo ETTE no firma (persona, dependencia, versión) y marcar entrega de copia digital trazable, sin presumir acuse.
-**Aceptación:** la ausencia no bloquea remisión; queda constancia consultable.
-**Estado:** BLOQUEADO hasta definir responsable del registro y canal (D-12).
+### Tarea B2 — Constancia de ausencia de firma ETTE + copia digital (C-08, D-12) ✅ HECHA
+D-12 cerrado (2026-11-11): el **responsable del centro de costo** registra la constancia (permiso
+`firmas.constancia_ausencia`); se modela como una `FirmaAnexo` **`ausente`** (opcional) sobre la
+versión del documento, con `nota` de constancia y **marca de copia** (`copia_entregada_en` +
+`copia_registrada_por_id`), **sin presumir acuse**. La ausencia **no bloquea** remisión/consolidación
+(el gate B3b solo mira firmas obligatorias).
+**Entregado:** migración (2 columnas de copia en `firmas_anexo`), modelo (relación `copiaRegistradaPor`,
+scope `ausentesEtte`), permiso `firmas.constancia_ausencia` (responsable CC y de equipo) + mirror
+`permisos.ts`, `ConstanciaAusenciaService` + `ConstanciaAusenciaController` (`POST /api/firmas/ausencia-ette`,
+`GET` de consulta), tests `ConstanciaAusenciaEtteTest`. La ausencia es idempotente por versión.
+**Pendiente (fuera del sistema):** canal concreto de entrega (correo/portal) y acreditación operativa.
 
 ### Tarea B3 — Mover emisión del acta antes de remitir (doc 05 §4)
 Hoy el acta solo se emite tras consolidar. El nuevo flujo exige firmar el Anexo 07 antes de remitir.
@@ -123,7 +130,7 @@ Indicador y listado comparten filtros/ámbito/periodo. **Bloqueado** por D-10 (a
 | B1 | Firma | ✅ Hecha (andamiaje) | matriz/proveedor → D-02 |
 | B3a,B3c | Firma | ✅ Hecha | D-05/D-06 cerrados |
 | B3b (gate) | Firma | ✅ Hecha | D-02 cerrado (gate OFF por defecto) |
-| B2 | Firma | Bloqueado | D-12 |
+| B2 | Firma | ✅ Hecha | D-12 cerrado |
 | C1–C3 | Cronograma | ✅ Hecha | ampliación → D-03 |
 | D1–D2 | ETTE | ✅ Hecha | ampliación → D-08 |
 | E1–E2 | Documentos | Bloqueado | D-04/D-10 |

@@ -31,6 +31,7 @@ export const PERMISOS = {
   ConsolidarEntrega: 'entregas.consolidar',
   // Firma y gestión de delegados ETTE.
   FirmarAnexos: 'firmas.firmar',
+  RegistrarConstanciaAusencia: 'firmas.constancia_ausencia',
   GestionarDelegados: 'delegados.gestionar',
   // Observaciones.
   RegistrarObservaciones: 'observaciones.registrar',
@@ -93,6 +94,7 @@ const PERMISOS_POR_ROL: Record<RolCodigo, readonly Permiso[]> = {
     PERMISOS.RegistrarObservaciones,
     PERMISOS.SubsanarObservaciones,
     PERMISOS.RemitirEntrega,
+    PERMISOS.RegistrarConstanciaAusencia,
     PERMISOS.VerExpediente,
     PERMISOS.VerReportes,
   ],
@@ -106,6 +108,7 @@ const PERMISOS_POR_ROL: Record<RolCodigo, readonly Permiso[]> = {
     PERMISOS.RegistrarObservaciones,
     PERMISOS.SubsanarObservaciones,
     PERMISOS.RemitirEntrega,
+    PERMISOS.RegistrarConstanciaAusencia,
     PERMISOS.GenerarActas,
     PERMISOS.VerExpediente,
     PERMISOS.VerReportes,

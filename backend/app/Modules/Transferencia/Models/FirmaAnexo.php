@@ -47,6 +47,8 @@ class FirmaAnexo extends BaseModel
         'hash_pdf',
         'resultado_verificacion',
         'nota',
+        'copia_entregada_en',
+        'copia_registrada_por_id',
     ];
 
     protected static function newFactory(): FirmaAnexoFactory
@@ -62,6 +64,7 @@ class FirmaAnexo extends BaseModel
             'version' => 'integer',
             'firmada_en' => 'datetime',
             'resultado_verificacion' => 'array',
+            'copia_entregada_en' => 'datetime',
         ];
     }
 
@@ -77,6 +80,12 @@ class FirmaAnexo extends BaseModel
         return $this->belongsTo(User::class, 'firmante_id');
     }
 
+    /** Quién registró la entrega de la copia digital (B2, D-12). @return BelongsTo<User, $this> */
+    public function copiaRegistradaPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'copia_registrada_por_id');
+    }
+
     /** Firmas obligatorias cuya ausencia bloquea la entrega (C-08). @param Builder<static> $query */
     public function scopeObligatorias(Builder $query): Builder
     {
@@ -87,5 +96,12 @@ class FirmaAnexo extends BaseModel
     public function scopeValidas(Builder $query): Builder
     {
         return $query->where('estado', EstadoFirma::FIRMADA->value);
+    }
+
+    /** Constancias de ausencia de firma ETTE (opcional + estado AUSENTE), B2/D-12. @param Builder<static> $query */
+    public function scopeAusentesEtte(Builder $query): Builder
+    {
+        return $query->where('caracter', CaracterFirma::OPCIONAL->value)
+            ->where('estado', EstadoFirma::AUSENTE->value);
     }
 }

@@ -12,6 +12,7 @@ use App\Modules\Organization\Controllers\DependenciaController;
 use App\Modules\Patrimonio\Controllers\PatrimonioController;
 use App\Modules\Personal\Controllers\PersonalController;
 use App\Modules\Reportes\Controllers\ReportesController;
+use App\Modules\Transferencia\Controllers\ConstanciaAusenciaController;
 use App\Modules\Transferencia\Controllers\CronogramaController;
 use App\Modules\Transferencia\Controllers\ObservacionController;
 use App\Modules\Transferencia\Controllers\TransferenciaController;
@@ -111,6 +112,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/revisar', [TransferenciaController::class, 'revisar'])->middleware('permiso:entregas.revisar');
         Route::get('/acta', [TransferenciaController::class, 'acta'])->middleware('permiso:actas.generar');
         Route::get('/acta/pdf', [TransferenciaController::class, 'actaPdf'])->middleware('permiso:actas.generar');
+    });
+
+    // Constancia de ausencia de firma ETTE + copia digital (RF-004/005, D-12).
+    // Consulta con anexos.ver; el registro lo hace el responsable del centro de
+    // costo (firmas.constancia_ausencia). La ausencia no bloquea el flujo.
+    Route::prefix('firmas')->group(function () {
+        Route::get('/ausencia-ette', [ConstanciaAusenciaController::class, 'index'])->middleware('permiso:anexos.ver');
+        Route::post('/ausencia-ette', [ConstanciaAusenciaController::class, 'store'])->middleware('permiso:firmas.constancia_ausencia');
     });
 
     // Cronograma del proceso (RF-007, C-03). Consulta con anexos.ver; la

@@ -39,6 +39,11 @@ enum Permiso: string
     // (acotado por asignación, no por la sola pertenencia al comité).
     case FirmarAnexos = 'firmas.firmar';
 
+    // Constancia de ausencia de firma ETTE + copia digital (RF-004/005, D-12).
+    // El responsable del centro de costo registra que ETTE no firmó su versión y
+    // marca la entrega de la copia digital (sin presumir acuse). No es firmar.
+    case RegistrarConstanciaAusencia = 'firmas.constancia_ausencia';
+
     // Gestión del equipo ETTE (RF-008): alta/designación/revocación de delegados
     // por el comité, limitada a su equipo; no es la administración general de
     // usuarios ni de roles institucionales.
@@ -70,6 +75,7 @@ enum Permiso: string
             self::RevisarEntrega => 'Revisar entregas recibidas',
             self::ConsolidarEntrega => 'Consolidar y remitir al nivel superior',
             self::FirmarAnexos => 'Firmar anexos (según designación)',
+            self::RegistrarConstanciaAusencia => 'Registrar ausencia de firma ETTE y copia digital',
             self::GestionarDelegados => 'Gestionar delegados ETTE',
             self::RegistrarObservaciones => 'Registrar observaciones',
             self::SubsanarObservaciones => 'Atender y subsanar observaciones',
@@ -124,6 +130,7 @@ enum Permiso: string
                 self::RegistrarObservaciones,
                 self::SubsanarObservaciones,
                 self::RemitirEntrega,
+                self::RegistrarConstanciaAusencia,
                 self::VerExpediente,
                 self::VerReportes,
             ],
@@ -139,6 +146,7 @@ enum Permiso: string
                 self::RegistrarObservaciones,
                 self::SubsanarObservaciones,
                 self::RemitirEntrega,
+                self::RegistrarConstanciaAusencia,
                 self::GenerarActas,
                 self::VerExpediente,
                 self::VerReportes,
