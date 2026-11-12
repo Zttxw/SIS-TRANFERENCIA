@@ -61,3 +61,4 @@ Thumbs.db
 fwAuthorization.json
 /backend/storage/app/private/firmaperu/
 /backend/storage/app/private/firmaperu-ca.pem
+/backend/storage/app/private/firmaperu-cliente-cache/

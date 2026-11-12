@@ -11,6 +11,7 @@ use App\Modules\Organization\Controllers\DependenciaController;
 use App\Modules\Patrimonio\Controllers\PatrimonioController;
 use App\Modules\Personal\Controllers\PersonalController;
 use App\Modules\Reportes\Controllers\ReportesController;
+use App\Modules\Transferencia\Controllers\FirmaperuClienteController;
 use App\Modules\Transferencia\Controllers\FirmaperuController;
 use App\Modules\Transferencia\Controllers\ObservacionController;
 use App\Modules\Transferencia\Controllers\TransferenciaController;
@@ -20,6 +21,9 @@ use Illuminate\Support\Facades\Route;
 
 // Autenticación por DNI + contraseña (plan §5).
 Route::post('/auth/login', [AuthController::class, 'login']);
+
+Route::get('/firmaperu/cliente/{archivo}', [FirmaperuClienteController::class, 'archivo'])
+    ->where('archivo', '.+')->middleware('throttle:300,1');
 
 Route::prefix('firmaperu')->middleware('throttle:60,1')->group(function () {
     Route::post('/param', [FirmaperuController::class, 'param']);
