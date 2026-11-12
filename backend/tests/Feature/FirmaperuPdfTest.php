@@ -8,11 +8,12 @@ use App\Models\User;
 use App\Modules\Acervo\Models\AcervoDocumental;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Organization\Services\CentrosCostoPdf;
+use App\Modules\Transferencia\Models\ActaTransferencia;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Modules\Transferencia\Services\FirmaperuPdfService;
+use App\Support\Enums\DeclaracionActa;
 use App\Support\Services\PdfService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Exceptions\HttpResponseException;
 use InvalidArgumentException;
 use Mockery\MockInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -75,17 +76,17 @@ class FirmaperuPdfTest extends TestCase
         $this->assertSame('%PDF-prueba', $pdf);
     }
 
-    public function test_acta_conserva_restriccion_existente_de_entrega_consolidada(): void
+    public function test_acta_para_firma_se_emite_antes_de_remitir_como_suscripcion_de_la_dependencia(): void
     {
         $proceso = ProcesoTransferencia::factory()->create();
         $dependencia = Dependencia::factory()->create(['proceso_transferencia_id' => $proceso->id]);
 
-        try {
-            app(FirmaperuPdfService::class)->generar('anexo07', $dependencia->id, User::factory()->make());
-            $this->fail('El acta no debe generarse sin consolidación.');
-        } catch (HttpResponseException $exception) {
-            $this->assertSame(409, $exception->getResponse()->getStatusCode());
-        }
+        $pdf = app(FirmaperuPdfService::class)->generar('anexo07', $dependencia->id, User::factory()->make());
+
+        $this->assertStringStartsWith('%PDF-', $pdf);
+        $acta = ActaTransferencia::where('dependencia_id', $dependencia->id)->firstOrFail();
+        $this->assertSame(DeclaracionActa::SUSCRIPCION_HIJA, $acta->declara);
+        $this->assertSame(1, $acta->version);
     }
 
     public function test_rechaza_anexo_sin_generador(): void

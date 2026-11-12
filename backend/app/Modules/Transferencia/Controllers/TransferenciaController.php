@@ -133,8 +133,9 @@ class TransferenciaController extends Controller
     }
 
     /**
-     * Descarga el PDF oficial del Acta (Anexo 07). Exige entrega CONSOLIDADA
-     * (409 en otro caso) a través del mismo generador que el resto de anexos.
+     * Descarga el PDF oficial del Acta (Anexo 07). B3/D-06: el acta se emite
+     * antes de remitir, por lo que el PDF está disponible desde su suscripción de
+     * la hija (pre-remisión) y también tras consolidar.
      */
     public function actaPdf(Request $request): StreamedResponse
     {

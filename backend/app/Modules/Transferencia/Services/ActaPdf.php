@@ -12,9 +12,12 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * PDF oficial del Anexo 07 (Acta de Transferencia). Unifica la impresión del
- * acta al generador del backend (F5): reutiliza TransferenciaService::obtenerActa,
- * que ya exige entrega CONSOLIDADA (409 en otro caso), de modo que el acta nunca
- * se emite como borrador. Sin marca de agua (siempre consolidada).
+ * acta al generador del backend (F5): reutiliza TransferenciaService::obtenerActa.
+ *
+ * B3 (D-06): el acta se emite ANTES de remitir, por lo que su PDF puede
+ * descargarse en la versión de suscripción de la hija (pre-remisión) y también
+ * tras consolidar. La declaración del acta (`declara`) fija qué afirma según el
+ * momento; no se exige CONSOLIDADA para imprimirla.
  *
  * @var array<string, string> MESES
  */
@@ -51,7 +54,8 @@ class ActaPdf
     /** @return array<string, mixed> */
     public function datos(int $dependenciaId, User $usuario): array
     {
-        // Enforce CONSOLIDADA (lanza 409 si no) y materializa/actualiza el acta.
+        // Materializa/actualiza el acta en su declaración vigente (suscripción de
+        // la hija antes de remitir; recepción/consolidación tras consolidar).
         $acta = $this->transferenciaService->obtenerActa($dependenciaId, $usuario);
         $contexto = $this->contexto->paraDependencia($dependenciaId);
 

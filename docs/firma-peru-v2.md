@@ -117,8 +117,9 @@ para ejecutar el proyecto allí también hay que preparar el entorno y la base d
 
 1. Ingresar con una cuenta con permiso de registro y DNI correspondiente al
    certificado. Para el acta se requiere también `actas.generar`.
-2. Guardar los datos del anexo. En el acta se mantiene su restricción previa de
-   entrega consolidada; los demás anexos no reciben restricciones nuevas.
+2. Guardar los datos del anexo. Tras integrar el flujo de `main`, el acta se puede
+   emitir antes de remitir como suscripción de la dependencia; ya no exige una
+   entrega consolidada para generar el PDF que se enviará al firmador.
 3. Pulsar «Firmar con Firma Perú». Revisar la copia guardada en el firmador,
    posicionar la representación visual y completar la firma en el equipo.
 4. Esperar la confirmación del backend. Descargar «PDF firmado» cuando esté
@@ -140,6 +141,18 @@ nivel B, sin sello de tiempo ni validación LTV. No afirmar una validación IOFE
 integral a partir de estos controles.
 
 El acta no pasa automáticamente a `suscrita`, ni la entrega cambia de estado.
+El bloqueo optativo de remisión importado de `main` (`exige_firma_acta`, apagado
+por defecto) consulta `FirmaAnexo` y la versión del acta. El conector v2 guarda
+resultados en `FirmaSesion`: aún no registra esas firmas en `FirmaAnexo` ni enlaza
+su vigencia con la versión institucional. Activar el bloqueo no convierte una
+sesión v2 en cumplimiento de ese requisito. La emisión previa a remisión y el
+versionado se conservan; la unión de ambos registros requiere una integración posterior.
+En la revisión del flujo importado se detectó además que, al re-remitir una entrega
+observada con ese bloqueo activado, se comprueba la firma antes de incrementar la
+versión y cancelar las firmas anteriores. Ese orden requiere corregirse y probarse
+antes de activar el requisito: la comprobación debe corresponder a la versión que
+se remite, no a la anterior. Esta integración conserva la lógica de `main` sin
+activar esa opción ni resolver todavía la matriz institucional de firmantes.
 El PDF de expediente regenerado sigue siendo un documento distinto de los anexos
 firmados; los originales firmados se descargan individualmente.
 
@@ -185,3 +198,7 @@ vigencia, limpieza de callbacks y exclusión de operaciones simultáneas.
   comprobación local y runtime; 66 pruebas Laravel de Firma Perú aprobadas (220 aserciones).
   Manifiesto inicial y manifiesto dependiente comprobados mediante HTTP local.
   La apertura de ClickOnce y la firma con certificado real siguen pendientes.
+- Integración de `main` en v2: 171 pruebas backend aprobadas (489 aserciones),
+  además de 16 Node. Compilación correcta y lint sin errores; se conservan las
+  seis advertencias previas. La prueba de PDF del acta cubre emisión pre-remisión,
+  declaración de suscripción de la dependencia y versión inicial.

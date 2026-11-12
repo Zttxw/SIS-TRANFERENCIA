@@ -3,6 +3,7 @@
 use App\Modules\Acervo\Controllers\AcervoController;
 use App\Modules\Auth\Controllers\ActivacionController;
 use App\Modules\Auth\Controllers\AuthController;
+use App\Modules\Auth\Controllers\DelegadoController;
 use App\Modules\Documentos\Controllers\DocumentoPendienteController;
 use App\Modules\Expediente\Controllers\ExpedienteController;
 use App\Modules\Gestion\Controllers\GestionController;
@@ -11,6 +12,8 @@ use App\Modules\Organization\Controllers\DependenciaController;
 use App\Modules\Patrimonio\Controllers\PatrimonioController;
 use App\Modules\Personal\Controllers\PersonalController;
 use App\Modules\Reportes\Controllers\ReportesController;
+use App\Modules\Transferencia\Controllers\ConstanciaAusenciaController;
+use App\Modules\Transferencia\Controllers\CronogramaController;
 use App\Modules\Transferencia\Controllers\FirmaperuClienteController;
 use App\Modules\Transferencia\Controllers\FirmaperuController;
 use App\Modules\Transferencia\Controllers\ObservacionController;
@@ -58,6 +61,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/servidores', [ActivacionController::class, 'index']);
         Route::post('/servidores/{servidor}/preparar-activacion', [ActivacionController::class, 'preparar']);
         Route::post('/servidores/{servidor}/activar', [ActivacionController::class, 'activar']);
+    });
+
+    // Gestión de delegados ETTE por el comité (RF-008). Alta/designación/
+    // revocación limitadas al equipo (delegados.gestionar), no es administrar
+    // usuarios/roles institucionales.
+    Route::prefix('delegados')->middleware('permiso:delegados.gestionar')->group(function () {
+        Route::get('/', [DelegadoController::class, 'index']);
+        Route::post('/', [DelegadoController::class, 'store']);
+        Route::delete('/{id}', [DelegadoController::class, 'destroy']);
     });
 
     // Anexo 01: Reporte de Asuntos Pendientes y Prioritarios (SGD) (plan §7.7).
@@ -120,6 +132,23 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/revisar', [TransferenciaController::class, 'revisar'])->middleware('permiso:entregas.revisar');
         Route::get('/acta', [TransferenciaController::class, 'acta'])->middleware('permiso:actas.generar');
         Route::get('/acta/pdf', [TransferenciaController::class, 'actaPdf'])->middleware('permiso:actas.generar');
+    });
+
+    // Constancia de ausencia de firma ETTE + copia digital (RF-004/005, D-12).
+    // Consulta con anexos.ver; el registro lo hace el responsable del centro de
+    // costo (firmas.constancia_ausencia). La ausencia no bloquea el flujo.
+    Route::prefix('firmas')->group(function () {
+        Route::get('/ausencia-ette', [ConstanciaAusenciaController::class, 'index'])->middleware('permiso:anexos.ver');
+        Route::post('/ausencia-ette', [ConstanciaAusenciaController::class, 'store'])->middleware('permiso:firmas.constancia_ausencia');
+    });
+
+    // Cronograma del proceso (RF-007, C-03). Consulta con anexos.ver; la
+    // modificación la reservan administrador y ETTS (cronograma.gestionar).
+    Route::prefix('cronograma')->group(function () {
+        Route::get('/', [CronogramaController::class, 'index'])->middleware('permiso:anexos.ver');
+        Route::post('/', [CronogramaController::class, 'store'])->middleware('permiso:cronograma.gestionar');
+        Route::put('/{id}', [CronogramaController::class, 'update'])->middleware('permiso:cronograma.gestionar');
+        Route::delete('/{id}', [CronogramaController::class, 'destroy'])->middleware('permiso:cronograma.gestionar');
     });
 
     // Expediente de entrega: paquete PDF único con todos los anexos (F5).

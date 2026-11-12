@@ -9,6 +9,7 @@ use App\Modules\Patrimonio\Models\BienPatrimonial;
 use App\Modules\Patrimonio\Models\VerificacionBien;
 use App\Support\Concerns\RespetaEstadoEntrega;
 use App\Support\Enums\EstadoConservacion;
+use App\Support\Enums\EstadoObservacion;
 use App\Support\Enums\EstadoVerificacionBien;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
@@ -131,7 +132,7 @@ class PatrimonioService
                     'proceso_transferencia_id' => $bien->proceso_transferencia_id,
                     'autor_id' => $usuario->id,
                     'descripcion' => $datos['observacion'],
-                    'estado' => 'pendiente',
+                    'estado' => EstadoObservacion::ABIERTA->value,
                 ]);
             }
 

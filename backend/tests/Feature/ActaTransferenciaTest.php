@@ -18,8 +18,10 @@ use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
- * Acta de transferencia (plan §7.10): solo se emite con la entrega CONSOLIDADA
- * y su relación de anexos refleja la presencia real (no un hardcode).
+ * Acta de transferencia (plan §7.10, B3/D-06). El acta se emite ANTES de
+ * remitir, declarando solo la *suscripción de la hija*; tras consolidar declara
+ * recepción/consolidación. Su relación de anexos refleja la presencia real (no
+ * un hardcode).
  */
 class ActaTransferenciaTest extends TestCase
 {
@@ -63,13 +65,27 @@ class ActaTransferenciaTest extends TestCase
         ]);
     }
 
-    public function test_sin_entrega_consolidada_el_acta_no_se_emite(): void
+    public function test_acta_se_emite_antes_de_remitir_declarando_suscripcion_de_la_hija(): void
     {
+        // B3/D-06: sin entrega consolidada (aquí sin entrega aún), el acta ya se
+        // emite y declara solo la suscripción de la hija; no 409 como antes.
         $this->responsable();
-        $this->crearEntrega(EstadoEntrega::REMITIDA);
 
         $this->getJson("/api/transferencia/acta?dependencia_id={$this->dep->id}")
-            ->assertStatus(409);
+            ->assertOk()
+            ->assertJsonPath('data.declara', 'suscripcion_hija')
+            ->assertJsonPath('data.version', 1)
+            ->assertJsonPath('data.estado', 'generada');
+    }
+
+    public function test_acta_consolidada_declara_recepcion_y_consolidacion(): void
+    {
+        $this->responsable();
+        $this->crearEntrega(EstadoEntrega::CONSOLIDADA);
+
+        $this->getJson("/api/transferencia/acta?dependencia_id={$this->dep->id}")
+            ->assertOk()
+            ->assertJsonPath('data.declara', 'recepcion_consolidacion');
     }
 
     public function test_acta_refleja_presencia_real_de_anexos(): void
