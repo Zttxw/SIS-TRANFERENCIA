@@ -152,9 +152,21 @@ El usuario puede abrir el cliente instalado desde Windows o pulsar «Iniciar
 cliente con Edge» y regresar a Chrome cuando el sistema confirme que responde
 en el puerto 48596. El iniciador puede comprobar actualizaciones al abrirse.
 
-Para automatizar su apertura al iniciar sesión, soporte puede colocar un acceso
-directo al iniciador del cliente en la carpeta que abre `Win + R` → `shell:startup`.
-El acceso directo debe abrir el servicio local utilizado por esta integración.
+Para configurar su apertura automática, ejecutar una vez por usuario de Windows,
+desde la raíz del repositorio:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/firma-peru/ConfigurarInicioAutomatico.ps1
+```
+
+El script crea el acceso `SIS Transferencia - Firma Peru.lnk` en la carpeta de
+inicio del usuario. Windows invoca el cliente oficial mediante ClickOnce con el
+puerto 48596 al iniciar sesión. El iniciador requiere conexión al proveedor
+oficial. La comprobación del cliente en el sistema consulta si el servicio responde;
+la configuración del inicio automático se realiza ejecutando el script.
+
+Para desactivar esta configuración, ejecutar el mismo comando con `-Desactivar`.
+La ejecución después de reiniciar debe comprobarse en cada equipo configurado.
 El procedimiento de inicio automático se describe en la
 [documentación de Microsoft](https://support.microsoft.com/es-es/windows/experience/startup-boot/configure-startup-applications-in-windows).
 
