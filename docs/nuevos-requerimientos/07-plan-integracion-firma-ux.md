@@ -13,6 +13,17 @@
 - **Procesos:** NO hay controller/endpoint para gestionar `procesos_transferencia` por UI todavía (solo el cronograma los referencia en `routes/api.php:148`). La Tarea F3-1 lo crea.
 - **Permisos:** backend en seeder + enum `Rol`; espejo frontend en `frontend/src/auth/permisos.ts`. Mantener ambos sincronizados (patrón ya establecido en el proyecto).
 
+## ⚠️ Regla de diseño UX (obligatoria en toda tarea con pantalla/flujo nuevo)
+
+**Antes de escribir código de UI, Claude DEBE consultar al usuario sobre el diseño y esperar su aprobación.** El "Diseño UX propuesto" que acompaña a cada tarea de la Fase 5 es un **punto de partida, no una decisión cerrada**. El procedimiento por tarea es:
+
+1. Leer el "Diseño UX propuesto" de la tarea y explorar los componentes que reutilizará.
+2. **Presentar al usuario** el diseño concreto (layout, ubicación, estados, componentes a reutilizar) — preferiblemente con un mockup ASCII o 2-3 variantes vía `AskUserQuestion` cuando haya una decisión real que tomar (p. ej. pantalla propia vs. sub-sección, menú contextual vs. botón fijo).
+3. **Esperar la aprobación o los ajustes del usuario.** No implementar hasta que el usuario confirme el diseño.
+4. Recién entonces escribir el código, respetando el sistema de diseño (tokens semánticos, primitivas, `notificarError`, permiso-primero).
+
+Esto aplica a todas las tareas que crean o modifican UI visible (Fase 1, 2, 3-2 y toda la Fase 5). Para tareas puramente de backend (F3-1) o de limpieza mecánica no hace falta, pero si hay duda, preguntar.
+
 ## El problema de UX (motivación)
 
 En el header de cada anexo, la zona de acciones apila **hasta 7 controles** en una fila sin jerarquía: `Previsualización`, `Firmar con Firma Perú`, `Opciones de firma`, `PDF firmado`, `Agregar firma`, `PDF recibido · sin verificar`, más las acciones propias del anexo (`Nueva serie`…) y el `EstadoAnexoChip`. El usuario no distingue cuál es la acción principal. Objetivo: **una acción primaria clara por anexo**, lo demás colapsado en un menú.
@@ -109,6 +120,51 @@ F1 (UX botones) → F2 (integración al flujo) → F3 (encender firma real, togg
 
 ---
 
+## Fase 5 — UI faltante del plan 06 (backend listo, sin frontend)
+
+> **Hallazgo (2026-11-12):** el plan 06 completó el backend (111 tests verde) pero **5 bloques nunca recibieron frontend**. El endpoint existe; nadie lo consume. Esta fase cierra esos huecos. **Recuerda la Regla de diseño UX de arriba: en cada tarea, consulta el diseño con el usuario antes de implementar.** El "Diseño UX propuesto" es el borrador de partida.
+>
+> **Deudas de UX detectadas (auditoría)** — se resuelven embebidas donde tocan: U3 `<select>` crudos → primitiva `Select` (dentro de F5-1); U5 duplicidad organigrama en menú (dentro de F4-1); U6 adopción de `notificarError` en features no migrados (donde cada tarea toque ese `use-*.ts`).
+
+### Tarea F5-1 — E1: sumilla + justificación en documentos (RF-001)
+**Backend listo:** migración `2026_11_11_000006` añadió `sumilla` y `justificacion` a `documentos_pendientes`; `GuardarDocumentoPendienteRequest` ya valida. El frontend `DocumentoModal` solo tiene `asunto`.
+**Diseño UX propuesto (borrador — CONSULTAR antes de implementar):** sin pantalla nueva. En `features/documentos/DocumentoModal.tsx` añadir `sumilla` (Textarea, separada del `asunto`) y `justificacion` (Textarea, requerida cuando el estado implica pendiente). Aprovechar para migrar el `<select>` crudo de estado (líneas ~149-159) a la primitiva `Select` (mata U3). Mensajes de error vía el patrón 422 ya existente.
+**Consultar al usuario:** orden/etiquetas de los campos nuevos, y si `justificacion` es siempre requerida o solo en ciertos estados.
+**Aceptación:** se puede guardar sumilla y justificación; el 422 marca el campo exacto; `<select>` reemplazado por `Select`; `tsc` verde.
+**Archivos:** `features/documentos/DocumentoModal.tsx`, `features/documentos/documentos.service.ts`, `types/` de documentos.
+
+### Tarea F5-2 — E2: drill-down de indicadores a listado documental (RF-002)
+**Backend listo:** `GET /documentos/drilldown` (`DocumentoPendienteController::drilldown`, permiso `anexos.ver,reportes.ver`). Ningún archivo frontend lo llama.
+**Diseño UX propuesto (borrador — CONSULTAR antes de implementar):** integración, no pantalla. Los indicadores del dashboard (`features/dashboard/TableroOperativoView.tsx`) se vuelven clickeables; al pulsar uno, navega a un listado documental filtrado por el **mismo ámbito/periodo** del indicador (regla del plan: indicador y listado comparten filtros). El listado reutiliza `DataTable`.
+**Consultar al usuario:** si el drill-down abre un modal sobre el dashboard o navega a una ruta nueva; qué columnas muestra el listado.
+**Aceptación:** click en un indicador lleva al listado filtrado coherente con ese indicador; filtros compartidos; `tsc` verde.
+**Archivos:** `features/dashboard/TableroOperativoView.tsx`, nuevo servicio/consulta de drilldown, posible nueva vista de listado.
+
+### Tarea F5-3 — B2: constancia de ausencia de firma ETTE
+**Backend listo:** `POST /firmas/ausencia-ette` (store, permiso `firmas.constancia_ausencia`) y `GET` de consulta (`ConstanciaAusenciaController`). Sin UI.
+**Diseño UX propuesto (borrador — CONSULTAR antes de implementar):** acción contextual en `features/acta/ActaPage.tsx`, visible solo con `firmas.constancia_ausencia` (responsable del CC). Botón **secundario** "Registrar ausencia de firma" → `Dialog` con nota de constancia + marca de copia entregada (`copia_entregada_en`). Claramente subordinado a la firma normal; se integra con el colapso de botones de la Fase 1.
+**Consultar al usuario:** ubicación exacta del botón (en ActaPage vs. en el menú de firma de F1-2) y qué campos pide el modal.
+**Aceptación:** el responsable del CC puede registrar la ausencia; queda reflejada; un no-autorizado no ve la acción; `tsc` verde.
+**Archivos:** `features/acta/ActaPage.tsx` + nuevo modal, `features/acta/acta.service.ts` (o servicio nuevo de firmas).
+
+### Tarea F5-4 — C: cronograma (gestión + aviso de bloqueo) (RF-007)
+**Backend listo:** `/cronograma` (index con `anexos.ver`; store/update/destroy con `cronograma.gestionar`). El gate de vencimiento ya devuelve 409 `errors.cronograma` al remitir. Sin UI.
+**Diseño UX propuesto (borrador — CONSULTAR antes de implementar):** dos piezas.
+- **F5-4a Gestión:** pantalla nueva `features/cronograma/` para Admin/ETTS (permiso `cronograma.gestionar`): lista de actividades por proceso (etapa, nombre, fechas, estado) estilo `AnexoCrudPage`, modal de alta/edición, acción "prorrogar". Nueva entrada en `layouts/navegacion.ts` condicionada al permiso. Estados con tokens: `en_curso`=info, `vencida`=danger, `completada`=success.
+- **F5-4b Aviso de bloqueo:** traducir el 409 `errors.cronograma` en `RemitirModal` con copy claro (plazo vencido), reutilizando el patrón de `AlertaBloqueoEntrega`/`notificarError`. (Converge con U2/F2.)
+**Consultar al usuario:** si el cronograma es pantalla propia con entrada de menú o sub-sección de otra; vista de lista vs. calendario/timeline; agrupación por etapa.
+**Aceptación:** Admin/ETTS gestionan actividades y prórrogas (auditado); un plazo vencido bloquea remisión con mensaje claro; permiso respetado; `tsc` verde.
+**Archivos:** nuevo `features/cronograma/` (page + modal + service + hook), `layouts/navegacion.ts`, `features/dashboard/RemitirModal.tsx`.
+
+### Tarea F5-5 — D: delegados ETTE (RF-008)
+**Backend listo:** `/delegados` (listar/designar/revocar, permiso `delegados.gestionar`, solo comité `ette`). `DelegadoService` solo toca asignaciones `delegado_ette`. Sin UI.
+**Diseño UX propuesto (borrador — CONSULTAR antes de implementar):** pantalla para el comité `ette` (permiso `delegados.gestionar`): `DataTable` de delegados actuales; "Designar" → modal con `Combobox` para buscar una cuenta existente del padrón + selector de **dependencia exacta**; "Revocar" con confirmación suave. Entrada de menú condicionada al permiso.
+**Consultar al usuario:** pantalla propia vs. sub-sección de `features/admin/`; si designar permite multi-dependencia o una a la vez.
+**Aceptación:** el comité designa/revoca delegados sobre cuentas existentes; no toca otros roles (404 si el rol no es delegado); permiso respetado; `tsc` verde.
+**Archivos:** nuevo `features/delegados/` (o sub-sección de admin), `layouts/navegacion.ts` si lleva entrada propia.
+
+---
+
 ## Tablero de estado
 
 | Tarea | Fase | Estado | Depende de |
@@ -122,6 +178,13 @@ F1 (UX botones) → F2 (integración al flujo) → F3 (encender firma real, togg
 | F3-2 | Firma real | ⬜ Pendiente | F3-1 |
 | F4-1 | Navegación | ⬜ Pendiente | — |
 | F4-2 | QA/limpieza | ⬜ Pendiente | todas |
+| F5-1 | UI plan 06 · E1 sumilla | ⬜ Pendiente | — |
+| F5-2 | UI plan 06 · E2 drill-down | ⬜ Pendiente | — |
+| F5-3 | UI plan 06 · B2 constancia | ⬜ Pendiente | F1-2 (preferible) |
+| F5-4 | UI plan 06 · C cronograma | ⬜ Pendiente | — |
+| F5-5 | UI plan 06 · D delegados | ⬜ Pendiente | — |
+
+**Prioridad de la Fase 5 (indicada por el usuario):** E1 + E2 primero, luego B2, luego C, luego D. Todas requieren consultar el diseño con el usuario antes de implementar (ver Regla de diseño UX).
 
 ## Cómo usar este plan (una tarea por sesión)
 
