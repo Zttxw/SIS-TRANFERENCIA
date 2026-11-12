@@ -297,7 +297,7 @@ export function DashboardPage() {
   ]
 
   return (
-    <div className="space-y-5 max-w-7xl mx-auto">
+    <div className="space-y-5 max-w-[1600px] mx-auto">
       {/* ========================================================
           BARRA DE CONTEXTO SUPERIOR Y PLAZOS INSTITUCIONALES
           ======================================================== */}
@@ -375,246 +375,240 @@ export function DashboardPage() {
       />
 
       {/* ========================================================
-          LAYOUT PRINCIPAL: DOS COLUMNAS (8 COLS + 4 COLS)
+          TABLA DE ANEXOS — ancho completo
           ======================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* ========================================================
-            COLUMNA IZQUIERDA: INFORMACIÓN A VERIFICAR Y COMPLETAR
-            ======================================================== */}
-        <div className="lg:col-span-8 space-y-4">
-          {/* Encabezado + resumen compacto de avance */}
-          <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-sm font-bold tracking-tight text-foreground">
-              <ClipboardList className="h-4 w-4 text-primary" />
-              Anexos de Transferencia de Gestión
-            </h2>
-            <span className="font-mono text-nota font-semibold text-muted-foreground">
-              {filasAnexos.length} anexos normativos
-            </span>
-          </div>
-
-          <ResumenAnexos filas={filasAnexos} />
-
-          <TablaAnexos
-            filas={filasAnexos}
-            dependenciaId={dependencia.id}
-            entregaConsolidada={estadoEntrega === 'consolidada'}
-          />
-
-          {/* Módulo Operativo: Documentos SGD (Asuntos Pendientes) */}
-          <Card className="border shadow-xs overflow-hidden">
-            <CardHeader className="py-2.5 px-4 border-b border-border bg-muted">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-primary" />
-                  <span>Documentos SGD · Reporte de Asuntos Pendientes</span>
-                </CardTitle>
-                <span className="inline-block px-2 py-0.5 rounded text-mini font-mono font-semibold border bg-info-soft text-info-fg border-info-border">
-                  Fuente: SGD
-                </span>
-              </div>
-            </CardHeader>
-            <CardContent className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <div className="space-y-1">
-                <p className="font-semibold text-foreground">
-                  {resumenDocs?.total_pendientes ?? 0} expedientes o documentos pendientes precargados
-                </p>
-                <p className="text-nota text-muted-foreground">
-                  Información precargada del SGD para verificar trámites no concluidos antes de remitir la entrega.
-                </p>
-              </div>
-              <Link
-                to="/documentos"
-                className={buttonVariants({
-                  variant: 'outline',
-                  size: 'sm',
-                  className:
-                    'h-7 text-xs px-2.5 font-medium border-primary/30 text-primary hover:bg-primary/10 gap-1 shrink-0 cursor-pointer',
-                })}
-              >
-                <span>Ver Asuntos Pendientes</span>
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            </CardContent>
-          </Card>
+      <div className="space-y-4">
+        {/* Encabezado + resumen compacto de avance */}
+        <div className="flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-bold tracking-tight text-foreground">
+            <ClipboardList className="h-4 w-4 text-primary" />
+            Anexos de Transferencia de Gestión
+          </h2>
+          <span className="font-mono text-nota font-semibold text-muted-foreground">
+            {filasAnexos.length} anexos normativos
+          </span>
         </div>
 
-        {/* ========================================================
-            COLUMNA DERECHA: REMITIR ENTREGA Y REGISTRO DE AUDITORÍA
-            ======================================================== */}
-        <div className="lg:col-span-4 space-y-4">
-          {/* Tarjeta de Remisión */}
-          <Card className="border shadow-xs">
-            <CardHeader className="py-3 px-4 border-b border-border bg-muted">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-                  <Send className="h-4 w-4 text-primary" />
-                  <span>Remitir mi entrega</span>
-                </CardTitle>
-                <div>{renderBadgeEstado(estadoEntrega)}</div>
-              </div>
-            </CardHeader>
+        <ResumenAnexos filas={filasAnexos} />
 
-            <CardContent className="p-4 space-y-3.5 text-xs">
+        <TablaAnexos
+          filas={filasAnexos}
+          dependenciaId={dependencia.id}
+          entregaConsolidada={estadoEntrega === 'consolidada'}
+        />
+      </div>
+
+      {/* ========================================================
+          REMITIR MI ENTREGA — debajo de la tabla, ancho completo
+          ======================================================== */}
+      <Card className="border shadow-xs">
+        <CardHeader className="py-3 px-4 border-b border-border bg-muted">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+              <Send className="h-4 w-4 text-primary" />
+              <span>Remitir mi entrega</span>
+            </CardTitle>
+            <div>{renderBadgeEstado(estadoEntrega)}</div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            {/* Texto + alerta contextual */}
+            <div className="flex-1 space-y-2.5 text-xs">
               <p className="text-muted-foreground leading-relaxed">
                 Al remitir, su información pasará a revisión formal de{' '}
                 <strong className="text-foreground">{superiorRevisor}</strong>. Solo podrá
                 modificarla si se le solicita una corrección mediante observación.
               </p>
 
-              {/* Alerta contextual según estado */}
               {esEditable ? (
-                <div className="rounded-lg bg-warning-soft border border-warning-border p-3 text-warning-fg space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-warning-fg">
-                    <AlertCircle className="h-3.5 w-3.5 text-warning-fg shrink-0" />
-                    <span>Verificación obligatoria</span>
-                  </div>
-                  <p className="text-nota text-warning-fg leading-normal">
-                    Asegúrese de haber revisado los bienes patrimoniales y el acervo documental
-                    antes de remitir formalmente el paquete de entrega.
+                <div className="flex items-start gap-1.5 rounded-lg bg-warning-soft border border-warning-border p-3 text-warning-fg">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <p className="text-nota leading-normal">
+                    <span className="font-bold">Verificación obligatoria.</span> Asegúrese de haber
+                    revisado los bienes patrimoniales y el acervo documental antes de remitir
+                    formalmente el paquete de entrega.
                   </p>
                 </div>
               ) : estadoEntrega === 'remitida' ? (
-                <div className="rounded-lg bg-info-soft border border-info-border p-3 text-info-fg space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-info-fg">
-                    <Clock className="h-3.5 w-3.5 text-info-fg shrink-0" />
-                    <span>Entrega en revisión</span>
-                  </div>
-                  <p className="text-nota text-info-fg leading-normal">
-                    La entrega se encuentra en custodia del superior jerárquico. La edición queda
-                    bloqueada hasta su validación.
+                <div className="flex items-start gap-1.5 rounded-lg bg-info-soft border border-info-border p-3 text-info-fg">
+                  <Clock className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <p className="text-nota leading-normal">
+                    <span className="font-bold">Entrega en revisión.</span> En custodia del superior
+                    jerárquico; la edición queda bloqueada hasta su validación.
                   </p>
                 </div>
               ) : estadoEntrega === 'consolidada' ? (
-                <div className="rounded-lg bg-success-soft border border-success-border p-3 text-success-fg space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-success-fg">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-success-fg shrink-0" />
-                    <span>Entrega consolidada</span>
-                  </div>
-                  <p className="text-nota text-success-fg leading-normal">
-                    Su despacho ha completado formalmente el cierre de entrega de gestión.
+                <div className="flex items-start gap-1.5 rounded-lg bg-success-soft border border-success-border p-3 text-success-fg">
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <p className="text-nota leading-normal">
+                    <span className="font-bold">Entrega consolidada.</span> Su despacho ha completado
+                    formalmente el cierre de entrega de gestión.
                   </p>
                 </div>
               ) : null}
+            </div>
 
-              {/* Botón Principal de Workflow */}
-              <div className="pt-1">
-                <Can permiso="entregas.remitir">
-                  {esEditable && (
-                    <Button
-                      onClick={() => setModalRemitir(true)}
-                      className="w-full h-9 bg-primary hover:bg-primary-hover text-white font-semibold text-xs gap-2 shadow-xs cursor-pointer"
-                    >
-                      <Send className="h-3.5 w-3.5" />
-                      <span>Remitir mi entrega</span>
-                    </Button>
-                  )}
-                </Can>
-
-                <Can permiso="entregas.revisar">
-                  {(estadoEntrega === 'remitida' || estadoEntrega === 'en_revision') && (
-                    <Button
-                      onClick={() => setModalRevisar(true)}
-                      className="w-full h-9 bg-secondary hover:bg-secondary-hover text-white font-semibold text-xs gap-2 shadow-xs cursor-pointer"
-                    >
-                      <ShieldCheck className="h-4 w-4" />
-                      <span>Revisar Entrega</span>
-                    </Button>
-                  )}
-                </Can>
-
-                <Can permiso="actas.generar">
-                  {estadoEntrega === 'consolidada' && (
-                    <Link
-                      to="/acta"
-                      className={buttonVariants({
-                        className:
-                          'w-full h-9 bg-primary hover:bg-primary-hover text-white font-semibold text-xs gap-2 shadow-xs',
-                      })}
-                    >
-                      <FileCheck2 className="h-4 w-4" />
-                      <span>Generar Acta de Transferencia</span>
-                    </Link>
-                  )}
-                </Can>
-
-                {!esEditable && estadoEntrega !== 'consolidada' && (
+            {/* Acción principal de workflow */}
+            <div className="shrink-0 lg:w-64">
+              <Can permiso="entregas.remitir">
+                {esEditable && (
                   <Button
-                    disabled
-                    variant="outline"
-                    className="w-full h-9 text-xs text-muted-foreground gap-2 cursor-not-allowed"
+                    onClick={() => setModalRemitir(true)}
+                    className="w-full h-10 bg-primary hover:bg-primary-hover text-white font-semibold text-xs gap-2 shadow-xs cursor-pointer"
                   >
-                    <Lock className="h-3.5 w-3.5" />
-                    <span>Edición bloqueada por trámite</span>
+                    <Send className="h-3.5 w-3.5" />
+                    <span>Remitir mi entrega</span>
                   </Button>
                 )}
-              </div>
-            </CardContent>
-          </Card>
+              </Can>
 
-          {/* Tarjeta de Historial y Auditoría */}
-          <Card className="border shadow-xs">
-            <CardHeader className="py-2.5 px-4 border-b border-border bg-muted">
-              <CardTitle className="text-nota font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <History className="h-3.5 w-3.5 text-primary" />
-                <span>Trazabilidad y Cronograma</span>
-              </CardTitle>
-            </CardHeader>
+              <Can permiso="entregas.revisar">
+                {(estadoEntrega === 'remitida' || estadoEntrega === 'en_revision') && (
+                  <Button
+                    onClick={() => setModalRevisar(true)}
+                    className="w-full h-10 bg-secondary hover:bg-secondary-hover text-white font-semibold text-xs gap-2 shadow-xs cursor-pointer"
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                    <span>Revisar Entrega</span>
+                  </Button>
+                )}
+              </Can>
 
-            <CardContent className="p-4 space-y-2.5 text-xs">
-              <div className="flex justify-between items-center text-muted-foreground">
-                <span>Fecha de corte:</span>
-                <span className="font-mono font-semibold text-foreground">31/10/2026</span>
-              </div>
+              <Can permiso="actas.generar">
+                {estadoEntrega === 'consolidada' && (
+                  <Link
+                    to="/acta"
+                    className={buttonVariants({
+                      className:
+                        'w-full h-10 bg-primary hover:bg-primary-hover text-white font-semibold text-xs gap-2 shadow-xs',
+                    })}
+                  >
+                    <FileCheck2 className="h-4 w-4" />
+                    <span>Generar Acta de Transferencia</span>
+                  </Link>
+                )}
+              </Can>
 
-              <div className="flex justify-between items-center text-muted-foreground">
-                <span>Fecha de remisión:</span>
-                <span className="font-mono text-foreground">
-                  {entrega?.remitida_en
-                    ? new Date(entrega.remitida_en).toLocaleString('es-PE', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })
-                    : 'Aún no remitida'}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center text-muted-foreground">
-                <span>Última revisión:</span>
-                <span className="font-mono text-foreground">
-                  {entrega?.revisada_en
-                    ? new Date(entrega.revisada_en).toLocaleString('es-PE', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })
-                    : 'Pendiente'}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center text-muted-foreground">
-                <span>Destino jerárquico:</span>
-                <span className="font-semibold text-foreground">
-                  {haciaEtts ? 'ETTS Institucional' : `Despacho Superior (ID ${dependencia.parent_id})`}
-                </span>
-              </div>
-
-              {entrega?.comentario && (
-                <div className="mt-2 rounded-lg bg-muted p-2.5 text-nota border border-border">
-                  <span className="font-semibold text-foreground block mb-0.5">
-                    Nota de Remisión:
-                  </span>
-                  <span className="text-muted-foreground">{entrega.comentario}</span>
-                </div>
+              {!esEditable && estadoEntrega !== 'consolidada' && (
+                <Button
+                  disabled
+                  variant="outline"
+                  className="w-full h-10 text-xs text-muted-foreground gap-2 cursor-not-allowed"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  <span>Edición bloqueada por trámite</span>
+                </Button>
               )}
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ========================================================
+          SECUNDARIO: Trazabilidad + Documentos SGD (dos columnas)
+          ======================================================== */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Trazabilidad y Cronograma */}
+        <Card className="border shadow-xs">
+          <CardHeader className="py-2.5 px-4 border-b border-border bg-muted">
+            <CardTitle className="text-nota font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <History className="h-3.5 w-3.5 text-primary" />
+              <span>Trazabilidad y Cronograma</span>
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="p-4 space-y-2.5 text-xs">
+            <div className="flex justify-between items-center text-muted-foreground">
+              <span>Fecha de corte:</span>
+              <span className="font-mono font-semibold text-foreground">31/10/2026</span>
+            </div>
+
+            <div className="flex justify-between items-center text-muted-foreground">
+              <span>Fecha de remisión:</span>
+              <span className="font-mono text-foreground">
+                {entrega?.remitida_en
+                  ? new Date(entrega.remitida_en).toLocaleString('es-PE', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : 'Aún no remitida'}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center text-muted-foreground">
+              <span>Última revisión:</span>
+              <span className="font-mono text-foreground">
+                {entrega?.revisada_en
+                  ? new Date(entrega.revisada_en).toLocaleString('es-PE', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : 'Pendiente'}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center text-muted-foreground">
+              <span>Destino jerárquico:</span>
+              <span className="font-semibold text-foreground">
+                {haciaEtts ? 'ETTS Institucional' : `Despacho Superior (ID ${dependencia.parent_id})`}
+              </span>
+            </div>
+
+            {entrega?.comentario && (
+              <div className="mt-2 rounded-lg bg-muted p-2.5 text-nota border border-border">
+                <span className="font-semibold text-foreground block mb-0.5">
+                  Nota de Remisión:
+                </span>
+                <span className="text-muted-foreground">{entrega.comentario}</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Documentos SGD · Reporte de Asuntos Pendientes */}
+        <Card className="border shadow-xs overflow-hidden">
+          <CardHeader className="py-2.5 px-4 border-b border-border bg-muted">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
+                <span>Documentos SGD · Asuntos Pendientes</span>
+              </CardTitle>
+              <span className="inline-block px-2 py-0.5 rounded text-mini font-mono font-semibold border bg-info-soft text-info-fg border-info-border">
+                Fuente: SGD
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="space-y-1">
+              <p className="font-semibold text-foreground">
+                {resumenDocs?.total_pendientes ?? 0} expedientes o documentos pendientes precargados
+              </p>
+              <p className="text-nota text-muted-foreground">
+                Información precargada del SGD para verificar trámites no concluidos antes de remitir la entrega.
+              </p>
+            </div>
+            <Link
+              to="/documentos"
+              className={buttonVariants({
+                variant: 'outline',
+                size: 'sm',
+                className:
+                  'h-7 text-xs px-2.5 font-medium border-primary/30 text-primary hover:bg-primary/10 gap-1 shrink-0 cursor-pointer',
+              })}
+            >
+              <span>Ver Asuntos Pendientes</span>
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Modales de workflow */}
