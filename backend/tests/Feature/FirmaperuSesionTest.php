@@ -119,6 +119,22 @@ class FirmaperuSesionTest extends TestCase
         $this->assertDatabaseCount('firma_sesiones', 1);
     }
 
+    public function test_selector_de_certificados_filtra_por_dni_del_iniciador(): void
+    {
+        $dep = $this->iniciarUsuario();
+        $preparacion = $this->preparar($dep);
+        $sesion = FirmaSesion::findOrFail($preparacion['sesion_id']);
+        User::findOrFail($sesion->usuario_id)->update(['dni' => '87654321']);
+
+        $parametros = $this->emitir($preparacion);
+        $filtro = '~'.$parametros['certificateFilter'].'~';
+
+        $this->assertSame(1, preg_match($filtro, 'ADRIAN FIR 12345678'));
+        $this->assertSame(0, preg_match($filtro, 'GIAN FIR 87654321'));
+        $this->assertSame(0, preg_match($filtro, 'OTRO FIR 912345678'));
+        $this->assertSame(0, preg_match($filtro, 'OTRO FIR 123456789'));
+    }
+
     public function test_token_expirado_no_entrega_documento_ni_recibe_archivo(): void
     {
         $dep = $this->iniciarUsuario();

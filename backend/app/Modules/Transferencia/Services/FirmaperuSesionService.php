@@ -95,7 +95,8 @@ class FirmaperuSesionService
             $parametros = [
                 'signatureFormat' => 'PAdES', 'signatureLevel' => 'B', 'signaturePackaging' => 'enveloped',
                 'documentToSign' => $this->url('documento/'.$descarga),
-                'certificateFilter' => '.*', 'webTsa' => '', 'userTsa' => '', 'passwordTsa' => '',
+                'certificateFilter' => '.*(?<![0-9])'.$sesion->firmante_dni.'(?![0-9]).*',
+                'webTsa' => '', 'userTsa' => '', 'passwordTsa' => '',
                 'theme' => 'claro', 'visiblePosition' => true, 'contactInfo' => $sesion->id,
                 'signatureReason' => 'Suscripción del '.strtoupper($sesion->tipo_documento),
                 'bachtOperation' => false, 'oneByOne' => true, 'signatureStyle' => 4,

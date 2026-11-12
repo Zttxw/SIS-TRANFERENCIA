@@ -127,6 +127,37 @@ para ejecutar el proyecto allí también hay que preparar el entorno y la base d
 5. Comprobar la firma con un lector/validador institucional. Para una segunda
    firma, otro interviniente inicia sesión con su propia cuenta y pulsa «Agregar firma».
 
+## Certificado vinculado a la cuenta
+
+Al preparar una firma, el servidor conserva el DNI de la cuenta autenticada en
+`FirmaSesion.firmante_dni`. El parámetro `certificateFilter` utiliza ese DNI para
+filtrar el campo CN del certificado en el cliente oficial. La expresión exige
+que el DNI coincida como una secuencia de ocho dígitos completa. El filtro conserva
+la identidad capturada al iniciar la sesión de firma.
+
+Al recibir el PDF, el servidor comprueba la firma CMS, la cadena de confianza y
+la coincidencia del DNI del certificado con el de la sesión. Para ejecutar esa
+comprobación se debe configurar `FIRMAPERU_CA_BUNDLE` con las autoridades de
+confianza institucionales. Si esa configuración está pendiente, el PDF queda en
+`pendiente_validacion`. La prueba con un certificado institucional real debe
+confirmar que su CN incluye el DNI esperado.
+
+El parámetro y el filtro por DNI se describen en la
+[guía oficial de integración](https://resources.firmaperu.gob.pe/documentos/firmador-componente-web.pdf).
+
+## Apertura del cliente después de reiniciar Windows
+
+El servicio local se debe iniciar nuevamente después de reiniciar el equipo.
+El usuario puede abrir el cliente instalado desde Windows o pulsar «Iniciar
+cliente con Edge» y regresar a Chrome cuando el sistema confirme que responde
+en el puerto 48596. El iniciador puede comprobar actualizaciones al abrirse.
+
+Para automatizar su apertura al iniciar sesión, soporte puede colocar un acceso
+directo al iniciador del cliente en la carpeta que abre `Win + R` → `shell:startup`.
+El acceso directo debe abrir el servicio local utilizado por esta integración.
+El procedimiento de inicio automático se describe en la
+[documentación de Microsoft](https://support.microsoft.com/es-es/windows/experience/startup-boot/configure-startup-applications-in-windows).
+
 ## Límites actuales
 
 Se conservan y verifican las revisiones incrementales CMS de los perfiles
@@ -203,6 +234,11 @@ vigencia, limpieza de callbacks y exclusión de operaciones simultáneas.
 
 ## Resultado de esta implementación
 
+- Filtro de certificados por DNI de la cuenta aplicado. Las pruebas de sesiones
+  y del validador aprobaron 25 casos y 118 aserciones, incluyendo selección del
+  DNI esperado, exclusión de otro DNI y rechazo de certificados de otro titular.
+  La selección en el cliente oficial con un certificado institucional real queda
+  pendiente de comprobación.
 - Pruebas del conector aprobadas; la última comprobación de sesiones incluye
   16 pruebas y 101 aserciones, con recepción pendiente, verificación posterior y rechazo.
 - Cliente: 7 pruebas aprobadas con Node 24.
