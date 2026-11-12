@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { firmaperuService } from './firmaperu.service'
 import { firmarConCliente } from './firmaperu-runtime'
+import { comprobarServicioFirma } from './equipo-firmaperu'
+import { PrepararEquipoFirma } from './PrepararEquipoFirma'
 import type { TipoDocumentoFirma } from './firmaperu.types'
 
 interface PropsFirma { tipoDocumento: TipoDocumentoFirma; dependenciaId: number | null }
@@ -24,6 +26,7 @@ function ControlFirma({ tipoDocumento, dependenciaId }: PropsFirma) {
   const cliente = useQueryClient()
   const [mensaje, setMensaje] = useState<string | null>(null)
   const [descargando, setDescargando] = useState(false)
+  const [equipo, setEquipo] = useState<{ previoId?: string } | null>(null)
   const operacion = useRef<AbortController | null>(null)
   const clave = ['firmaperu', tipoDocumento, dependenciaId]
   const { data: estado } = useQuery({
@@ -44,6 +47,12 @@ function ControlFirma({ tipoDocumento, dependenciaId }: PropsFirma) {
     const scope = new AbortController()
     operacion.current = scope
     try {
+      setMensaje('Comprobando Firma Perú en este equipo…')
+      if (!await comprobarServicioFirma(scope.signal)) {
+        if (!scope.signal.aborted) setEquipo({ previoId })
+        return
+      }
+      setMensaje(null)
       const aceptar = await confirmar({
         title: previoId ? 'Agregar firma al PDF conservado' : 'Firmar el PDF guardado',
         description: previoId
@@ -91,10 +100,13 @@ function ControlFirma({ tipoDocumento, dependenciaId }: PropsFirma) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       {puedeFirmar && (
-        <Button size="sm" variant="outline" onClick={() => void firmar()} disabled={Boolean(mensaje)} className="gap-2">
-          {mensaje ? <Loader2 className="h-4 w-4 animate-spin" /> : <PenLine className="h-4 w-4" />}
-          {mensaje ? 'Firmando…' : 'Firmar con Firma Perú'}
-        </Button>
+        <>
+          <Button size="sm" variant="outline" onClick={() => void firmar()} disabled={Boolean(mensaje)} className="gap-2">
+            {mensaje ? <Loader2 className="h-4 w-4 animate-spin" /> : <PenLine className="h-4 w-4" />}
+            {mensaje ? 'Firmando…' : 'Firmar con Firma Perú'}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setEquipo({})} disabled={Boolean(mensaje)}>Opciones de firma</Button>
+        </>
       )}
       {estado?.firmado && (
         <>
@@ -112,6 +124,11 @@ function ControlFirma({ tipoDocumento, dependenciaId }: PropsFirma) {
           <Download className="h-4 w-4" /> PDF recibido · sin verificar
         </Button>
       )}
+      {equipo && <PrepararEquipoFirma onCerrar={() => setEquipo(null)} onContinuar={() => {
+        const previoId = equipo.previoId
+        setEquipo(null)
+        void firmar(previoId)
+      }} />}
     </div>
   )
 }
