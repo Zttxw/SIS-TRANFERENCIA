@@ -41,6 +41,11 @@ export interface FilaPendiente extends FilaBase {
 }
 
 export interface InformeGestion {
+  cabecera?: {
+    cargo: string | null
+    nivel_organizacional: NivelOrganizacional | null
+    responsable: { id: number; nombres: string; apellidos: string; cargo?: string } | null
+  }
   id: number
   proceso_transferencia_id: number
   dependencia_id: number
@@ -76,6 +81,7 @@ export interface InformeGestion {
 }
 
 export interface GuardarInformeGestionPayload {
+  periodo_gestion?: string | null
   dependencia_id: number
   servidor_responsable_id?: number | null
   nivel_organizacional?: NivelOrganizacional | null

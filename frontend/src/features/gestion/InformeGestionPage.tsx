@@ -42,7 +42,7 @@ export function InformeGestionPage() {
     !estadoEntrega || estadoEntrega === 'borrador' || estadoEntrega === 'observada'
 
   // Estado de cabecera (Sección I) y de las cuatro tablas de filas.
-  const [nivel, setNivel] = useState<NivelOrganizacional | ''>('')
+  const nivel = informe?.cabecera?.nivel_organizacional ?? informe?.nivel_organizacional ?? ''
   const [cargoPeriodo, setCargoPeriodo] = useState('')
   const [funciones, setFunciones] = useState<FilaFuncion[]>([])
   const [logros, setLogros] = useState<FilaLogro[]>([])
@@ -52,8 +52,9 @@ export function InformeGestionPage() {
 
   // Sincronizar los datos cargados con el estado del formulario.
   useEffect(() => {
-    setNivel((informe?.nivel_organizacional as NivelOrganizacional) ?? '')
-    setCargoPeriodo(informe?.cargo_periodo ?? '')
+    const cargo = informe?.cabecera?.cargo ?? ''
+    const guardado = informe?.cargo_periodo ?? ''
+    setCargoPeriodo(guardado === cargo ? '' : guardado.startsWith(`${cargo} · `) ? guardado.slice(cargo.length + 3) : guardado)
     setFunciones(informe?.funciones ?? [])
     setLogros(informe?.logros_items ?? [])
     setDificultades(informe?.dificultades_items ?? [])
@@ -100,8 +101,7 @@ export function InformeGestionPage() {
 
     guardarMut.mutate({
       dependencia_id: dependenciaId,
-      nivel_organizacional: nivel || null,
-      cargo_periodo: cargoPeriodo.trim() || null,
+      periodo_gestion: cargoPeriodo.trim() || null,
       funciones,
       logros_items: logros,
       dificultades_items: dificultadesLimpias,
@@ -165,7 +165,11 @@ export function InformeGestionPage() {
       ) : (
         <>
           {/* Sección I — Identificación del centro de costo */}
-          <Card className="bg-muted/15">
+          <Card className="overflow-hidden border-primary/20 shadow-sm">
+            <div className="border-b border-primary/15 bg-primary/5 px-5 py-4">
+              <h2 className="flex items-center gap-2 font-semibold text-primary"><Building2 className="h-5 w-5" /> Identificación del responsable</h2>
+              <p className="mt-1 text-sm text-muted-foreground">La oficina, el responsable y su cargo se obtienen del padrón institucional. Complete el periodo y luego describa su gestión en las cuatro secciones.</p>
+            </div>
             <CardContent className="space-y-4 p-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="space-y-1">
@@ -182,9 +186,9 @@ export function InformeGestionPage() {
                   <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
                     <User className="h-4 w-4 shrink-0 text-primary" />
                     <span className="truncate">
-                      {informe?.responsable
-                        ? `${informe.responsable.nombres} ${informe.responsable.apellidos}`
-                        : 'Titular / Encargado de área'}
+                      {(informe?.cabecera?.responsable ?? informe?.responsable)
+                        ? `${(informe?.cabecera?.responsable ?? informe?.responsable)?.nombres} ${(informe?.cabecera?.responsable ?? informe?.responsable)?.apellidos}`
+                        : 'Sin responsable vinculado: solicite actualizar el padrón'}
                     </span>
                   </div>
                 </div>
@@ -211,42 +215,46 @@ export function InformeGestionPage() {
                 </div>
               </div>
 
+              <div className="rounded-lg border border-primary/15 bg-primary/5 p-3">
+                <span className="text-xs text-muted-foreground">Cargo / puesto del responsable · automático</span>
+                <p className="mt-1 text-sm font-semibold">{informe?.cabecera?.cargo || informe?.responsable?.cargo || 'Cargo pendiente en el padrón institucional'}</p>
+              </div>
               <div className="grid grid-cols-1 gap-4 border-t pt-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Nivel organizacional</Label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {NIVELES.map((n) => (
-                      <button
-                        key={n.valor}
-                        type="button"
-                        disabled={!esModificable}
-                        onClick={() => setNivel(nivel === n.valor ? '' : n.valor)}
-                        className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
-                          nivel === n.valor
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-input text-muted-foreground hover:bg-muted'
-                        }`}
-                      >
-                        {n.etiqueta}
-                      </button>
-                    ))}
+                  <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm font-medium">
+                    {NIVELES.find((n) => n.valor === nivel)?.etiqueta ?? 'Nivel pendiente en el padrón'}
                   </div>
+                  <p className="text-xs text-muted-foreground">Asignado según la estructura organizacional.</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="cargo_periodo" className="text-xs">
-                    Cargo / puesto y periodo de gestión
+                    Periodo de gestión
                   </Label>
                   <Input
                     id="cargo_periodo"
                     value={cargoPeriodo}
                     disabled={!esModificable}
-                    placeholder="Ej. Jefe de la Unidad de Logística · 2023–2026"
+                    placeholder="Ej. enero de 2025 a diciembre de 2026"
                     onChange={(e) => setCargoPeriodo(e.target.value)}
                   />
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          <div className="grid gap-3 sm:grid-cols-3" aria-label="Pasos para completar el informe">
+            {[
+              ['1', 'Complete su gestión', 'Agregue funciones y logros; registre dificultades y pendientes si corresponde.'],
+              ['2', 'Guarde y revise el PDF', 'Guarde el borrador y abra Previsualización para revisar el anexo con sus datos.'],
+              ['3', 'Complete y firme', 'Marque el informe como completado y utilice el botón Firma Perú.'],
+            ].map(([paso, titulo, detalle]) => (
+              <div key={paso} className="flex gap-3 rounded-xl border bg-card p-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">{paso}</span>
+                <div><h3 className="text-sm font-semibold">{titulo}</h3><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{detalle}</p></div>
+              </div>
+            ))}
+          </div>
 
           {/* Sección I — Funciones principales */}
           <SeccionFilas<FilaFuncion>
@@ -340,7 +348,7 @@ export function InformeGestionPage() {
 
           {/* Barra de acciones inferior */}
           <Can permiso="anexos.registrar">
-            <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border bg-card p-4 shadow-sm">
+            <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-primary/20 bg-card p-4 shadow-lg">
               <IndicadorFaltantes
                 faltantes={faltantes}
                 textoCompleto="Listo para guardar o marcar completado."

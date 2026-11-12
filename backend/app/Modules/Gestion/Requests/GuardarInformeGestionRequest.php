@@ -19,6 +19,7 @@ class GuardarInformeGestionRequest extends AnexoFormRequest
             'servidor_responsable_id' => ['nullable', 'integer', 'exists:servidores,id'],
             'nivel_organizacional' => ['nullable', 'string', 'in:primer_nivel,segundo_nivel,tercer_nivel,equipo_trabajo'],
             'cargo_periodo' => ['nullable', 'string', 'max:255'],
+            'periodo_gestion' => ['nullable', 'string', 'max:100'],
 
             // Sección I — Funciones principales (al menos una fila).
             'funciones' => ['required', 'array', 'min:1'],

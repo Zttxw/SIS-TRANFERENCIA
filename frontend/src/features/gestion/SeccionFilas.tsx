@@ -65,11 +65,11 @@ export function SeccionFilas<T extends FilaEditable>({
   }))
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="overflow-hidden border-primary/15">
+      <CardHeader className="border-b bg-muted/25 pb-4">
         <div className="flex items-center gap-2">
           <div
-            className={`flex h-7 w-7 items-center justify-center rounded font-bold text-xs ${colorNumero}`}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-bold text-base ${colorNumero}`}
           >
             {numero}
           </div>
@@ -85,7 +85,7 @@ export function SeccionFilas<T extends FilaEditable>({
         </div>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="pt-5">
         <EditableTable
           columnas={columnasEditables}
           filas={filas}
