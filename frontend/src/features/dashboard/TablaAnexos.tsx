@@ -52,26 +52,16 @@ function clasesEstado(estado: string): string {
   return 'border-border bg-muted text-muted-foreground'
 }
 
-// Fuentes: color sobrio y consistente, sin competir con la tabla.
-function clasesFuente(fuente: string): string {
-  const f = fuente.toLowerCase()
-  if (f.includes('siga')) return 'bg-success-soft text-success-fg border-success-border'
-  if (f.includes('sgd') || f.includes('rof')) return 'bg-info-soft text-info-fg border-info-border'
-  if (f.includes('sistema') || f.includes('consolidado')) return 'bg-primary/10 text-primary border-primary/25'
-  return 'bg-muted text-muted-foreground border-border'
-}
-
 export function TablaAnexos({ filas, dependenciaId, entregaConsolidada }: Props) {
   const [expandida, setExpandida] = useState<string | null>(null)
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
       {/* Cabecera de la tabla (solo escritorio) */}
-      <div className="hidden grid-cols-[2.5rem_minmax(0,1fr)_7.5rem_6rem_minmax(0,1fr)_7rem] items-center gap-3 border-b border-border bg-muted/40 px-4 py-2.5 text-mini font-semibold uppercase tracking-wider text-muted-foreground sm:grid">
+      <div className="hidden grid-cols-[2.5rem_minmax(0,1fr)_7.5rem_minmax(0,1fr)_7rem] items-center gap-3 border-b border-border bg-muted/40 px-4 py-2.5 text-mini font-semibold uppercase tracking-wider text-muted-foreground sm:grid">
         <span className="text-center">N.º</span>
         <span>Anexo</span>
         <span>Estado</span>
-        <span>Fuente</span>
         <span>Información</span>
         <span className="text-right">Acciones</span>
       </div>
@@ -88,7 +78,7 @@ export function TablaAnexos({ filas, dependenciaId, entregaConsolidada }: Props)
               <div
                 className={cn(
                   'grid items-center gap-3 px-4 py-3',
-                  'grid-cols-[2.5rem_1fr] sm:grid-cols-[2.5rem_minmax(0,1fr)_7.5rem_6rem_minmax(0,1fr)_7rem]',
+                  'grid-cols-[2.5rem_1fr] sm:grid-cols-[2.5rem_minmax(0,1fr)_7.5rem_minmax(0,1fr)_7rem]',
                   puedeExpandir && 'cursor-pointer',
                 )}
                 onClick={puedeExpandir ? () => setExpandida(abierta ? null : anexo.id) : undefined}
@@ -118,13 +108,6 @@ export function TablaAnexos({ filas, dependenciaId, entregaConsolidada }: Props)
                 <div className="hidden sm:block">
                   <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-mini font-semibold', clasesEstado(anexo.estado))}>
                     {anexo.estado}
-                  </span>
-                </div>
-
-                {/* Fuente */}
-                <div className="hidden sm:block">
-                  <span className={cn('inline-block rounded border px-2 py-0.5 font-mono text-mini font-semibold', clasesFuente(anexo.fuente))}>
-                    {anexo.fuente}
                   </span>
                 </div>
 
@@ -171,9 +154,6 @@ export function TablaAnexos({ filas, dependenciaId, entregaConsolidada }: Props)
                 <div className="col-start-2 flex flex-wrap items-center gap-1.5 sm:hidden">
                   <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-mini font-semibold', clasesEstado(anexo.estado))}>
                     {anexo.estado}
-                  </span>
-                  <span className={cn('inline-block rounded border px-1.5 py-0.5 font-mono text-mini font-semibold', clasesFuente(anexo.fuente))}>
-                    {anexo.fuente}
                   </span>
                 </div>
               </div>
