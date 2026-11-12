@@ -14,6 +14,7 @@ import axios, { AxiosError, type AxiosInstance } from 'axios'
 import { ApiError, type ApiErrorBody } from '@/types/api'
 
 import { limpiarToken, obtenerToken } from './token'
+import { perteneceASesionActual } from '@/auth/sesion-runtime'
 
 const baseURL = import.meta.env.VITE_API_URL ?? '/api'
 
@@ -24,7 +25,7 @@ export const api: AxiosInstance = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = obtenerToken()
-  if (token) {
+  if (token && !config.headers.has('Authorization')) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
@@ -60,7 +61,7 @@ api.interceptors.response.use(
     const message =
       data?.message ?? error.message ?? 'Ocurrió un error inesperado.'
 
-    if (status === 401) {
+    if (status === 401 && perteneceASesionActual(error.config?.headers.get('Authorization'), obtenerToken())) {
       limpiarToken()
       alCaducarSesion?.()
     }

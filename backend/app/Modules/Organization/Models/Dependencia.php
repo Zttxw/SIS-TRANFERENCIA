@@ -119,12 +119,16 @@ class Dependencia extends BaseModel
     {
         $ids = [$this->id];
         $frontera = [$this->id];
+        $hijasPorPadre = self::query()->where('proceso_transferencia_id', $this->proceso_transferencia_id)
+            ->get(['id', 'parent_id'])->groupBy('parent_id');
 
         while ($frontera !== []) {
-            $hijas = self::query()
-                ->whereIn('parent_id', $frontera)
-                ->pluck('id')
-                ->all();
+            $hijas = [];
+            foreach ($frontera as $padreId) {
+                foreach ($hijasPorPadre->get($padreId, collect()) as $hija) {
+                    $hijas[] = $hija->id;
+                }
+            }
 
             $hijas = array_values(array_diff($hijas, $ids));
 

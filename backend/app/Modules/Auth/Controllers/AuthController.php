@@ -63,6 +63,7 @@ class AuthController extends Controller
     {
         $usuario->load([
             'asignacionesRol:id,user_id,dependencia_id,rol',
+            'asignacionesRol.dependencia:id,parent_id,proceso_transferencia_id',
             'servidor:id,dependencia_id,dni,nombres,apellidos,cargo,es_responsable',
             'servidor.dependencia:id,codigo,nombre,nivel',
         ]);

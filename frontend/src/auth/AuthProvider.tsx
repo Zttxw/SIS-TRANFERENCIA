@@ -7,6 +7,7 @@ import { derivarPermisos, type Permiso } from '@/auth/permisos'
 import { registrarManejadorSesionCaducada } from '@/lib/api'
 import { guardarToken, limpiarToken, obtenerToken } from '@/lib/token'
 import type { LoginPayload, Usuario } from '@/types/auth'
+import { cerrarSesionSinEspera } from './sesion-runtime'
 
 /**
  * Proveedor de sesión (plan E2). Al montar:
@@ -23,10 +24,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Evita re-entrar en la limpieza de sesión si llegan varios 401 seguidos.
   const limpiando = useRef(false)
+  const consultaPerfil = useRef<AbortController | null>(null)
+  const revisionSesion = useRef(0)
 
   const limpiarSesion = useCallback(() => {
     if (limpiando.current) return
     limpiando.current = true
+    revisionSesion.current++
+    consultaPerfil.current?.abort()
     limpiarToken()
     setUsuario(null)
     setEstado('anonimo')
@@ -44,12 +49,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Carga inicial del perfil si hay token persistido.
   useEffect(() => {
-    if (!obtenerToken()) return
-    let cancelado = false
+    const token = obtenerToken()
+    if (!token) return
+    const controlador = new AbortController()
+    consultaPerfil.current = controlador
     authService
-      .me()
+      .me(controlador.signal)
       .then((perfil) => {
-        if (!cancelado) {
+        if (!controlador.signal.aborted && obtenerToken() === token) {
           setUsuario(perfil)
           setEstado('autenticado')
         }
@@ -57,28 +64,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {
         // Token inválido/caducado: el interceptor 401 ya limpia; por si fue
         // otro error, aseguramos el estado anónimo.
-        if (!cancelado) limpiarSesion()
+        if (!controlador.signal.aborted && obtenerToken() === token) limpiarSesion()
       })
     return () => {
-      cancelado = true
+      controlador.abort()
     }
   }, [limpiarSesion])
 
   const iniciarSesion = useCallback(async (payload: LoginPayload) => {
+    consultaPerfil.current?.abort()
+    const revision = revisionSesion.current
     const { token, usuario: perfil } = await authService.login(payload)
+    if (revision !== revisionSesion.current) {
+      void authService.logout(token).catch(() => undefined)
+      return
+    }
+    queryClient.clear()
     guardarToken(token)
     setUsuario(perfil)
     setEstado('autenticado')
-  }, [])
+  }, [queryClient])
 
   const cerrarSesion = useCallback(async () => {
-    try {
-      await authService.logout()
-    } catch {
-      // Aunque falle la revocación remota, limpiamos la sesión local.
-    } finally {
-      limpiarSesion()
-    }
+    await cerrarSesionSinEspera(() => authService.logout(), limpiarSesion)
   }, [limpiarSesion])
 
   const permisos = useMemo<Set<Permiso>>(

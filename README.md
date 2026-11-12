@@ -1,3 +1,19 @@
+## Rendimiento local de SIS-TRANSFERENCIA
+
+Con el entorno y las rutas ya configurados, se pueden generar las cachés de Laravel
+para reducir el arranque de las peticiones en Docker sobre Windows:
+
+```sh
+docker compose exec -T backend php artisan config:cache
+docker compose exec -T backend php artisan route:cache
+```
+
+Antes de cambiar `.env`, configuración o rutas, y antes de ejecutar pruebas, limpiar
+las cachés con `docker compose exec -T backend php artisan optimize:clear`. Después
+se pueden regenerar. Estos archivos son locales, están excluidos de Git y no se
+transfieren al clonar. La primera petición puede seguir siendo más lenta que las
+siguientes; la caché no sustituye medir la navegación real en el equipo del usuario.
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">

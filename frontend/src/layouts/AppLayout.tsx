@@ -1,6 +1,6 @@
-import { ChevronDown, ChevronRight, FolderTree, LogOut, Menu, Users, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, FolderTree, LogOut, Menu, X } from 'lucide-react'
 import { useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigation } from 'react-router-dom'
 
 import { useAuth } from '@/auth/hooks'
 import { Button } from '@/components/ui/button'
@@ -9,34 +9,10 @@ import { cn } from '@/lib/utils'
 
 import { ITEMS_NAV } from './navegacion'
 
-function getInfoEstructura(
-  usuario: ReturnType<typeof useAuth>['usuario'],
-  esSubmenu = false,
-) {
-  if (usuario?.es_global) {
-    return {
-      etiqueta: esSubmenu ? 'Anexo 01 · Organigrama' : 'Estructura Orgánica',
-      icono: FolderTree,
-    }
-  }
-
-  const nombreDep = usuario?.servidor?.dependencia?.nombre || ''
-  let sufijo = 'Personal del Despacho'
-  if (/TECNOLOG[IÍ]AS DE LA INFORMACI[OÓ]N/i.test(nombreDep)) {
-    sufijo = 'Trabajadores de OTI'
-  } else if (/ABASTECIMIENTO/i.test(nombreDep)) {
-    sufijo = 'Trabajadores de Abastecimiento'
-  } else if (/CONTABILIDAD/i.test(nombreDep)) {
-    sufijo = 'Trabajadores de Contabilidad'
-  } else if (/TESORER[IÍ]A/i.test(nombreDep)) {
-    sufijo = 'Trabajadores de Tesorería'
-  } else if (/RECURSOS HUMANOS/i.test(nombreDep)) {
-    sufijo = 'Trabajadores de RRHH'
-  }
-
+function getInfoEstructura(esSubmenu = false) {
   return {
-    etiqueta: esSubmenu ? `Anexo 01 · ${sufijo}` : sufijo,
-    icono: Users,
+    etiqueta: esSubmenu ? 'Anexo 01 · Centros de costo' : 'Estructura Orgánica',
+    icono: FolderTree,
   }
 }
 
@@ -47,6 +23,7 @@ function getInfoEstructura(
 export function AppLayout() {
   const { usuario, permisos, cerrarSesion } = useAuth()
   const location = useLocation()
+  const navigation = useNavigation()
   const [menuAbierto, setMenuAbierto] = useState(false)
 
   // Rutas de anexos para detectar estado activo (Anexos 01 al 07)
@@ -62,8 +39,8 @@ export function AppLayout() {
   const estaEnAnexo = rutasAnexos.some((r) => location.pathname.startsWith(r))
   const [anexosAbierto, setAnexosAbierto] = useState(true)
 
-  const infoEstructura = getInfoEstructura(usuario, false)
-  const infoEstructuraSubmenu = getInfoEstructura(usuario, true)
+  const infoEstructura = getInfoEstructura(false)
+  const infoEstructuraSubmenu = getInfoEstructura(true)
   const items = ITEMS_NAV.filter((item) => permisos.has(item.permiso))
 
   const nav = (
@@ -286,6 +263,7 @@ export function AppLayout() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-6">
+          {navigation.state !== 'idle' && <p role="status" className="mb-3 text-xs text-muted-foreground">Cargando módulo…</p>}
           <Outlet />
         </main>
       </div>
