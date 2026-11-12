@@ -51,7 +51,7 @@ class CronogramaService
         $datos['proceso_transferencia_id'] = $procesoId ?? $this->resolverProcesoActivoId();
         $datos['operacion'] = $datos['operacion'] ?? self::OPERACION_REMISION;
 
-        return CronogramaActividad::create($datos);
+        return CronogramaActividad::create($datos)->fresh();
     }
 
     /**

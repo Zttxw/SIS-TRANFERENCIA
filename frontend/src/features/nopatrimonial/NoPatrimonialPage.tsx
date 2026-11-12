@@ -13,7 +13,6 @@ import {
   useEliminarBienNoPatrimonial,
   useNoPatrimonial,
 } from './use-nopatrimonial'
-import { noPatrimonialService } from './nopatrimonial.service'
 import { NoPatrimonialModal } from './NoPatrimonialModal'
 import type { BienNoPatrimonial } from '@/types/nopatrimonial'
 

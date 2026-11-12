@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { useTableroOperativo } from './use-dashboard'
+import { DocumentosIndicadorModal } from '@/features/documentos/DocumentosIndicadorModal'
 
 interface TableroOperativoViewProps {
   onSeleccionarDependencia: (id: number) => void
@@ -36,6 +37,7 @@ export function TableroOperativoView({ onSeleccionarDependencia }: TableroOperat
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>('todos')
   const [filtroNivel, setFiltroNivel] = useState<number | 'todos'>('todos')
+  const [dependenciaDocumental, setDependenciaDocumental] = useState<number | null>(null)
 
   // Filtrado reactivo en tiempo real
   const dependenciasLista = tablero?.dependencias
@@ -115,6 +117,7 @@ export function TableroOperativoView({ onSeleccionarDependencia }: TableroOperat
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto">
+      {dependenciaDocumental !== null && <DocumentosIndicadorModal key={dependenciaDocumental} dependenciaId={dependenciaDocumental} onClose={() => setDependenciaDocumental(null)} />}
       {/* ========================================================
           BARRA DE CONTEXTO SUPERIOR Y PLAZOS INSTITUCIONALES
           ======================================================== */}
@@ -421,6 +424,7 @@ export function TableroOperativoView({ onSeleccionarDependencia }: TableroOperat
 
                           {/* Acciones */}
                           <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                            <Button size="sm" variant="ghost" onClick={() => setDependenciaDocumental(dep.id)}>Documentos</Button>
                             <Button
                               size="sm"
                               variant="outline"

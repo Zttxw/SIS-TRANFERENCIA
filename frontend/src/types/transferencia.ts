@@ -64,10 +64,7 @@ export interface EstadoEntregaResponse {
 export interface ResumenDocumentosResponse {
   dependencia_id: number
   total_pendientes: number
-  por_estado: Array<{
-    estado: string
-    total: number
-  }>
+  por_estado: Record<string, number>
 }
 
 export interface RemitirEntregaPayload {

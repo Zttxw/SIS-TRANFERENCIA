@@ -17,7 +17,6 @@ import {
   useCrearAcervo,
   useEliminarAcervo,
 } from './use-acervo'
-import { acervoService } from './acervo.service'
 import { AcervoModal } from './AcervoModal'
 import { AcervoPorAnio } from './AcervoPorAnio'
 import type { AcervoDocumental, TipoAcervo } from '@/types/acervo'

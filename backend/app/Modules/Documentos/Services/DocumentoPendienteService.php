@@ -35,7 +35,13 @@ class DocumentoPendienteService
         }
 
         if (! empty($filtros['estado_atencion'])) {
-            $query->where('estado_atencion', $filtros['estado_atencion']);
+            if ($filtros['estado_atencion'] === 'SIN ESTADO') {
+                $query->where(function ($query): void {
+                    $query->whereNull('estado_atencion')->orWhereIn('estado_atencion', ['', 'SIN ESTADO']);
+                });
+            } else {
+                $query->where('estado_atencion', $filtros['estado_atencion']);
+            }
         }
 
         if (! empty($filtros['search'])) {
@@ -160,8 +166,8 @@ class DocumentoPendienteService
     {
         $total = DocumentoPendiente::where('dependencia_id', $dependenciaId)->count();
         $porEstado = DocumentoPendiente::where('dependencia_id', $dependenciaId)
-            ->selectRaw('COALESCE(estado_atencion, \'SIN ESTADO\') as estado, count(*) as cantidad')
-            ->groupBy('estado_atencion')
+            ->selectRaw('COALESCE(NULLIF(estado_atencion, \'\'), \'SIN ESTADO\') as estado, count(*) as cantidad')
+            ->groupByRaw('COALESCE(NULLIF(estado_atencion, \'\'), \'SIN ESTADO\')')
             ->pluck('cantidad', 'estado')
             ->toArray();
 

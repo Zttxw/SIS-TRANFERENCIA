@@ -83,7 +83,7 @@ function ControlFirma({ tipoDocumento, dependenciaId, compacto = false }: PropsF
       if (!scope.signal.aborted) {
         await cliente.invalidateQueries({ queryKey: clave })
         await cliente.invalidateQueries({ queryKey: ['acta'] })
-        await cliente.invalidateQueries({ queryKey: ['transferencia', 'estado'] })
+        await cliente.invalidateQueries({ queryKey: ['transferencia-estado', dependenciaId] })
         if (resultado.estado === 'pendiente_validacion') {
           toast.info('PDF recibido. Su verificación institucional está pendiente.')
         } else if (resultado.vigente === false) {
@@ -117,7 +117,7 @@ function ControlFirma({ tipoDocumento, dependenciaId, compacto = false }: PropsF
   // Un solo botón sólido a la vez. Si aún no hay firma vigente y el usuario
   // puede firmar, la acción primaria es «Firmar»; si ya firmó vigente, pasa a
   // ser «Descargar». El resto se agrupa detrás del menú de acciones.
-  const primarioEsFirmar = puedeFirmar && estado?.vigente !== false && !estado?.firmado
+  const primarioEsFirmar = puedeFirmar && Boolean(estado) && (!estado?.firmado || estado.vigente === false)
   const puedeAgregar = puedeFirmar && Boolean(estado?.firmado) && estado?.vigente !== false
   // Ítems secundarios realmente disponibles (para no pintar un menú vacío).
   const hayMenu =

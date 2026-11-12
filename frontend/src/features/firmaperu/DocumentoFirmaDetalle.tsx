@@ -13,6 +13,7 @@ interface Props {
   /** El acta 07 solo se firma con la entrega consolidada. */
   bloqueado?: boolean
   notaBloqueo?: string
+  soloLectura?: boolean
 }
 
 /**
@@ -22,8 +23,8 @@ interface Props {
  * y firmar — reusando BotonGenerarPdf + BotonFirmaPeru. El estado de firma es
  * independiente del estado de llenado del anexo. Firmar no congela el anexo.
  */
-export function DocumentoFirmaDetalle({ tipoDocumento, dependenciaId, bloqueado = false, notaBloqueo }: Props) {
-  const { data: estado, isLoading } = useQuery<EstadoFirma>({
+export function DocumentoFirmaDetalle({ tipoDocumento, dependenciaId, bloqueado = false, notaBloqueo, soloLectura = false }: Props) {
+  const { data: estado, isLoading, isError, refetch } = useQuery<EstadoFirma>({
     queryKey: ['firmaperu', tipoDocumento, dependenciaId],
     queryFn: ({ signal }) => firmaperuService.estado(tipoDocumento, dependenciaId, signal),
     retry: false,
@@ -41,13 +42,15 @@ export function DocumentoFirmaDetalle({ tipoDocumento, dependenciaId, bloqueado 
           <span className="inline-flex items-center gap-1 text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin" /> Consultando…
           </span>
+        ) : isError ? (
+          <button type="button" className="text-danger-fg underline" onClick={() => void refetch()}>No se pudo consultar. Reintentar</button>
         ) : (
           <EstadoDocumento estado={estado} bloqueado={bloqueado} notaBloqueo={notaBloqueo} />
         )}
       </div>
 
       {/* Acciones secundarias */}
-      {!bloqueado && (
+      {!bloqueado && !soloLectura && !isError && (
         <div className="flex items-center gap-1.5">
           <PrevisualizarAnexo tipoDocumento={tipoDocumento} dependenciaId={dependenciaId} />
           <BotonGenerarPdf

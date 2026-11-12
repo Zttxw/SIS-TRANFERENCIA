@@ -63,9 +63,9 @@ export function DocumentosPage() {
     !estadoEntrega || estadoEntrega === 'borrador' || estadoEntrega === 'observada'
   const dependencia = estadoData?.dependencia
 
-  const handleGuardar = (payload: GuardarDocumentoPayload) => {
+  const handleGuardar = async (payload: GuardarDocumentoPayload) => {
     if (docAEditar) {
-      actualizarMut.mutate(
+      await actualizarMut.mutateAsync(
         { id: docAEditar.id, payload },
         {
           onSuccess: () => {
@@ -75,7 +75,7 @@ export function DocumentosPage() {
         },
       )
     } else {
-      crearMut.mutate(payload, {
+      await crearMut.mutateAsync(payload, {
         onSuccess: () => {
           setModalAbierto(false)
         },

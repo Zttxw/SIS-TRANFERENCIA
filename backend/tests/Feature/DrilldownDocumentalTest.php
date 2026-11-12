@@ -113,4 +113,22 @@ class DrilldownDocumentalTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.items.0.original_sgd', 'restringido');
     }
+
+    public function test_el_indicador_sin_estado_y_su_listado_incluyen_registros_antiguos(): void
+    {
+        foreach ([null, '', 'SIN ESTADO', 'PENDIENTE'] as $estado) {
+            DocumentoPendiente::create([
+                'proceso_transferencia_id' => $this->proceso->id,
+                'dependencia_id' => $this->depA->id,
+                'asunto' => 'Documento sin clasificación',
+                'estado_atencion' => $estado,
+                'fuente' => FuenteDato::SGD->value,
+            ]);
+        }
+        $this->actuarComo(Rol::COORDINADOR, $this->depA);
+        $this->getJson('/api/documentos-pendientes/resumen?dependencia_id='.$this->depA->id)
+            ->assertOk()->assertJsonPath('data.por_estado.SIN ESTADO', 3);
+        $this->getJson('/api/documentos-pendientes/drilldown?dependencia_id='.$this->depA->id.'&estado_atencion=SIN%20ESTADO')
+            ->assertOk()->assertJsonPath('data.total', 3)->assertJsonCount(3, 'data.items');
+    }
 }

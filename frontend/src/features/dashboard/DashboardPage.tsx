@@ -42,6 +42,7 @@ import { RevisarModal } from './RevisarModal'
 import { TablaAnexos } from './TablaAnexos'
 import { TableroOperativoView } from './TableroOperativoView'
 import { useEstadoEntrega, useResumenDocumentos } from './use-dashboard'
+import { DocumentosIndicadorModal } from '@/features/documentos/DocumentosIndicadorModal'
 
 function renderBadgeEstado(estado: EstadoEntrega | null) {
   switch (estado) {
@@ -99,6 +100,7 @@ export function DashboardPage() {
 
   const [modalRemitir, setModalRemitir] = useState(false)
   const [modalRevisar, setModalRevisar] = useState(false)
+  const [indicadorDocumental, setIndicadorDocumental] = useState<{ estado?: string } | null>(null)
 
   // Si no hay una dependencia concreta seleccionada (visión global de admin / ETTS)
   if (!dependenciaId) {
@@ -367,6 +369,7 @@ export function DashboardPage() {
 
       {/* ¿Qué sigue? — una sugerencia contextual, descartable */}
       <QueSigueCard
+        dependenciaId={dependencia.id}
         estadoEntrega={estadoEntrega}
         esEditable={esEditable}
         anexos={filasAnexos
@@ -377,7 +380,7 @@ export function DashboardPage() {
       {/* ========================================================
           TABLA DE ANEXOS — ancho completo
           ======================================================== */}
-      <div className="space-y-4">
+      <div id="anexos-entrega" className="scroll-mt-20 space-y-4">
         {/* Encabezado + resumen compacto de avance */}
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-sm font-bold tracking-tight text-foreground">
@@ -588,9 +591,16 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
             <div className="space-y-1">
-              <p className="font-semibold text-foreground">
+              <button type="button" onClick={() => setIndicadorDocumental({})} className="text-left font-semibold text-primary underline underline-offset-2">
                 {resumenDocs?.total_pendientes ?? 0} expedientes o documentos pendientes precargados
-              </p>
+              </button>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(resumenDocs?.por_estado ?? {}).map(([estado, total]) => (
+                  <button key={estado} type="button" onClick={() => setIndicadorDocumental({ estado })} className="text-xs text-primary underline underline-offset-2">
+                    {estado} · {total}
+                  </button>
+                ))}
+              </div>
               <p className="text-nota text-muted-foreground">
                 Información precargada del SGD para verificar trámites no concluidos antes de remitir la entrega.
               </p>
@@ -610,6 +620,9 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {indicadorDocumental && <DocumentosIndicadorModal key={`${dependencia.id}-${indicadorDocumental.estado ?? 'todos'}`}
+        dependenciaId={dependencia.id} estado={indicadorDocumental.estado} onClose={() => setIndicadorDocumental(null)} />}
 
       {/* Modales de workflow */}
       <RemitirModal

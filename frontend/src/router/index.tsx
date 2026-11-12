@@ -37,6 +37,8 @@ export const router = createBrowserRouter([
           { path: 'acta', lazy: () => import('@/features/acta/ActaPage').then(({ ActaPage }) => ({ Component: ActaPage })) },
           { path: 'reportes', lazy: () => import('@/features/reportes/ReportesPage').then(({ ReportesPage }) => ({ Component: ReportesPage })) },
           { path: 'usuarios', lazy: () => import('@/features/admin/AdminPage').then(({ AdminPage }) => ({ Component: AdminPage })) },
+          { path: 'cronograma', lazy: () => import('@/features/cronograma/CronogramaPage').then(({ CronogramaPage }) => ({ Component: CronogramaPage })) },
+          { path: 'delegados', lazy: () => import('@/features/delegados/DelegadosPage').then(({ DelegadosPage }) => ({ Component: DelegadosPage })) },
           { path: 'admin', element: <Navigate to="/usuarios" replace /> },
           { path: '*', element: <NotFoundPage /> },
         ],

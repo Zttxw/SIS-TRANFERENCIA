@@ -1,10 +1,14 @@
 import { useState } from 'react'
+import { useQueries } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Compass, X } from 'lucide-react'
 
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { EstadoEntrega } from '@/types/transferencia'
+import { firmaperuService } from '@/features/firmaperu/firmaperu.service'
+import type { TipoDocumentoFirma } from '@/features/firmaperu/firmaperu.types'
+import { useAuth } from '@/auth/hooks'
 
 /** Un anexo pendiente candidato a sugerencia (subconjunto de lo que ya calcula el dashboard). */
 export interface AnexoPendiente {
@@ -21,6 +25,7 @@ interface QueSigueCardProps {
   /** Ruta del acta (Anexo 07) cuando la entrega está consolidada. */
   rutaActa?: string
   className?: string
+  dependenciaId: number
 }
 
 interface Sugerencia {
@@ -42,10 +47,24 @@ export function QueSigueCard({
   anexos,
   rutaActa = '/acta',
   className,
+  dependenciaId,
 }: QueSigueCardProps) {
+  const { tiene } = useAuth()
+  const puedeFirmar = tiene('anexos.registrar') || tiene('actas.generar') || tiene('firmas.firmar')
   const [oculto, setOculto] = useState(false)
+  const tipos: TipoDocumentoFirma[] = ['anexo02', 'anexo03', 'anexo04', 'anexo05', 'anexo06']
+  if (estadoEntrega === 'consolidada') tipos.push('anexo07')
+  const firmas = useQueries({
+    queries: tipos.map((tipo) => ({
+      queryKey: ['firmaperu', tipo, dependenciaId],
+      queryFn: ({ signal }: { signal: AbortSignal }) => firmaperuService.estado(tipo, dependenciaId, signal),
+      staleTime: 15000,
+      retry: false,
+    })),
+  })
+  const hayFirmaPendiente = puedeFirmar && firmas.some(({ data }) => data?.borrador_generado && (!data.firmado || data.vigente === false))
 
-  const sugerencia = resolverSugerencia(estadoEntrega, esEditable, anexos, rutaActa)
+  const sugerencia = resolverSugerencia(estadoEntrega, esEditable, anexos, rutaActa, hayFirmaPendiente)
   if (!sugerencia || oculto) return null
 
   return (
@@ -63,6 +82,11 @@ export function QueSigueCard({
         <p className="mt-0.5 text-sm text-info-fg/90">{sugerencia.descripcion}</p>
         <Link
           to={sugerencia.ruta}
+          onClick={() => {
+            if (sugerencia.ruta === '/#anexos-entrega') {
+              document.getElementById('anexos-entrega')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }
+          }}
           className={buttonVariants({
             size: 'sm',
             className: 'mt-2.5 gap-1.5',
@@ -89,6 +113,7 @@ function resolverSugerencia(
   esEditable: boolean,
   anexos: AnexoPendiente[],
   rutaActa: string,
+  hayFirmaPendiente: boolean,
 ): Sugerencia | null {
   // Entrega devuelta con observaciones: lo urgente es subsanar.
   if (estado === 'observada') {
@@ -104,6 +129,15 @@ function resolverSugerencia(
   // Ya remitida / en revisión: no hay acción del emisor; no se sugiere nada.
   if (estado === 'remitida' || estado === 'en_revision' || estado === 'subsanada') {
     return null
+  }
+
+  if (hayFirmaPendiente) {
+    return {
+      titulo: 'Firme los documentos de la entrega',
+      descripcion: 'Tiene PDF generados pendientes de firma. Abra el detalle de cada documento en «Mi entrega».',
+      ruta: '/#anexos-entrega',
+      cta: 'Ir a los documentos',
+    }
   }
 
   // Consolidada: emitir el acta de cierre.

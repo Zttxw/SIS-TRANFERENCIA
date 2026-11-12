@@ -119,4 +119,16 @@ class CronogramaAdminTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data');
     }
+
+    public function test_administrador_consulta_el_cronograma_con_vencimiento_calculado(): void
+    {
+        $this->freezeTime();
+        $this->actuarComo(Rol::ADMINISTRADOR);
+        CronogramaActividad::factory()->create([
+            'proceso_transferencia_id' => $this->proceso->id,
+            'fecha_vencimiento' => now()->subDay()->toDateString(),
+            'estado' => 'en_curso',
+        ]);
+        $this->getJson('/api/cronograma')->assertOk()->assertJsonPath('data.0.vencida', true);
+    }
 }

@@ -1,6 +1,7 @@
 import {
   Archive,
   BarChart3,
+  CalendarDays,
   ClipboardList,
   FileCheck2,
   Files,
@@ -38,12 +39,6 @@ export const ITEMS_NAV: ItemNav[] = [
     etiqueta: 'Dashboard',
     ruta: '/',
     icono: LayoutDashboard,
-    permiso: PERMISOS.VerAnexos,
-  },
-  {
-    etiqueta: 'Estructura Orgánica',
-    ruta: '/organigrama',
-    icono: FolderTree,
     permiso: PERMISOS.VerAnexos,
   },
   {
@@ -124,5 +119,17 @@ export const ITEMS_NAV: ItemNav[] = [
     ruta: '/reportes',
     icono: BarChart3,
     permiso: PERMISOS.VerAnexos,
+  },
+  {
+    etiqueta: 'Cronograma',
+    ruta: '/cronograma',
+    icono: CalendarDays,
+    permiso: PERMISOS.GestionarCronograma,
+  },
+  {
+    etiqueta: 'Delegados ETTE',
+    ruta: '/delegados',
+    icono: UserCog,
+    permiso: PERMISOS.GestionarDelegados,
   },
 ]

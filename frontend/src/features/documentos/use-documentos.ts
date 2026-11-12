@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 
 import type { FiltrosDocumentos, GuardarDocumentoPayload } from '@/types/documentos'
 import { documentosService } from './documentos.service'
+import { notificarError } from '@/lib/api-errors'
 
 export function useDocumentos(filtros: FiltrosDocumentos = {}) {
   return useQuery({
@@ -30,16 +31,9 @@ export function useCrearDocumento() {
     onSuccess: (_, vars) => {
       toast.success('Documento pendiente registrado con éxito.')
       queryClient.invalidateQueries({ queryKey: ['documentos-pendientes'] })
+      queryClient.invalidateQueries({ queryKey: ['documentos-indicador'] })
       queryClient.invalidateQueries({ queryKey: ['documentos-pendientes-resumen', vars.dependencia_id] })
       queryClient.invalidateQueries({ queryKey: ['transferencia-estado', vars.dependencia_id] })
-    },
-    onError: (error: any) => {
-      if (error?.status === 409 || error?.response?.status === 409) {
-        toast.error('No se puede registrar: la entrega está bloqueada (remitida o consolidada).')
-        return
-      }
-      const msg = error?.response?.data?.message ?? 'Error al registrar el documento.'
-      toast.error(msg)
     },
   })
 }
@@ -53,16 +47,9 @@ export function useActualizarDocumento() {
     onSuccess: (_, vars) => {
       toast.success('Documento pendiente actualizado.')
       queryClient.invalidateQueries({ queryKey: ['documentos-pendientes'] })
+      queryClient.invalidateQueries({ queryKey: ['documentos-indicador'] })
       queryClient.invalidateQueries({ queryKey: ['documentos-pendientes-resumen', vars.payload.dependencia_id] })
       queryClient.invalidateQueries({ queryKey: ['transferencia-estado', vars.payload.dependencia_id] })
-    },
-    onError: (error: any) => {
-      if (error?.status === 409 || error?.response?.status === 409) {
-        toast.error('No se puede actualizar: la entrega está bloqueada (remitida o consolidada).')
-        return
-      }
-      const msg = error?.response?.data?.message ?? 'Error al actualizar el documento.'
-      toast.error(msg)
     },
   })
 }
@@ -75,17 +62,11 @@ export function useEliminarDocumento() {
     onSuccess: () => {
       toast.success('Documento eliminado del Anexo 01.')
       queryClient.invalidateQueries({ queryKey: ['documentos-pendientes'] })
+      queryClient.invalidateQueries({ queryKey: ['documentos-indicador'] })
       queryClient.invalidateQueries({ queryKey: ['documentos-pendientes-resumen'] })
       queryClient.invalidateQueries({ queryKey: ['transferencia-estado'] })
     },
-    onError: (error: any) => {
-      if (error?.status === 409 || error?.response?.status === 409) {
-        toast.error('No se puede eliminar: la entrega está bloqueada (remitida o consolidada).')
-        return
-      }
-      const msg = error?.response?.data?.message ?? 'Error al eliminar el documento.'
-      toast.error(msg)
-    },
+    onError: (error) => notificarError(error),
   })
 }
 

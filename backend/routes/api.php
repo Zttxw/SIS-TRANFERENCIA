@@ -71,6 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // usuarios/roles institucionales.
     Route::prefix('delegados')->middleware('permiso:delegados.gestionar')->group(function () {
         Route::get('/', [DelegadoController::class, 'index']);
+        Route::get('/candidatos', [DelegadoController::class, 'candidatos']);
         Route::post('/', [DelegadoController::class, 'store']);
         Route::delete('/{id}', [DelegadoController::class, 'destroy']);
     });
@@ -149,7 +150,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Cronograma del proceso (RF-007, C-03). Consulta con anexos.ver; la
     // modificación la reservan administrador y ETTS (cronograma.gestionar).
     Route::prefix('cronograma')->group(function () {
-        Route::get('/', [CronogramaController::class, 'index'])->middleware('permiso:anexos.ver');
+        Route::get('/', [CronogramaController::class, 'index'])->middleware('permiso:anexos.ver,cronograma.gestionar');
         Route::post('/', [CronogramaController::class, 'store'])->middleware('permiso:cronograma.gestionar');
         Route::put('/{id}', [CronogramaController::class, 'update'])->middleware('permiso:cronograma.gestionar');
         Route::delete('/{id}', [CronogramaController::class, 'destroy'])->middleware('permiso:cronograma.gestionar');

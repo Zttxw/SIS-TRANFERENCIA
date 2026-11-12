@@ -5,9 +5,14 @@ import type {
   FiltrosDocumentos,
   GuardarDocumentoPayload,
   ResumenDocumentosPendientes,
+  ListadoDocumentosIndicador,
 } from '@/types/documentos'
 
 export const documentosService = {
+  async listarIndicador(filtros: FiltrosDocumentos): Promise<ListadoDocumentosIndicador> {
+    const { data } = await api.get<ApiSuccess<ListadoDocumentosIndicador>>('/documentos-pendientes/drilldown', { params: filtros })
+    return data.data
+  },
   async listar(filtros: FiltrosDocumentos = {}): Promise<ApiPaginated<DocumentoPendiente>> {
     const params = new URLSearchParams()
     if (filtros.dependencia_id) params.set('dependencia_id', String(filtros.dependencia_id))

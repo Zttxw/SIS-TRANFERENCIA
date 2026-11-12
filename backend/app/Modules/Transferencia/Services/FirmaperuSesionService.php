@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Transferencia\Services;
 
 use App\Models\User;
+use App\Modules\Transferencia\Models\FirmaBorrador;
 use App\Modules\Transferencia\Models\FirmaSesion;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use Illuminate\Http\UploadedFile;
@@ -44,10 +45,22 @@ class FirmaperuSesionService
             $contenido = Storage::disk('local')->get($previo->firmado_path);
             abort_unless(hash_equals($previo->firmado_sha256, hash('sha256', $contenido)), 409, 'El PDF firmado anterior no coincide con su huella.');
         } else {
-            $captura = $this->pdf->capturar($tipo, $dependenciaId, $usuario);
-            abort_unless(hash_equals($documento->contenido_sha256, $captura['huella']), 409,
-                'Los datos cambiaron mientras se preparaba el PDF. Guarde los cambios y vuelva a firmar.');
-            $contenido = $captura['pdf'];
+            $borrador = FirmaBorrador::where('proceso_transferencia_id', $procesoId)
+                ->where('dependencia_id', $dependenciaId)->where('tipo_documento', $tipo)->first();
+            if ($borrador) {
+                abort_unless($borrador->contenido_sha256 !== null
+                    && hash_equals($documento->contenido_sha256, $borrador->contenido_sha256), 409,
+                    'Los datos cambiaron o el borrador es anterior a esta actualización. Regenere y revise el PDF antes de firmar.');
+                abort_unless(Storage::disk('local')->exists($borrador->pdf_path), 409, 'Regenere el PDF borrador antes de firmar.');
+                $contenido = Storage::disk('local')->get($borrador->pdf_path);
+                abort_unless(hash_equals($borrador->pdf_sha256, hash('sha256', $contenido)), 409,
+                    'El PDF borrador no coincide con su huella. Regenérelo antes de firmar.');
+            } else {
+                $captura = $this->pdf->capturar($tipo, $dependenciaId, $usuario);
+                abort_unless(hash_equals($documento->contenido_sha256, $captura['huella']), 409,
+                    'Los datos cambiaron mientras se preparaba el PDF. Guarde los cambios y vuelva a firmar.');
+                $contenido = $captura['pdf'];
+            }
         }
 
         $id = (string) Str::uuid7();

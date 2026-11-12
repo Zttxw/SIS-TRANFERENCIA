@@ -5,6 +5,7 @@ import { ArrowRight, ChevronDown } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { DocumentoFirmaDetalle } from '@/features/firmaperu/DocumentoFirmaDetalle'
 import { MiniEstadoFirma } from '@/features/firmaperu/MiniEstadoFirma'
+import { ConstanciaAusenciaEtte } from '@/features/firmaperu/ConstanciaAusenciaEtte'
 import type { TipoDocumentoFirma } from '@/features/firmaperu/firmaperu.types'
 import { cn } from '@/lib/utils'
 
@@ -56,9 +57,9 @@ export function TablaAnexos({ filas, dependenciaId, entregaConsolidada }: Props)
   const [expandida, setExpandida] = useState<string | null>(null)
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <div className="rounded-xl border border-border bg-card">
       {/* Cabecera de la tabla (solo escritorio) */}
-      <div className="hidden grid-cols-[2.5rem_minmax(0,1fr)_7.5rem_minmax(0,1fr)_7rem] items-center gap-3 border-b border-border bg-muted/40 px-4 py-2.5 text-mini font-semibold uppercase tracking-wider text-muted-foreground sm:grid">
+      <div className="hidden grid-cols-[2.5rem_minmax(0,1fr)_7.5rem_minmax(0,1fr)_7rem] items-center gap-3 rounded-t-xl border-b border-border bg-muted/40 px-4 py-2.5 text-mini font-semibold uppercase tracking-wider text-muted-foreground sm:grid">
         <span className="text-center">N.º</span>
         <span>Anexo</span>
         <span>Estado</span>
@@ -167,6 +168,7 @@ export function TablaAnexos({ filas, dependenciaId, entregaConsolidada }: Props)
                     bloqueado={anexo.tipoFirma === 'anexo07' && !entregaConsolidada}
                     notaBloqueo="El acta se firma una vez consolidada la entrega."
                   />
+                  {anexo.tipoFirma === 'anexo07' && entregaConsolidada && <ConstanciaAusenciaEtte dependenciaId={dependenciaId} />}
                 </div>
               )}
             </li>

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
@@ -8,12 +8,22 @@ import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import type { DocumentoPendiente, GuardarDocumentoPayload } from '@/types/documentos'
+import { Select } from '@/components/ui/select'
+import { aplicarErroresAFormulario, notificarError } from '@/lib/api-errors'
+import type {
+  DocumentoPendiente,
+  GuardarDocumentoPayload,
+} from '@/types/documentos'
 
 const documentoSchema = z.object({
   numero_documento: z.string().optional().nullable(),
   tipo_documento: z.string().optional().nullable(),
   asunto: z.string().min(3, 'El asunto debe tener al menos 3 caracteres'),
+  sumilla: z.string().optional().nullable(),
+  justificacion_pendiente: z
+    .string()
+    .trim()
+    .min(1, 'Debe justificar por qué el documento está pendiente'),
   fecha_documento: z.string().optional().nullable(),
   estado_atencion: z.string().optional().nullable(),
   accion_pendiente: z.string().optional().nullable(),
@@ -25,7 +35,7 @@ type FormValues = z.infer<typeof documentoSchema>
 interface DocumentoModalProps {
   open: boolean
   onClose: () => void
-  onSave: (payload: GuardarDocumentoPayload) => void
+  onSave: (payload: GuardarDocumentoPayload) => Promise<void>
   documento?: DocumentoPendiente | null
   dependenciaId: number
   loading?: boolean
@@ -45,6 +55,8 @@ export function DocumentoModal({
     register,
     handleSubmit,
     reset,
+    control,
+    setError,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(documentoSchema),
@@ -52,6 +64,8 @@ export function DocumentoModal({
       numero_documento: '',
       tipo_documento: '',
       asunto: '',
+      sumilla: '',
+      justificacion_pendiente: '',
       fecha_documento: '',
       estado_atencion: 'PENDIENTE',
       accion_pendiente: '',
@@ -65,7 +79,11 @@ export function DocumentoModal({
         numero_documento: documento.numero_documento || '',
         tipo_documento: documento.tipo_documento || '',
         asunto: documento.asunto || '',
-        fecha_documento: documento.fecha_documento ? documento.fecha_documento.slice(0, 10) : '',
+        sumilla: documento.sumilla || '',
+        justificacion_pendiente: documento.justificacion_pendiente || '',
+        fecha_documento: documento.fecha_documento
+          ? documento.fecha_documento.slice(0, 10)
+          : '',
         estado_atencion: documento.estado_atencion || 'PENDIENTE',
         accion_pendiente: documento.accion_pendiente || '',
         observaciones: documento.observaciones || '',
@@ -75,35 +93,50 @@ export function DocumentoModal({
         numero_documento: '',
         tipo_documento: '',
         asunto: '',
+        sumilla: '',
+        justificacion_pendiente: '',
         fecha_documento: new Date().toISOString().slice(0, 10),
         estado_atencion: 'PENDIENTE',
         accion_pendiente: '',
         observaciones: '',
       })
     }
-  }, [documento, reset])
+  }, [documento, open, reset])
 
-  const onSubmit = (values: FormValues) => {
-    onSave({
-      dependencia_id: dependenciaId,
-      numero_documento: values.numero_documento || null,
-      tipo_documento: values.tipo_documento || null,
-      asunto: values.asunto,
-      fecha_documento: values.fecha_documento || null,
-      estado_atencion: values.estado_atencion || 'PENDIENTE',
-      accion_pendiente: values.accion_pendiente || null,
-      observaciones: values.observaciones || null,
-    })
+  const onSubmit = async (values: FormValues) => {
+    try {
+      await onSave({
+        dependencia_id: dependenciaId,
+        numero_documento: values.numero_documento || null,
+        tipo_documento: values.tipo_documento || null,
+        asunto: values.asunto,
+        sumilla: values.sumilla?.trim() || null,
+        justificacion_pendiente: values.justificacion_pendiente,
+        fecha_documento: values.fecha_documento || null,
+        estado_atencion: values.estado_atencion || 'PENDIENTE',
+        accion_pendiente: values.accion_pendiente || null,
+        observaciones: values.observaciones || null,
+      })
+    } catch (error) {
+      if (!aplicarErroresAFormulario(error, setError)) notificarError(error)
+    }
   }
 
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      title={isEditing ? 'Editar Asunto Pendiente' : 'Registrar Nuevo Asunto Pendiente'}
-      description="Anexo 01: Reporte de asuntos y expedientes pendientes de atención formal."
+      title={
+        isEditing
+          ? 'Editar Asunto Pendiente'
+          : 'Registrar Nuevo Asunto Pendiente'
+      }
+      description="Asuntos y expedientes pendientes de atención formal."
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="max-h-[70vh] space-y-4 overflow-y-auto px-1"
+      >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="num_doc">N.° de Documento / Expediente</Label>
@@ -138,25 +171,64 @@ export function DocumentoModal({
           )}
         </div>
 
+        <div className="space-y-1.5">
+          <Label htmlFor="sumilla">Sumilla</Label>
+          <Textarea
+            id="sumilla"
+            rows={2}
+            {...register('sumilla')}
+            aria-invalid={Boolean(errors.sumilla)}
+          />
+          {errors.sumilla && (
+            <p className="text-xs text-destructive">{errors.sumilla.message}</p>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="justificacion_pendiente">
+            Justificación del pendiente *
+          </Label>
+          <Textarea
+            id="justificacion_pendiente"
+            rows={2}
+            {...register('justificacion_pendiente')}
+            aria-invalid={Boolean(errors.justificacion_pendiente)}
+          />
+          {errors.justificacion_pendiente && (
+            <p className="text-xs text-destructive">
+              {errors.justificacion_pendiente.message}
+            </p>
+          )}
+        </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="fecha_doc">Fecha del Documento</Label>
-            <Input id="fecha_doc" type="date" {...register('fecha_documento')} />
+            <Input
+              id="fecha_doc"
+              type="date"
+              {...register('fecha_documento')}
+            />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="estado_at">Estado de Atención</Label>
-            <select
-              id="estado_at"
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              {...register('estado_atencion')}
-            >
-              <option value="PENDIENTE">PENDIENTE</option>
-              <option value="EN TRÁMITE">EN TRÁMITE</option>
-              <option value="CON OBSERVACIONES">CON OBSERVACIONES</option>
-              <option value="URGENTE">URGENTE</option>
-              <option value="ATENDIDO">ATENDIDO</option>
-            </select>
+            <Controller
+              name="estado_atencion"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  id="estado_at"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={[
+                    'PENDIENTE',
+                    'EN TRÁMITE',
+                    'CON OBSERVACIONES',
+                    'URGENTE',
+                    'ATENDIDO',
+                  ].map((value) => ({ value, label: value }))}
+                />
+              )}
+            />
           </div>
         </div>
 
@@ -172,11 +244,20 @@ export function DocumentoModal({
 
         <div className="space-y-1.5">
           <Label htmlFor="obs">Observaciones Adicionales</Label>
-          <Input id="obs" placeholder="Anotaciones complementarias..." {...register('observaciones')} />
+          <Input
+            id="obs"
+            placeholder="Anotaciones complementarias..."
+            {...register('observaciones')}
+          />
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-3 border-t">
-          <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={loading}
+          >
             Cancelar
           </Button>
           <Button type="submit" loading={loading} disabled={loading}>
@@ -187,4 +268,3 @@ export function DocumentoModal({
     </Dialog>
   )
 }
-

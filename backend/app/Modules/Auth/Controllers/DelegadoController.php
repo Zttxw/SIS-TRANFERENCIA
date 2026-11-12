@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Modules\Auth\Services\DelegadoService;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +25,21 @@ class DelegadoController extends Controller
     public function index(): JsonResponse
     {
         return ApiResponse::success($this->delegados->listar(), 'Delegados ETTE recuperados.');
+    }
+
+    public function candidatos(Request $request): JsonResponse
+    {
+        $datos = $request->validate(['buscar' => ['nullable', 'string', 'max:100']]);
+        $buscar = trim($datos['buscar'] ?? '');
+        $usuarios = User::query()->where('activo', true)
+            ->when($buscar !== '', function ($query) use ($buscar): void {
+                $query->where(function ($query) use ($buscar): void {
+                    $query->whereLike('name', '%'.$buscar.'%')->orWhereLike('dni', '%'.$buscar.'%');
+                });
+            })
+            ->orderBy('name')->limit(30)->get(['id', 'dni', 'name']);
+
+        return ApiResponse::success($usuarios, 'Cuentas disponibles para designación.');
     }
 
     public function store(Request $request): JsonResponse

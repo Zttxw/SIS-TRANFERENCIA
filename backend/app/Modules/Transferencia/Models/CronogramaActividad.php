@@ -31,6 +31,13 @@ class CronogramaActividad extends BaseModel
 
     protected $table = 'cronograma_actividades';
 
+    protected $appends = ['vencida'];
+
+    public function getVencidaAttribute(): bool
+    {
+        return $this->estaVencida();
+    }
+
     protected $fillable = [
         'proceso_transferencia_id',
         'dependencia_id',
@@ -72,7 +79,7 @@ class CronogramaActividad extends BaseModel
      */
     public function estaVencida(?Carbon $referencia = null): bool
     {
-        if ($this->fecha_vencimiento === null || $this->estado->estaCompletada()) {
+        if ($this->fecha_vencimiento === null || $this->estado?->estaCompletada()) {
             return false;
         }
 
