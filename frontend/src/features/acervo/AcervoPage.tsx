@@ -5,7 +5,6 @@ import { toast } from 'sonner'
 import { useDependenciaActiva } from '@/auth/hooks'
 import { Can } from '@/auth/Can'
 import { AnexoCrudPage } from '@/components/anexos/AnexoCrudPage'
-import { BotonDescargarPdf } from '@/components/anexos/BotonDescargarPdf'
 import { Button } from '@/components/ui/button'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { Select } from '@/components/ui/select'
@@ -214,13 +213,6 @@ export function AcervoPage() {
             placeholder="Todos los formatos"
           />
         </>
-      }
-      accionesExtra={
-        <BotonDescargarPdf
-          descargar={() => acervoService.descargarPdf(dependenciaId as number)}
-          disabled={!dependenciaId}
-          etiqueta="PDF oficial"
-        />
       }
       textoNuevo="Nueva Serie Documental"
       iconoNuevo={Plus}

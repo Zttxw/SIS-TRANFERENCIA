@@ -4,7 +4,6 @@ import { toast } from 'sonner'
 
 import { useDependenciaActiva } from '@/auth/hooks'
 import { AnexoCrudPage } from '@/components/anexos/AnexoCrudPage'
-import { BotonDescargarPdf } from '@/components/anexos/BotonDescargarPdf'
 import type { ColumnaTabla } from '@/components/ui/data-table'
 import { aplicarErroresAFormulario } from '@/lib/api-errors'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
@@ -132,13 +131,6 @@ export function NoPatrimonialPage() {
         setPagina(1)
       }}
       placeholderBusqueda="Buscar bien no patrimonial por denominación, descripción o ubicación..."
-      accionesExtra={
-        <BotonDescargarPdf
-          descargar={() => noPatrimonialService.descargarPdf(dependenciaId as number)}
-          disabled={!dependenciaId}
-          etiqueta="PDF oficial"
-        />
-      }
       textoNuevo="Nuevo Bien No Patrimonial"
       iconoNuevo={PackagePlus}
       vacio={{

@@ -2,7 +2,8 @@ import type { ReactNode } from 'react'
 import { Building2 } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
-import { BotonFirmaPeru } from '@/features/firmaperu/BotonFirmaPeru'
+import { BotonGenerarPdf } from '@/features/firmaperu/BotonGenerarPdf'
+import { PrevisualizarAnexo } from '@/features/firmaperu/PrevisualizarAnexo'
 import type { TipoDocumentoFirma } from '@/features/firmaperu/firmaperu.types'
 import type { ClaveAnexoObservable } from '@/types/observaciones'
 import type { EstadoEntrega } from '@/types/transferencia'
@@ -98,8 +99,18 @@ export function AnexoLayout({
         acciones={
           <>
             <EstadoAnexoChip estadoEntrega={estadoEntrega} esModificable={esModificable} />
+            {/* Acciones de documento: solo previsualizar + generar el borrador
+                oficial. La firma ya no vive aquí: se concentra en «Mi entrega»
+                (plan 07, Fase 3). Un divisor la separa de las acciones de
+                edición del anexo para no leerse como una sola nube de botones. */}
             {anexoObservable && TIPOS_FIRMA[anexoObservable] && (
-              <BotonFirmaPeru key={`${anexoObservable}-${dependenciaId}`} tipoDocumento={TIPOS_FIRMA[anexoObservable]!} dependenciaId={dependenciaId} />
+              <span className="flex items-center gap-2.5">
+                <PrevisualizarAnexo tipoDocumento={TIPOS_FIRMA[anexoObservable]!} dependenciaId={dependenciaId} />
+                <BotonGenerarPdf tipoDocumento={TIPOS_FIRMA[anexoObservable]!} dependenciaId={dependenciaId} />
+              </span>
+            )}
+            {anexoObservable && TIPOS_FIRMA[anexoObservable] && acciones && (
+              <span aria-hidden className="h-6 w-px bg-border" />
             )}
             {acciones}
           </>

@@ -4,7 +4,6 @@ import { toast } from 'sonner'
 
 import { useDependenciaActiva } from '@/auth/hooks'
 import { AnexoCrudPage } from '@/components/anexos/AnexoCrudPage'
-import { BotonDescargarPdf } from '@/components/anexos/BotonDescargarPdf'
 import type { ColumnaTabla } from '@/components/ui/data-table'
 import { aplicarErroresAFormulario } from '@/lib/api-errors'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
@@ -129,13 +128,6 @@ function PersonalContenido() {
         setPagina(1)
       }}
       placeholderBusqueda="Buscar servidor por DNI, nombres, apellidos o cargo..."
-      accionesExtra={
-        <BotonDescargarPdf
-          descargar={() => personalService.descargarPdf(dependenciaId as number)}
-          disabled={!dependenciaId}
-          etiqueta="PDF oficial"
-        />
-      }
       textoNuevo="Registrar Servidor"
       iconoNuevo={UserPlus}
       vacio={{

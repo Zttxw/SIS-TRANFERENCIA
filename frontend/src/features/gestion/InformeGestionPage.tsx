@@ -4,7 +4,6 @@ import { AlertCircle, Building2, CheckCircle, Save, User } from 'lucide-react'
 import { useDependenciaActiva } from '@/auth/hooks'
 import { Can } from '@/auth/Can'
 import { AnexoLayout } from '@/components/anexos/AnexoLayout'
-import { BotonDescargarPdf } from '@/components/anexos/BotonDescargarPdf'
 import { IndicadorFaltantes } from '@/components/anexos/IndicadorFaltantes'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,7 +11,6 @@ import { CargaBloque } from '@/components/ui/async-boundary'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
-import { gestionService } from './gestion.service'
 import { useGuardarInformeGestion, useInformeGestion } from './use-gestion'
 import { SeccionFilas } from './SeccionFilas'
 import type {
@@ -114,11 +112,6 @@ export function InformeGestionPage() {
 
   const acciones = (
     <>
-      <BotonDescargarPdf
-        descargar={() => gestionService.descargarPdf(dependenciaId as number)}
-        disabled={!dependenciaId}
-        etiqueta="PDF oficial"
-      />
       <Can permiso="anexos.registrar">
         <Button
           type="button"

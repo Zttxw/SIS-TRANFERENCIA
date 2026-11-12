@@ -210,7 +210,7 @@ F1 (UX botones) **✅ hecha** → **F3 (reestructuración: firma fuera del anexo
 | F1-2 | UX | ⤵️ Subsumida por F3-2/F3-3 | F1-1 |
 | F1-3 | UX | ⤵️ Subsumida por F3-2 | F1-2 |
 | F3-1 | Reestructuración · endpoint generar borrador | ✅ Hecho | — |
-| F3-2 | Reestructuración · firma fuera del anexo | ⬜ Pendiente | F3-1 |
+| F3-2 | Reestructuración · firma fuera del anexo | ✅ Hecho | F3-1 |
 | F3-3 | Reestructuración · panel firma en «Mi entrega» | ⬜ Pendiente | F3-2 |
 | F2-1 | Integración | ⬜ Pendiente | F3-3 |
 | F2-2 | Integración | ⬜ Pendiente | F3-3 |
