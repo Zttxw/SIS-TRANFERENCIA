@@ -38,6 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('firmaperu')->group(function () {
         Route::post('/preparar', [FirmaperuController::class, 'preparar'])->middleware('permiso:anexos.registrar,firmas.firmar,actas.generar')->middleware('throttle:10,1');
         Route::middleware('permiso:anexos.ver')->group(function () {
+            Route::get('/previsualizar', [FirmaperuController::class, 'previsualizar'])->middleware('throttle:20,1');
             Route::get('/sesiones/{id}', [FirmaperuController::class, 'sesion'])->whereUuid('id');
             Route::get('/estado/{tipo}/{dependenciaId}', [FirmaperuController::class, 'estado'])->whereNumber('dependenciaId');
             Route::get('/documentos/{id}/descargar', [FirmaperuController::class, 'descargar'])->whereUuid('id');

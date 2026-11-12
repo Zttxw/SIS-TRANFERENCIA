@@ -1,0 +1,144 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature;
+
+use App\Models\User;
+use App\Modules\Auth\Models\AsignacionRol;
+use App\Modules\Gestion\Services\InformeGestionPdf;
+use App\Modules\Organization\Models\Dependencia;
+use App\Modules\Organization\Models\Servidor;
+use App\Modules\Personal\Models\Personal;
+use App\Modules\Personal\Services\IngestaPersonalSgd;
+use App\Modules\Personal\Services\PersonalPdf;
+use App\Modules\Transferencia\Models\Entrega;
+use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Support\Enums\Rol;
+use Database\Seeders\RolesPermisosSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
+
+class AnexosExperienciaTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private ProcesoTransferencia $proceso;
+
+    private Dependencia $dep;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(RolesPermisosSeeder::class);
+        $this->proceso = ProcesoTransferencia::factory()->create();
+        $this->dep = Dependencia::factory()->create(['proceso_transferencia_id' => $this->proceso->id, 'nivel' => 3]);
+        $usuario = User::factory()->create();
+        AsignacionRol::factory()->rol(Rol::RESPONSABLE_CENTRO_COSTO)->create([
+            'user_id' => $usuario->id, 'dependencia_id' => $this->dep->id,
+            'proceso_transferencia_id' => $this->proceso->id,
+        ]);
+        Sanctum::actingAs($usuario);
+    }
+
+    private function servidor(string $dni = '12345678'): Servidor
+    {
+        return Servidor::create([
+            'proceso_transferencia_id' => $this->proceso->id, 'dependencia_id' => $this->dep->id,
+            'dni' => $dni, 'nombres' => 'Responsable', 'apellidos' => 'Institucional', 'cargo' => 'Jefe de oficina',
+        ]);
+    }
+
+    public function test_identificacion_automatica_se_muestra_sin_crear_un_informe_y_se_guarda_en_el_pdf(): void
+    {
+        $responsable = $this->servidor();
+        $this->dep->update(['encargado_servidor_id' => $responsable->id]);
+        $ajeno = $this->servidor('87654321');
+
+        $this->getJson('/api/gestion/informe?dependencia_id='.$this->dep->id)->assertOk()
+            ->assertJsonPath('data.responsable.id', $responsable->id)
+            ->assertJsonPath('data.cabecera.cargo', 'Jefe de oficina')
+            ->assertJsonPath('data.nivel_organizacional', 'tercer_nivel');
+        $this->assertDatabaseCount('informes_gestion', 0);
+
+        $this->postJson('/api/gestion/informe', [
+            'dependencia_id' => $this->dep->id,
+            'servidor_responsable_id' => $ajeno->id,
+            'nivel_organizacional' => 'primer_nivel',
+            'periodo_gestion' => '2025–2026',
+            'funciones' => [['descripcion' => 'Coordinar los servicios institucionales']],
+            'logros_items' => [['actividad' => 'Mejorar los servicios']],
+        ])->assertOk()->assertJsonPath('data.servidor_responsable_id', $responsable->id)
+            ->assertJsonPath('data.cargo_periodo', 'Jefe de oficina · 2025–2026')
+            ->assertJsonPath('data.nivel_organizacional', 'tercer_nivel');
+
+        $vista = app(InformeGestionPdf::class)->datos($this->dep->id);
+        $this->assertSame('Responsable Institucional', $vista['informe']['responsable']);
+        $this->assertSame('Jefe de oficina · 2025–2026', $vista['informe']['cargo_periodo']);
+    }
+
+    public function test_no_inventa_responsable_ni_cargo_si_faltan_en_el_padron(): void
+    {
+        $this->getJson('/api/gestion/informe?dependencia_id='.$this->dep->id)->assertOk()
+            ->assertJsonPath('data.cabecera.responsable', null)
+            ->assertJsonPath('data.cabecera.cargo', null);
+        $this->assertDatabaseCount('informes_gestion', 0);
+    }
+
+    public function test_previsualizar_usa_pdf_oficial_sin_iniciar_firma_y_respeta_el_ambito(): void
+    {
+        $respuesta = $this->get('/api/firmaperu/previsualizar?tipo_documento=anexo02&dependencia_id='.$this->dep->id);
+        $respuesta->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $respuesta->getContent());
+        $this->assertStringContainsString('inline', $respuesta->headers->get('Content-Disposition'));
+        $this->assertDatabaseCount('firma_sesiones', 0);
+        $this->assertDatabaseCount('documentos_firma', 0);
+
+        $otra = Dependencia::factory()->create(['proceso_transferencia_id' => $this->proceso->id]);
+        $this->getJson('/api/firmaperu/previsualizar?tipo_documento=anexo05&dependencia_id='.$otra->id)->assertForbidden();
+        $this->getJson('/api/firmaperu/previsualizar?tipo_documento=invalido&dependencia_id='.$this->dep->id)->assertUnprocessable();
+    }
+
+    public function test_proyeccion_de_personal_es_idempotente_y_conserva_correcciones_y_retiros(): void
+    {
+        $primero = $this->servidor();
+        $segundo = $this->servidor('87654321');
+        $servicio = app(IngestaPersonalSgd::class);
+        $this->assertSame(['personal' => 2, 'omitidos' => 0], $servicio->ejecutar($this->proceso));
+        $this->assertSame(['personal' => 2, 'omitidos' => 0], $servicio->ejecutar($this->proceso));
+        $this->assertDatabaseCount('personal', 2);
+
+        Personal::where('servidor_id', $primero->id)->firstOrFail()->update(['cargo' => 'Cargo validado', 'fuente' => 'manual']);
+        Personal::where('servidor_id', $segundo->id)->firstOrFail()->delete();
+        $this->assertSame(['personal' => 0, 'omitidos' => 2], $servicio->ejecutar($this->proceso));
+
+        $this->getJson('/api/personal?dependencia_id='.$this->dep->id.'&search=validado')->assertOk()
+            ->assertJsonCount(1, 'data')->assertJsonPath('data.0.cargo', 'Cargo validado');
+        $pdf = app(PersonalPdf::class)->datos($this->dep->id);
+        $this->assertCount(1, $pdf['personal']);
+        $this->assertSame('Cargo validado', $pdf['personal'][0]['cargo']);
+    }
+
+    public function test_listado_personal_excluye_registros_de_otro_proceso(): void
+    {
+        $this->servidor();
+        app(IngestaPersonalSgd::class)->ejecutar($this->proceso);
+        $anterior = ProcesoTransferencia::factory()->cerrado()->create();
+        Personal::create([
+            'proceso_transferencia_id' => $anterior->id, 'dependencia_id' => $this->dep->id,
+            'dni' => '99999999', 'nombres' => 'Proceso anterior',
+        ]);
+        $this->getJson('/api/personal?dependencia_id='.$this->dep->id)->assertOk()
+            ->assertJsonCount(1, 'data')->assertJsonPath('data.0.dni', '12345678');
+    }
+
+    public function test_precarga_no_modifica_personal_de_entregas_ya_remitidas(): void
+    {
+        $this->servidor();
+        Entrega::create(['proceso_transferencia_id' => $this->proceso->id,
+            'dependencia_id' => $this->dep->id, 'estado' => 'remitida']);
+        $this->assertSame(['personal' => 0, 'omitidos' => 0], app(IngestaPersonalSgd::class)->ejecutar($this->proceso));
+        $this->assertDatabaseCount('personal', 0);
+    }
+}

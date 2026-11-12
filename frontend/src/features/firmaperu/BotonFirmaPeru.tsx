@@ -10,6 +10,7 @@ import { firmaperuService } from './firmaperu.service'
 import { firmarConCliente } from './firmaperu-runtime'
 import { comprobarServicioFirma } from './equipo-firmaperu'
 import { PrepararEquipoFirma } from './PrepararEquipoFirma'
+import { PrevisualizarAnexo } from './PrevisualizarAnexo'
 import type { TipoDocumentoFirma } from './firmaperu.types'
 
 interface PropsFirma { tipoDocumento: TipoDocumentoFirma; dependenciaId: number | null }
@@ -106,9 +107,10 @@ function ControlFirma({ tipoDocumento, dependenciaId }: PropsFirma) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      <PrevisualizarAnexo tipoDocumento={tipoDocumento} dependenciaId={dependenciaId} />
       {puedeFirmar && (
         <>
-          <Button size="sm" variant="outline" onClick={() => void firmar()} disabled={Boolean(mensaje)} className="gap-2">
+          <Button size="sm" onClick={() => void firmar()} disabled={Boolean(mensaje)} className="gap-2 border border-indigo-700 bg-indigo-700 text-white shadow-sm hover:bg-indigo-800 focus-visible:ring-indigo-500">
             {mensaje ? <Loader2 className="h-4 w-4 animate-spin" /> : <PenLine className="h-4 w-4" />}
             {mensaje ? 'Firmando…' : 'Firmar con Firma Perú'}
           </Button>

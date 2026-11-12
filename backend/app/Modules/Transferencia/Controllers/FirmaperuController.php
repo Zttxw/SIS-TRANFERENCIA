@@ -7,6 +7,7 @@ namespace App\Modules\Transferencia\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Models\FirmaSesion;
+use App\Modules\Transferencia\Services\FirmaperuPdfService;
 use App\Modules\Transferencia\Services\FirmaperuRegistroService;
 use App\Modules\Transferencia\Services\FirmaperuSesionService;
 use App\Support\Concerns\AutorizaAmbito;
@@ -44,6 +45,27 @@ class FirmaperuController extends Controller
 
         return ApiResponse::success($this->sesiones->preparar($usuario, $tipo, $dependenciaId,
             $datos['documento_previo_id'] ?? null), 'Sesión de firma preparada.', 201);
+    }
+
+    public function previsualizar(Request $request, FirmaperuPdfService $pdf): Response
+    {
+        $datos = $request->validate([
+            'tipo_documento' => 'required|string|in:'.self::TIPOS,
+            'dependencia_id' => 'required|integer|exists:dependencias,id',
+        ]);
+        $dependenciaId = (int) $datos['dependencia_id'];
+        $this->autorizarDependencia($request->user(), $dependenciaId);
+        $procesoId = app(ContextoTransferencia::class)->procesoActivoId();
+        abort_unless(Dependencia::whereKey($dependenciaId)->where('proceso_transferencia_id', $procesoId)->exists(), 409);
+        if (in_array($datos['tipo_documento'], ['acta', 'anexo07'], true)) {
+            $this->registro->caracter($request->user(), 'anexo07', $dependenciaId);
+        }
+
+        return response($pdf->generar($datos['tipo_documento'], $dependenciaId, $request->user()), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="Previsualizacion-'.$datos['tipo_documento'].'.pdf"',
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 
     public function param(Request $request): Response

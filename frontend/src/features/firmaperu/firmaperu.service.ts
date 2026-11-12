@@ -4,6 +4,13 @@ import type { ApiSuccess } from '@/types/api'
 import type { EstadoFirma, PreparacionFirma, SesionFirma, TipoDocumentoFirma } from './firmaperu.types'
 
 export const firmaperuService = {
+  async previsualizar(tipo: TipoDocumentoFirma, dependenciaId: number, signal: AbortSignal) {
+    const res = await api.get<Blob>('/firmaperu/previsualizar', {
+      params: { tipo_documento: tipo, dependencia_id: dependenciaId },
+      responseType: 'blob', signal, timeout: 60000,
+    })
+    return res.data
+  },
   async preparar(tipo: TipoDocumentoFirma, dependenciaId: number, signal: AbortSignal, previoId?: string) {
     const res = await api.post<ApiSuccess<PreparacionFirma>>('/firmaperu/preparar', {
       tipo_documento: tipo,

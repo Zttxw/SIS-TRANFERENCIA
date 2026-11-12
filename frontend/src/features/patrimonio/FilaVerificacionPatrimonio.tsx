@@ -125,15 +125,15 @@ export function FilaVerificacionPatrimonio({
   }
 
   return (
-    <tr className="bg-muted/20">
+    <tr className="bg-sky-50 dark:bg-sky-950/30">
       <td colSpan={colSpan} className="p-0">
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="space-y-4 border-l-2 border-primary px-4 py-4"
+          className="m-2 space-y-4 rounded-xl border-2 border-sky-300 border-l-8 bg-card px-5 py-5 shadow-md dark:border-sky-700"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-sky-100 px-4 py-3 dark:bg-sky-950">
             <div className="text-sm font-semibold text-foreground">
-              Verificación física · <span className="font-mono">{bien.codigo_patrimonial}</span>
+              Complete la verificación física · <span className="font-mono">{bien.codigo_patrimonial}</span>
             </div>
             <span className="text-nota text-muted-foreground">{bien.denominacion}</span>
           </div>

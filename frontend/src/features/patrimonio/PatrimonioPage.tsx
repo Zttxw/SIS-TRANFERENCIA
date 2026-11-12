@@ -197,7 +197,7 @@ export function PatrimonioPage() {
               <Button
                 variant={estadoVerif === 'pendiente' && !expandida ? 'default' : 'outline'}
                 size="sm"
-                className="h-7 gap-1 text-xs"
+                className="h-8 gap-1.5 border border-sky-700 bg-sky-700 px-3 text-xs font-semibold text-white shadow-sm hover:bg-sky-800"
                 disabled={!esModificable}
                 aria-expanded={expandida}
                 onClick={() => alternarFila(bien.id)}
@@ -347,18 +347,23 @@ export function PatrimonioPage() {
       </div>
 
       {/* Barra de progreso global */}
-      <Card className="p-4">
+      <Card className="border-sky-200 bg-sky-50/50 p-5 dark:border-sky-900 dark:bg-sky-950/20">
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs font-medium">
             <span className="text-muted-foreground">Progreso de verificación patrimonial:</span>
             <span className="font-bold text-foreground">{resumen?.porcentaje_avance ?? 0}%</span>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+          <div role="progressbar" aria-label="Progreso de verificación patrimonial" aria-valuemin={0} aria-valuemax={100} aria-valuenow={resumen?.porcentaje_avance ?? 0} className="h-3 w-full overflow-hidden rounded-full border border-slate-300 bg-slate-200 dark:border-slate-600 dark:bg-slate-800">
             <div
-              className="h-full bg-primary transition-all duration-500"
+              className="h-full rounded-full bg-emerald-600 transition-all duration-500"
               style={{ width: `${resumen?.porcentaje_avance ?? 0}%` }}
             />
           </div>
+          <p className="text-xs text-muted-foreground">
+            {(resumen?.porcentaje_avance ?? 0) === 0
+              ? 'Verificación sin iniciar. Pulse Verificar en cada bien para registrar el resultado.'
+              : `${resumen?.pendientes ?? 0} bienes pendientes de verificación.`}
+          </p>
         </div>
       </Card>
 
