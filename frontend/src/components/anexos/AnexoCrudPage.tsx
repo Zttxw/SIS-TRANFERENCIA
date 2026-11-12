@@ -69,6 +69,7 @@ interface AnexoCrudPageProps<T> {
    * `<Can>` de registro (p. ej. «Descargar PDF», visible para quien solo consulta).
    */
   accionesExtra?: React.ReactNode
+  aviso?: React.ReactNode
 
   // ── Eliminación ────────────────────────────────────────────────────────────
   /** Texto de confirmación por fila; omitir deshabilita el botón eliminar. */
@@ -133,6 +134,7 @@ export function AnexoCrudPage<T>({
   iconoNuevo: IconoNuevo = Plus,
   vacio,
   accionesExtra,
+  aviso,
   confirmarEliminar,
   onEliminar,
   eliminando = false,
@@ -228,6 +230,7 @@ export function AnexoCrudPage<T>({
       }
     >
       {/* Barra de búsqueda + filtros */}
+      {aviso}
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

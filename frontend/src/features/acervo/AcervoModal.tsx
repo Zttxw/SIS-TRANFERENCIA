@@ -73,6 +73,7 @@ export function AcervoModal({
   })
 
   useEffect(() => {
+    if (!open) return
     if (acervo) {
       reset({
         tipo: acervo.tipo,
@@ -88,7 +89,7 @@ export function AcervoModal({
       reset({
         tipo: 'fisico',
         serie_documental: '',
-        periodo: '2023 - 2026',
+        periodo: '',
         cantidad_unidades: 1,
         unidad_conservacion: 'Archivadores de Palanca',
         ubicacion: 'Archivo de gestión de oficina',
@@ -96,7 +97,7 @@ export function AcervoModal({
         observaciones: '',
       })
     }
-  }, [acervo, reset])
+  }, [acervo, reset, open])
 
   const onSubmit = (values: FormValues) => {
     onSave(
@@ -120,9 +121,10 @@ export function AcervoModal({
       open={open}
       onClose={onClose}
       title={isEditing ? 'Editar Serie Documental' : 'Registrar Acervo Documental'}
-      description="Anexo 03: Inventario de acervo documental físico y digital transferido según Directiva §7.3."
+      description="Registre los datos de sus archivadores físicos o repositorios digitales. Este formulario inventaría las series; no adjunta ni digitaliza sus documentos."
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {!isEditing && <p className="rounded-md bg-info-soft p-3 text-xs text-info-fg">El SGD opera desde septiembre de 2025. Los archivadores físicos y la documentación histórica se registran manualmente, incluso si no aparecen en la precarga.</p>}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <FormField
             label="Formato del Acervo"

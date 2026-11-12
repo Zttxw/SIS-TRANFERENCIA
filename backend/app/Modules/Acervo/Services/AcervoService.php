@@ -21,6 +21,7 @@ class AcervoService
     public function listar(array $filtros = []): LengthAwarePaginator
     {
         $query = AcervoDocumental::query()
+            ->where('proceso_transferencia_id', $this->resolverProcesoActivoId())
             ->with(['dependencia', 'registradoPor', 'evidencias'])
             ->orderBy('id', 'desc');
 
@@ -40,9 +41,10 @@ class AcervoService
         if (! empty($filtros['search'])) {
             $term = trim((string) $filtros['search']);
             $query->where(function ($q) use ($term) {
-                $q->where('serie_documental', 'ilike', "%{$term}%")
-                    ->orWhere('descripcion', 'ilike', "%{$term}%")
-                    ->orWhere('ubicacion', 'ilike', "%{$term}%");
+                $q->whereLike('serie_documental', "%{$term}%")
+                    ->orWhereLike('descripcion', "%{$term}%")
+                    ->orWhereLike('periodo', "%{$term}%")
+                    ->orWhereLike('ubicacion', "%{$term}%");
             });
         }
 

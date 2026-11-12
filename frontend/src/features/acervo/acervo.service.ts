@@ -1,6 +1,7 @@
 import { api } from '@/lib/api'
 import { descargarArchivo } from '@/lib/descargas'
 import type { ApiPaginated, ApiSuccess } from '@/types/api'
+import { reunirPaginasAcervo } from './paginacion-acervo'
 import type {
   AcervoDocumental,
   FiltrosAcervo,
@@ -8,7 +9,10 @@ import type {
 } from '@/types/acervo'
 
 export const acervoService = {
-  async listar(filtros: FiltrosAcervo = {}): Promise<ApiPaginated<AcervoDocumental>> {
+  async listar(filtros: FiltrosAcervo = {}, signal?: AbortSignal): Promise<ApiPaginated<AcervoDocumental>> {
+    if ((filtros.per_page ?? 0) > 100) {
+      return reunirPaginasAcervo((page) => acervoService.listar({ ...filtros, page, per_page: 100 }, signal), signal)
+    }
     const params = new URLSearchParams()
     if (filtros.dependencia_id) params.set('dependencia_id', String(filtros.dependencia_id))
     if (filtros.tipo) params.set('tipo', filtros.tipo)
@@ -16,7 +20,7 @@ export const acervoService = {
     if (filtros.per_page) params.set('per_page', String(filtros.per_page))
     if (filtros.page) params.set('page', String(filtros.page))
 
-    const res = await api.get<ApiPaginated<AcervoDocumental>>(`/acervo?${params.toString()}`)
+    const res = await api.get<ApiPaginated<AcervoDocumental>>(`/acervo?${params.toString()}`, { signal })
     return res.data
   },
 

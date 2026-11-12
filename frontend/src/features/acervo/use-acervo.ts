@@ -11,7 +11,7 @@ const CONFLICTO_ACERVO =
 export function useAcervo(filtros: FiltrosAcervo = {}) {
   return useQuery({
     queryKey: ['acervo-documental', filtros],
-    queryFn: () => acervoService.listar(filtros),
+    queryFn: ({ signal }) => acervoService.listar(filtros, signal),
     enabled: Boolean(filtros.dependencia_id),
     staleTime: 1000 * 30,
   })

@@ -33,6 +33,11 @@ const FILTRO_TIPO_OPCIONES = [
 
 const columnas: ColumnaTabla<AcervoDocumental>[] = [
   {
+    id: 'fuente',
+    header: 'Procedencia',
+    cell: (item) => <span className="text-xs text-muted-foreground">{item.fuente === 'sgd' ? 'Precarga SGD' : 'Registro manual'}</span>,
+  },
+  {
     id: 'tipo',
     header: 'Formato',
     cell: (item) =>
@@ -168,6 +173,13 @@ export function AcervoPage() {
       tituloCorto="Inventario de Acervo Documental"
       titulo="Inventario de Acervo Documental (Físico y Digital)"
       subtitulo="Series documentales, expedientes custodiados y archivos de gestión de la unidad (Directiva N.° 001-2026-MDSJ/A §7.3)"
+      aviso={
+        <aside className="space-y-1 rounded-lg border border-info-border bg-info-soft p-4 text-sm text-info-fg">
+          <p className="font-semibold">SGD disponible desde septiembre de 2025</p>
+          <p>La precarga muestra resúmenes de documentos digitales de los periodos importados, no todo el archivo histórico de la oficina ni sus documentos adjuntos.</p>
+          <p>Use «Nueva Serie Documental» para registrar sus archivadores físicos, tomos y cajas: indique serie, periodo, cantidad y ubicación. Incluya también la documentación anterior a septiembre de 2025 que esté bajo su custodia.</p>
+        </aside>
+      }
       anexoObservable="acervo"
       guiaSeleccion="Utilice el selector de dependencias en la barra superior para gestionar el acervo documental del despacho."
       dependenciaId={dependenciaId}
@@ -214,7 +226,7 @@ export function AcervoPage() {
       iconoNuevo={Plus}
       vacio={{
         titulo: 'Sin series documentales',
-        descripcion: 'No se han registrado series de acervo para esta dependencia. Registre la primera.',
+        descripcion: 'No hay series para estos filtros. La ausencia de precarga SGD no significa que la oficina no tenga archivo físico. Registre sus archivadores desde «Nueva Serie Documental».',
       }}
       confirmarEliminar={confirmarEliminarSerie}
       onEliminar={(item) => eliminarMut.mutate(item.id)}
