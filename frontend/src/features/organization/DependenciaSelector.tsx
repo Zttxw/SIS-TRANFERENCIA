@@ -16,11 +16,13 @@ import { listarDependencias } from './dependencias.service'
 export function DependenciaSelector({ className }: { className?: string }) {
   const { usuario } = useAuth()
   const { dependenciaId, setDependenciaId } = useDependenciaActiva()
+  const esGlobal = usuario?.es_global === true
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['dependencias', 'catalogo'],
     queryFn: () => listarDependencias(),
     staleTime: 5 * 60_000,
+    enabled: esGlobal || (usuario?.dependencias_ambito?.length ?? 0) > 1,
   })
 
   if (isError) {
@@ -31,7 +33,6 @@ export function DependenciaSelector({ className }: { className?: string }) {
     )
   }
 
-  const esGlobal = usuario?.es_global === true
   const esJefe =
     Boolean(usuario?.servidor?.es_responsable) ||
     Boolean(

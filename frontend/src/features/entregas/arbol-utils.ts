@@ -8,7 +8,7 @@ export interface NodoArbol {
   parent_id: number | null
   encargado?: {
     id: number
-    dni: string
+    dni?: string
     nombres: string
     apellidos: string
     cargo: string | null

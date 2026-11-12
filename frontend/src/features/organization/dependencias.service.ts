@@ -6,6 +6,17 @@
 import { api } from '@/lib/api'
 import type { ApiSuccess } from '@/types/api'
 import type { Dependencia } from '@/types/auth'
+import type { DependenciaResumen } from '@/types/transferencia'
+
+export interface UnidadOrganigrama extends DependenciaResumen {
+  en_ambito: boolean
+  es_responsable: boolean
+}
+
+export async function listarOrganigrama(signal?: AbortSignal): Promise<UnidadOrganigrama[]> {
+  const { data } = await api.get<ApiSuccess<UnidadOrganigrama[]>>('/dependencias/organigrama', { signal })
+  return data.data
+}
 
 export async function listarDependencias(search?: string): Promise<Dependencia[]> {
   const { data } = await api.get<ApiSuccess<Dependencia[]>>('/dependencias', {

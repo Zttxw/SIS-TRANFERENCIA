@@ -30,7 +30,7 @@ export interface DependenciaResumen {
   activa?: boolean
   encargado?: {
     id: number
-    dni: string
+    dni?: string
     nombres: string
     apellidos: string
     cargo: string | null

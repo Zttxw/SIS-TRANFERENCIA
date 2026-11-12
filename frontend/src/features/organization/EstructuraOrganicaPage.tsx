@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowRight,
@@ -14,6 +15,7 @@ import {
   RefreshCw,
   Search,
   Sparkles,
+  Users,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -24,36 +26,38 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { construirArbol, filtrarArbol, type NodoArbol } from '@/features/entregas/arbol-utils'
-import { useCatalogoDependencias } from '@/features/entregas/use-entregas'
-import { DespachoPersonalView } from './DespachoPersonalView'
+import { listarOrganigrama } from './dependencias.service'
+import { ancestrosVisibles } from './organigrama-utils'
 import { BotonFirmaPeru } from '@/features/firmaperu/BotonFirmaPeru'
 
 export function EstructuraOrganicaPage() {
   const { usuario } = useAuth()
-  const esGlobal = usuario?.es_global === true
-
-  // Si el usuario no tiene visión global (es Jefe de Oficina o Servidor),
-  // se le presenta directamente la vista operativa de su despacho y sus trabajadores.
-  if (!esGlobal) {
-    return <DespachoPersonalView />
-  }
-
-  return <ArbolOrganicoAdminView />
-}
-
-function ArbolOrganicoAdminView() {
   const navigate = useNavigate()
   const { dependenciaId, setDependenciaId } = useDependenciaActiva()
-  const { data: dependencias, isLoading, isError, refetch } = useCatalogoDependencias()
+  const { data: dependencias, isLoading, isError, refetch } = useQuery({
+    queryKey: ['dependencias', 'organigrama'],
+    queryFn: ({ signal }) => listarOrganigrama(signal),
+    staleTime: 5 * 60_000,
+  })
 
   const [busqueda, setBusqueda] = useState('')
   const [nodoSeleccionado, setNodoSeleccionado] = useState<NodoArbol | null>(null)
-  const [nodosExpandidos, setNodosExpandidos] = useState<Set<number>>(new Set([1, 48])) // Expandir raíz y primeros niveles
+  const [expansionManual, setNodosExpandidos] = useState<Set<number> | null>(null)
+  const responsables = useMemo(() => new Set(dependencias?.filter((dep) => dep.es_responsable).map((dep) => dep.id) ?? []), [dependencias])
+  const permitidas = useMemo(() => new Set(dependencias?.filter((dep) => dep.en_ambito).map((dep) => dep.id) ?? []), [dependencias])
+  const expansionInicial = useMemo(() => ancestrosVisibles(dependencias ?? [], [...responsables, ...(dependenciaId ? [dependenciaId] : [])]), [dependencias, responsables, dependenciaId])
+  const nodosExpandidos = expansionManual ?? expansionInicial
 
   // Construir el árbol jerárquico
   const arbolCompleto = useMemo(() => {
     return dependencias ? construirArbol(dependencias) : []
   }, [dependencias])
+  const nodosPorId = useMemo(() => {
+    const mapa = new Map<number, NodoArbol>()
+    const recorrer = (nodos: NodoArbol[]) => nodos.forEach((nodo) => { mapa.set(nodo.id, nodo); recorrer(nodo.hijos) })
+    recorrer(arbolCompleto)
+    return mapa
+  }, [arbolCompleto])
 
   // Filtrar el árbol reactivamente
   const arbolFiltrado = useMemo(() => {
@@ -62,18 +66,19 @@ function ArbolOrganicoAdminView() {
 
   // Buscar el nodo actualmente activo o seleccionado por defecto
   const nodoEfectivo = useMemo(() => {
-    if (nodoSeleccionado) return nodoSeleccionado
+    if (nodoSeleccionado) return nodosPorId.get(nodoSeleccionado.id) ?? null
     if (!dependencias || dependencias.length === 0) return null
     if (dependenciaId) {
-      const match = dependencias.find((d) => d.id === dependenciaId)
-      if (match) return match as unknown as NodoArbol
+      const match = nodosPorId.get(dependenciaId)
+      if (match) return match
     }
     return arbolCompleto[0] ?? null
-  }, [nodoSeleccionado, dependenciaId, dependencias, arbolCompleto])
+  }, [nodoSeleccionado, dependenciaId, dependencias, arbolCompleto, nodosPorId])
+  const puedeOperar = Boolean(nodoEfectivo && permitidas.has(nodoEfectivo.id))
 
   const toggleExpandido = (id: number) => {
     setNodosExpandidos((prev) => {
-      const nuevo = new Set(prev)
+      const nuevo = new Set(prev ?? expansionInicial)
       if (nuevo.has(id)) {
         nuevo.delete(id)
       } else {
@@ -93,11 +98,13 @@ function ArbolOrganicoAdminView() {
   }
 
   const handleSeleccionarDespacho = (nodo: NodoArbol) => {
+    if (!permitidas.has(nodo.id)) return
     setDependenciaId(nodo.id)
     toast.success(`Despacho activo establecido: [${nodo.codigo}] ${nodo.nombre}`)
   }
 
   const handleAbrirDashboard = (nodo: NodoArbol) => {
+    if (!permitidas.has(nodo.id)) return
     setDependenciaId(nodo.id)
     navigate('/')
   }
@@ -146,7 +153,7 @@ function ArbolOrganicoAdminView() {
             </Badge>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Carga y homologación del organigrama municipal · Directiva N.° 001-2026-MDSJ/GM
+            Centros de costo de la institución. {usuario?.es_global ? 'Seleccione una unidad para consultar sus anexos.' : 'Las unidades a su cargo aparecen resaltadas en verde. El personal se consulta en el Anexo 05.'}
           </p>
         </div>
 
@@ -228,6 +235,7 @@ function ArbolOrganicoAdminView() {
                     nodosExpandidos={nodosExpandidos}
                     onToggle={toggleExpandido}
                     nodoActivoId={dependenciaId}
+                    responsables={responsables}
                     nodoSeleccionadoId={nodoEfectivo?.id ?? null}
                     onSeleccionarNodo={(n) => setNodoSeleccionado(n)}
                   />
@@ -259,7 +267,9 @@ function ArbolOrganicoAdminView() {
 
               <CardContent className="p-4 space-y-4 text-xs">
                 {/* Indicador de Despacho Activo */}
-                {nodoEfectivo.id === dependenciaId ? (
+                {!puedeOperar ? (
+                  <p className="rounded-lg border bg-muted/30 p-2.5 text-muted-foreground">Puede consultar esta unidad en el organigrama. El acceso a sus anexos está limitado a su ámbito asignado.</p>
+                ) : nodoEfectivo.id === dependenciaId ? (
                   <div className="flex items-center gap-2 p-2.5 rounded-lg bg-success-soft border border-success-border text-success-fg font-semibold">
                     <Check className="h-4 w-4 text-success-fg shrink-0" />
                     <span>Esta unidad es actualmente su despacho activo</span>
@@ -300,14 +310,14 @@ function ArbolOrganicoAdminView() {
                           </div>
                         </>
                       ) : (
-                        <span className="italic text-muted-foreground">Sin asignar</span>
+                        <span className="italic text-muted-foreground">{puedeOperar ? 'Sin asignar' : 'Fuera de su ámbito de consulta de personal'}</span>
                       )}
                     </div>
                   </div>
                 </div>
 
                 {/* Enlaces Rápidos a Anexos de este despacho */}
-                <div className="space-y-2 border-t border-border pt-3">
+                {puedeOperar && <div className="space-y-2 border-t border-border pt-3">
                   <span className="text-nota font-bold text-muted-foreground uppercase tracking-wider block">
                     Acciones de Auditoría
                   </span>
@@ -323,6 +333,11 @@ function ArbolOrganicoAdminView() {
                       <span>Abrir Dashboard de esta oficina</span>
                       <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
                     </Button>
+
+                    <Button variant="outline" size="sm" className="h-8 justify-start gap-2 text-xs" onClick={() => {
+                      setDependenciaId(nodoEfectivo.id)
+                      navigate('/personal')
+                    }}><Users className="h-3.5 w-3.5" /> Anexo 05 · Personal del centro de costo</Button>
 
                     <Button
                       variant="outline"
@@ -352,7 +367,7 @@ function ArbolOrganicoAdminView() {
                       <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
                     </Button>
                   </div>
-                </div>
+                </div>}
               </CardContent>
             </Card>
           ) : (
@@ -375,6 +390,7 @@ interface CarpetaNodoItemProps {
   nodosExpandidos: Set<number>
   onToggle: (id: number) => void
   nodoActivoId: number | null
+  responsables: Set<number>
   nodoSeleccionadoId: number | null
   onSeleccionarNodo: (nodo: NodoArbol) => void
 }
@@ -385,12 +401,14 @@ function CarpetaNodoItem({
   nodosExpandidos,
   onToggle,
   nodoActivoId,
+  responsables,
   nodoSeleccionadoId,
   onSeleccionarNodo,
 }: CarpetaNodoItemProps) {
   const tieneHijos = Boolean(nodo.hijos && nodo.hijos.length > 0)
   const estaExpandido = nodosExpandidos.has(nodo.id)
   const esActivo = nodoActivoId === nodo.id
+  const esResponsable = responsables.has(nodo.id)
   const esSeleccionado = nodoSeleccionadoId === nodo.id
 
   return (
@@ -398,7 +416,9 @@ function CarpetaNodoItem({
       <div
         onClick={() => onSeleccionarNodo(nodo)}
         className={`group flex items-center gap-1.5 py-1.5 px-2 rounded-lg cursor-pointer text-xs transition-all ${
-          esSeleccionado
+          esResponsable
+            ? 'bg-success-soft text-success-fg font-semibold ring-1 ring-success-border'
+            : esSeleccionado
             ? 'bg-primary/15 text-primary font-semibold ring-1 ring-primary/30'
             : esActivo
             ? 'bg-success-soft text-success-fg font-semibold'
@@ -444,9 +464,9 @@ function CarpetaNodoItem({
         <span className="truncate flex-1">{nodo.nombre}</span>
 
         {/* Insignia si es Despacho Activo */}
-        {esActivo && (
+        {(esResponsable || esActivo) && (
           <span className="px-1.5 py-0.2 rounded-full text-mini font-bold bg-success text-white shrink-0">
-            Activo
+            {esResponsable ? 'Unidad a su cargo' : 'Activo'}
           </span>
         )}
 
@@ -469,6 +489,7 @@ function CarpetaNodoItem({
               nodosExpandidos={nodosExpandidos}
               onToggle={onToggle}
               nodoActivoId={nodoActivoId}
+              responsables={responsables}
               nodoSeleccionadoId={nodoSeleccionadoId}
               onSeleccionarNodo={onSeleccionarNodo}
             />

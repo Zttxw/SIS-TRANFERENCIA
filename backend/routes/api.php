@@ -51,6 +51,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Catálogo de dependencias y centros de costo. Consultable por cualquier
     // cuenta con acceso a anexos (precisa ubicar su ámbito).
+    Route::get('/dependencias/organigrama', [DependenciaController::class, 'organigrama'])->middleware('permiso:anexos.ver,usuarios.gestionar');
     Route::middleware('permiso:anexos.ver')->group(function () {
         Route::get('/dependencias', [DependenciaController::class, 'index']);
         Route::get('/dependencias/{id}', [DependenciaController::class, 'show']);
