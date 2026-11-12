@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Modules\Organization\Services\IngestaCatalogosSgd;
 use App\Modules\Organization\Services\IngestaDocumentalSgd;
 use App\Modules\Organization\Services\IngestaSgd;
+use App\Modules\Personal\Services\IngestaPersonalSgd;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use Illuminate\Console\Command;
 use Throwable;
@@ -65,6 +66,9 @@ class IngestarSgd extends Command
                 $filas[] = ['Dependencias', $m['dependencias']];
                 $filas[] = ['Servidores', $m['servidores']];
                 $filas[] = ['Encargados resueltos', $m['encargados']];
+                $personal = app(IngestaPersonalSgd::class)->ejecutar($proceso, $dependencia);
+                $filas[] = ['Personal del Anexo 05', $personal['personal']];
+                $filas[] = ['Personal conservado sin cambios', $personal['omitidos']];
             }
 
             // Los catálogos deben poblarse antes que la documental: esta los usa

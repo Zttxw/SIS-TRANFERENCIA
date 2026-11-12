@@ -55,7 +55,7 @@ class IngestarPersonal extends Command
             $this->info('✔ Relación de personal generada.');
             $this->table(['Métrica', 'Valor'], [
                 ['Personal ingestado/actualizado (Anexo 05)', $metricas['personal']],
-                ['Omitidos (editados manualmente)', $metricas['omitidos']],
+                ['Omitidos (manuales o retirados)', $metricas['omitidos']],
             ]);
 
             if ($metricas['personal'] === 0 && $metricas['omitidos'] === 0) {

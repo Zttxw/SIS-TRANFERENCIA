@@ -6,6 +6,7 @@ namespace App\Modules\Personal\Services;
 
 use App\Modules\Organization\Models\Servidor;
 use App\Modules\Personal\Models\Personal;
+use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Enums\FuenteDato;
 use Illuminate\Support\Carbon;
@@ -22,6 +23,7 @@ use Illuminate\Support\Facades\DB;
  *
  * Idempotente y respetuoso con ediciones manuales: los registros marcados como
  * `fuente=manual` (creados/editados por un usuario) no se sobrescriben.
+ * Los retiros se conservan y las entregas remitidas no se modifican.
  */
 class IngestaPersonalSgd
 {
@@ -35,6 +37,9 @@ class IngestaPersonalSgd
         $query = Servidor::query()
             ->where('proceso_transferencia_id', $proceso->id)
             ->whereNotNull('dependencia_id')
+            ->whereNotIn('dependencia_id', Entrega::query()->select('dependencia_id')
+                ->where('proceso_transferencia_id', $proceso->id)
+                ->whereNotIn('estado', ['borrador', 'observada']))
             ->whereNotNull('dni');
 
         if ($codigoDependencia !== null) {
@@ -64,13 +69,13 @@ class IngestaPersonalSgd
                     ->where('dni', $srv->dni)
                     ->first();
 
-                if ($existente !== null && $existente->fuente === FuenteDato::MANUAL->value) {
+                if ($existente !== null && ($existente->trashed() || $existente->esManual())) {
                     $omitidos++;
 
                     continue;
                 }
 
-                $personal = Personal::withTrashed()->updateOrCreate(
+                Personal::withTrashed()->updateOrCreate(
                     [
                         'proceso_transferencia_id' => $proceso->id,
                         'dni' => $srv->dni,
@@ -90,10 +95,6 @@ class IngestaPersonalSgd
                         'extraido_en' => $extraidoEn,
                     ]
                 );
-
-                if ($personal->trashed()) {
-                    $personal->restore();
-                }
 
                 $ingestados++;
             }

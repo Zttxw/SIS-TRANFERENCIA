@@ -21,6 +21,7 @@ class PersonalService
     public function listar(array $filtros = []): LengthAwarePaginator
     {
         $query = Personal::query()
+            ->where('proceso_transferencia_id', $this->resolverProcesoActivoId())
             ->with(['dependencia', 'servidor', 'observaciones'])
             ->orderBy('apellidos');
 
@@ -36,10 +37,10 @@ class PersonalService
         if (! empty($filtros['search'])) {
             $term = trim((string) $filtros['search']);
             $query->where(function ($q) use ($term) {
-                $q->where('dni', 'ilike', "%{$term}%")
-                    ->orWhere('nombres', 'ilike', "%{$term}%")
-                    ->orWhere('apellidos', 'ilike', "%{$term}%")
-                    ->orWhere('cargo', 'ilike', "%{$term}%");
+                $q->whereLike('dni', "%{$term}%")
+                    ->orWhereLike('nombres', "%{$term}%")
+                    ->orWhereLike('apellidos', "%{$term}%")
+                    ->orWhereLike('cargo', "%{$term}%");
             });
         }
 

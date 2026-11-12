@@ -43,7 +43,7 @@ const columnas: ColumnaTabla<Personal>[] = [
     header: 'Régimen Laboral',
     cell: (s) => (
       <span className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-mini font-semibold text-secondary-foreground">
-        {s.regimen_laboral}
+        {s.regimen_laboral || 'Pendiente de completar'}
       </span>
     ),
   },
@@ -59,13 +59,18 @@ const columnas: ColumnaTabla<Personal>[] = [
     cell: (s) => (
       <span className="inline-flex items-center gap-1 rounded bg-success-soft px-1.5 py-0.5 text-mini font-medium text-success-fg">
         <UserCheck className="h-3 w-3" />
-        {s.situacion_laboral ?? 'ACTIVO'}
+        {s.situacion_laboral || 'Sin confirmar'}
       </span>
     ),
   },
 ]
 
 export function PersonalPage() {
+  const { dependenciaId } = useDependenciaActiva()
+  return <PersonalContenido key={dependenciaId ?? 'sin-dependencia'} />
+}
+
+function PersonalContenido() {
   const { dependenciaId } = useDependenciaActiva()
   const [pagina, setPagina] = useState(1)
   const [busqueda, setBusqueda] = useState('')
@@ -104,6 +109,12 @@ export function PersonalPage() {
       dependencia={estadoData?.dependencia}
       estadoEntrega={estadoEntrega}
       esModificable={esModificable}
+      aviso={
+        <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm dark:border-sky-900 dark:bg-sky-950/30">
+          <p className="font-semibold">Personal del centro de costo</p>
+          <p className="mt-1 text-muted-foreground">El padrón se precarga desde los servidores importados del SGD. Revise y complete el régimen, la modalidad y la situación laboral antes de firmar. Puede registrar servidores faltantes o retirar los que ya no correspondan.</p>
+        </div>
+      }
       filas={colaboradores}
       rowKey={(s) => s.id}
       loading={isLoading}
