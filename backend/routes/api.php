@@ -78,6 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('documentos-pendientes')->group(function () {
         Route::get('/', [DocumentoPendienteController::class, 'index'])->middleware('permiso:anexos.ver');
         Route::get('/resumen', [DocumentoPendienteController::class, 'resumen'])->middleware('permiso:anexos.ver,reportes.ver');
+        Route::get('/drilldown', [DocumentoPendienteController::class, 'drilldown'])->middleware('permiso:anexos.ver,reportes.ver');
         Route::post('/', [DocumentoPendienteController::class, 'store'])->middleware('permiso:anexos.registrar');
         Route::put('/{id}', [DocumentoPendienteController::class, 'update'])->middleware('permiso:anexos.registrar');
         Route::delete('/{id}', [DocumentoPendienteController::class, 'destroy'])->middleware('permiso:anexos.registrar');

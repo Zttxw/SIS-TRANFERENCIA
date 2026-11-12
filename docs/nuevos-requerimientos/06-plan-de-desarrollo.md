@@ -113,10 +113,24 @@ Permiso `delegados.gestionar` (solo `ette`); `DelegadoController` (`/api/delegad
 
 ## Bloque E — Documentos, indicadores y métricas (RF-001/002/006)
 
-### Tarea E1 — Sumilla y justificación de pendiente (RF-001)
-Separar asunto de sumilla; exigir justificación. **Bloqueado** por D-04 (significado del corte).
-### Tarea E2 — Drill-down de indicadores a listado documental (RF-002)
-Indicador y listado comparten filtros/ámbito/periodo. **Bloqueado** por D-10 (acceso a originales SGD).
+### Tarea E1 — Sumilla y justificación de pendiente (RF-001) ✅ HECHA
+D-04 cerrado parcial (2026-11-11): se añaden `sumilla` y `justificacion_pendiente` al documento
+pendiente **conservando `asunto`** (no se renombra ni migra); la justificación es **obligatoria solo
+en complementos** (`fuente != sgd`) — un registro ingerido del SGD no la exige. El CRUD crea siempre
+`fuente = manual` ⇒ exige justificación.
+**Entregado:** migración (2 columnas), modelo (fillable), `GuardarDocumentoPendienteRequest`
+(validación condicional por fuente), servicio (persiste ambos campos). Tests en
+`DocumentoPendienteSumillaTest`.
+**Pendiente (D-04):** significado operativo del corte SGD y plazo de incorporación de complementos.
+
+### Tarea E2 — Drill-down de indicadores a listado documental (RF-002) ✅ HECHA
+D-10 cerrado parcial (2026-11-11): endpoint de **listado documental** que comparte **filtros/ámbito/
+periodo** con el indicador y se acota por permisos; el original SGD se expone como estado
+`disponible según permiso` **sin traer el archivo** (la ingesta solo guarda agregados).
+**Entregado:** `DocumentoPendienteService::listarParaIndicador` (mismos filtros que `resumen`/`listar`)
++ ruta `GET /api/documentos-pendientes/drilldown`, con marca `original_sgd` por documento. Tests en
+`DrilldownDocumentalTest`.
+**Pendiente (D-10):** acceso real al repositorio de archivos SGD y autorización de difusión de originales.
 
 ---
 
@@ -133,6 +147,11 @@ Indicador y listado comparten filtros/ámbito/periodo. **Bloqueado** por D-10 (a
 | B2 | Firma | ✅ Hecha | D-12 cerrado |
 | C1–C3 | Cronograma | ✅ Hecha | ampliación → D-03 |
 | D1–D2 | ETTE | ✅ Hecha | ampliación → D-08 |
-| E1–E2 | Documentos | Bloqueado | D-04/D-10 |
+| E1 | Documentos | ✅ Hecha | D-04 cerrado parcial |
+| E2 | Documentos | ✅ Hecha | D-10 cerrado parcial |
 
 Las tareas "listas para iniciar" se construyen en su parte confirmada; la parte abierta se deja marcada y no se inventa.
+
+**Todos los bloques A–E están implementados en su parte confirmada.** Lo que queda pendiente son
+ampliaciones condicionadas a decisiones aún abiertas (D-03, D-07, D-08, D-09) y la integración del
+proveedor real de firma (Firma Perú/RENIEC) + la matriz documental ETTS (D-02).

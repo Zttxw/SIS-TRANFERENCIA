@@ -34,6 +34,8 @@ class DocumentoPendiente extends BaseModel
         'numero_documento',
         'tipo_documento',
         'asunto',
+        'sumilla',
+        'justificacion_pendiente',
         'fecha_documento',
         'estado_atencion',
         'accion_pendiente',
