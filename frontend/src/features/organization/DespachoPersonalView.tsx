@@ -24,6 +24,7 @@ import type { Servidor } from '@/types/auth'
 
 import { obtenerDependencia } from './dependencias.service'
 import { BotonFirmaPeru } from '@/features/firmaperu/BotonFirmaPeru'
+import { PrevisualizarAnexo } from '@/features/firmaperu/PrevisualizarAnexo'
 
 /**
  * Vista de Despacho Operativo y Personal Asignado.
@@ -128,6 +129,7 @@ export function DespachoPersonalView() {
 
         {/* Acciones principales */}
         <div className="flex flex-wrap items-center gap-2">
+          {idEfectivo != null && <PrevisualizarAnexo tipoDocumento="anexo01" dependenciaId={idEfectivo} />}
           <BotonFirmaPeru tipoDocumento="anexo01" dependenciaId={idEfectivo} />
           <Button
             size="sm"

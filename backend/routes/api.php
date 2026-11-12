@@ -37,6 +37,7 @@ Route::prefix('firmaperu')->middleware('throttle:60,1')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('firmaperu')->group(function () {
         Route::post('/preparar', [FirmaperuController::class, 'preparar'])->middleware('permiso:anexos.registrar,firmas.firmar,actas.generar')->middleware('throttle:10,1');
+        Route::post('/generar-borrador', [FirmaperuController::class, 'generarBorrador'])->middleware('permiso:anexos.registrar,actas.generar')->middleware('throttle:20,1');
         Route::middleware('permiso:anexos.ver')->group(function () {
             Route::get('/previsualizar', [FirmaperuController::class, 'previsualizar'])->middleware('throttle:20,1');
             Route::get('/sesiones/{id}', [FirmaperuController::class, 'sesion'])->whereUuid('id');
@@ -78,6 +79,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('documentos-pendientes')->group(function () {
         Route::get('/', [DocumentoPendienteController::class, 'index'])->middleware('permiso:anexos.ver');
         Route::get('/resumen', [DocumentoPendienteController::class, 'resumen'])->middleware('permiso:anexos.ver,reportes.ver');
+        Route::get('/drilldown', [DocumentoPendienteController::class, 'drilldown'])->middleware('permiso:anexos.ver,reportes.ver');
         Route::post('/', [DocumentoPendienteController::class, 'store'])->middleware('permiso:anexos.registrar');
         Route::put('/{id}', [DocumentoPendienteController::class, 'update'])->middleware('permiso:anexos.registrar');
         Route::delete('/{id}', [DocumentoPendienteController::class, 'destroy'])->middleware('permiso:anexos.registrar');

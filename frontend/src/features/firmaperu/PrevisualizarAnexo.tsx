@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Eye, Loader2, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { Tooltip } from '@/components/ui/tooltip'
 import { firmaperuService } from './firmaperu.service'
 import type { TipoDocumentoFirma } from './firmaperu.types'
 
@@ -13,9 +14,11 @@ interface Props {
 export function PrevisualizarAnexo(props: Props) {
   const [abierto, setAbierto] = useState(false)
   return <>
-    <Button size="sm" variant="outline" className="gap-2 border-primary/30 text-primary" onClick={() => setAbierto(true)}>
-      <Eye className="h-4 w-4" /> Previsualización
-    </Button>
+    <Tooltip content="Previsualización">
+      <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground" aria-label="Previsualización" onClick={() => setAbierto(true)}>
+        <Eye className="h-4 w-4" />
+      </Button>
+    </Tooltip>
     {abierto && <VisorAnexo {...props} onCerrar={() => setAbierto(false)} />}
   </>
 }

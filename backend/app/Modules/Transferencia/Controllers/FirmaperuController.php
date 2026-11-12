@@ -6,6 +6,7 @@ namespace App\Modules\Transferencia\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Organization\Models\Dependencia;
+use App\Modules\Transferencia\Models\FirmaBorrador;
 use App\Modules\Transferencia\Models\FirmaSesion;
 use App\Modules\Transferencia\Services\FirmaperuPdfService;
 use App\Modules\Transferencia\Services\FirmaperuRegistroService;
@@ -57,8 +58,24 @@ class FirmaperuController extends Controller
         $this->autorizarDependencia($request->user(), $dependenciaId);
         $procesoId = app(ContextoTransferencia::class)->procesoActivoId();
         abort_unless(Dependencia::whereKey($dependenciaId)->where('proceso_transferencia_id', $procesoId)->exists(), 409);
+        $tipo = $datos['tipo_documento'] === 'acta' ? 'anexo07' : $datos['tipo_documento'];
         if (in_array($datos['tipo_documento'], ['acta', 'anexo07'], true)) {
             $this->registro->caracter($request->user(), 'anexo07', $dependenciaId);
+        }
+
+        // Si existe el PDF borrador persistido (y su huella coincide), se muestra
+        // ese archivo exacto. Si no, se genera al vuelo con los datos actuales.
+        $borrador = FirmaBorrador::where('tipo_documento', $tipo)
+            ->where('dependencia_id', $dependenciaId)->where('proceso_transferencia_id', $procesoId)->first();
+        if ($borrador && Storage::disk('local')->exists($borrador->pdf_path)) {
+            $contenido = Storage::disk('local')->get($borrador->pdf_path);
+            if (hash_equals($borrador->pdf_sha256, hash('sha256', $contenido))) {
+                return response($contenido, 200, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="Borrador-'.$tipo.'.pdf"',
+                    'Cache-Control' => 'private, no-store',
+                ]);
+            }
         }
 
         return response($pdf->generar($datos['tipo_documento'], $dependenciaId, $request->user()), 200, [
@@ -66,6 +83,30 @@ class FirmaperuController extends Controller
             'Content-Disposition' => 'inline; filename="Previsualizacion-'.$datos['tipo_documento'].'.pdf"',
             'Cache-Control' => 'private, no-store',
         ]);
+    }
+
+    public function generarBorrador(Request $request, FirmaperuPdfService $pdf): JsonResponse
+    {
+        $datos = $request->validate([
+            'tipo_documento' => 'required|string|in:'.self::TIPOS,
+            'dependencia_id' => 'required|integer|exists:dependencias,id',
+        ]);
+        $dependenciaId = (int) $datos['dependencia_id'];
+        $usuario = $request->user();
+        $this->autorizarDependencia($usuario, $dependenciaId);
+        $tipo = $datos['tipo_documento'] === 'acta' ? 'anexo07' : $datos['tipo_documento'];
+        // Valida la responsabilidad del firmante y, para el acta, exige actas.generar.
+        $this->registro->caracter($usuario, $tipo, $dependenciaId);
+        $procesoId = app(ContextoTransferencia::class)->procesoActivoId();
+        abort_unless(Dependencia::whereKey($dependenciaId)->where('proceso_transferencia_id', $procesoId)->exists(),
+            409, 'La dependencia no pertenece al proceso activo.');
+
+        $borrador = $pdf->generarBorrador($tipo, $dependenciaId, $usuario);
+
+        return ApiResponse::success([
+            'borrador_generado' => true,
+            'borrador_generado_en' => $borrador->generado_en->toIso8601String(),
+        ], 'Borrador generado.', 201);
     }
 
     public function param(Request $request): Response
@@ -126,11 +167,17 @@ class FirmaperuController extends Controller
             ->where('proceso_transferencia_id', app(ContextoTransferencia::class)->procesoActivoId())
             ->where('estado', 'pendiente_validacion')->latest('created_at')->orderByDesc('id')->first();
 
+        $borrador = FirmaBorrador::where('tipo_documento', $tipo === 'acta' ? 'anexo07' : $tipo)
+            ->where('dependencia_id', $dependenciaId)
+            ->where('proceso_transferencia_id', app(ContextoTransferencia::class)->procesoActivoId())->first();
+
         return ApiResponse::success(['firmado' => $sesion !== null, 'documento_id' => $sesion?->id,
             'version' => $sesion?->documento?->version,
             'vigente' => $sesion !== null && $this->registro->vigente($sesion),
             'firmado_en' => $sesion?->firmado_en?->toIso8601String(),
-            'pendiente_validacion' => $pendiente !== null, 'sesion_pendiente_id' => $pendiente?->id]);
+            'pendiente_validacion' => $pendiente !== null, 'sesion_pendiente_id' => $pendiente?->id,
+            'borrador_generado' => $borrador !== null,
+            'borrador_generado_en' => $borrador?->generado_en?->toIso8601String()]);
     }
 
     public function descargar(Request $request, string $id): StreamedResponse

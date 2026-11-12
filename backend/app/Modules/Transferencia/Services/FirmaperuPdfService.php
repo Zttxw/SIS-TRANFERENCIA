@@ -11,7 +11,10 @@ use App\Modules\NoPatrimonial\Services\NoPatrimonialPdf;
 use App\Modules\Organization\Services\CentrosCostoPdf;
 use App\Modules\Patrimonio\Services\PatrimonioPdf;
 use App\Modules\Personal\Services\PersonalPdf;
+use App\Modules\Transferencia\Models\FirmaBorrador;
+use App\Support\Services\ContextoTransferencia;
 use App\Support\Services\PdfService;
+use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 
 class FirmaperuPdfService
@@ -36,6 +39,26 @@ class FirmaperuPdfService
         [$vista, $datos, $orientacion] = $this->plantilla($tipoDocumento, $dependenciaId, $usuario);
 
         return $this->pdf->binario($vista, $datos, 'a4', $orientacion);
+    }
+
+    /**
+     * Genera y SOBRESCRIBE el borrador oficial de un documento (02-07) sin firmarlo.
+     * Un único archivo por (proceso, dependencia, tipo); no crea DocumentoFirma ni
+     * versiona. Es el insumo que luego se firma en «Mi entrega».
+     */
+    public function generarBorrador(string $tipoDocumento, int $dependenciaId, User $usuario): FirmaBorrador
+    {
+        $tipo = $tipoDocumento === 'acta' ? 'anexo07' : $tipoDocumento;
+        $procesoId = app(ContextoTransferencia::class)->procesoActivoId();
+        $contenido = $this->generar($tipo, $dependenciaId, $usuario);
+        $ruta = 'firmaperu/borradores/'.$procesoId.'/'.$dependenciaId.'/'.$tipo.'.pdf';
+        abort_unless(Storage::disk('local')->put($ruta, $contenido), 503, 'No se pudo conservar el PDF borrador.');
+
+        return FirmaBorrador::updateOrCreate(
+            ['proceso_transferencia_id' => $procesoId, 'dependencia_id' => $dependenciaId, 'tipo_documento' => $tipo],
+            ['pdf_path' => $ruta, 'pdf_sha256' => hash('sha256', $contenido),
+                'generado_por' => $usuario->id, 'generado_en' => now()],
+        );
     }
 
     /** Huella del contenido impreso, sin hora de impresión ni estado operativo de entrega. */

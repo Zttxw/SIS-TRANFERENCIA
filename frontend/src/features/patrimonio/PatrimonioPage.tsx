@@ -18,7 +18,6 @@ import { useAuth, useDependenciaActiva } from '@/auth/hooks'
 import { Can } from '@/auth/Can'
 import { AlertaBloqueoEntrega } from '@/components/anexos/AlertaBloqueoEntrega'
 import { AnexoHeader } from '@/components/anexos/AnexoHeader'
-import { BotonDescargarPdf } from '@/components/anexos/BotonDescargarPdf'
 import { ObservacionesAnexoPanel } from '@/components/anexos/ObservacionesAnexoPanel'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,13 +31,13 @@ import { Select } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
-import { BotonFirmaPeru } from '@/features/firmaperu/BotonFirmaPeru'
+import { BotonGenerarPdf } from '@/features/firmaperu/BotonGenerarPdf'
+import { PrevisualizarAnexo } from '@/features/firmaperu/PrevisualizarAnexo'
 import {
   useBienesPatrimoniales,
   useResumenPatrimonial,
   useVerificarBien,
 } from './use-patrimonio'
-import { patrimonioService } from './patrimonio.service'
 import { FilaVerificacionPatrimonio } from './FilaVerificacionPatrimonio'
 import { agruparPatrimonioPorServidor } from './agrupar-por-servidor'
 import type { BienPatrimonial, EstadoVerificacionBien, VerificarBienPayload } from '@/types/patrimonio'
@@ -269,12 +268,8 @@ export function PatrimonioPage() {
         dependenciaNombre={dependencia?.nombre ?? (esGlobal ? 'Municipalidad Distrital de San Jerónimo (Visión Global)' : undefined)}
         acciones={
           <>
-            <BotonFirmaPeru key={dependenciaId} tipoDocumento="anexo04" dependenciaId={dependenciaId} />
-            <BotonDescargarPdf
-              descargar={() => patrimonioService.descargarPdf(dependenciaId as number)}
-              disabled={!dependenciaId}
-              etiqueta="PDF oficial"
-            />
+            {dependenciaId != null && <PrevisualizarAnexo tipoDocumento="anexo04" dependenciaId={dependenciaId} />}
+            <BotonGenerarPdf tipoDocumento="anexo04" dependenciaId={dependenciaId} />
           </>
         }
       />
