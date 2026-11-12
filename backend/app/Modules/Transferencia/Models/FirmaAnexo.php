@@ -49,6 +49,7 @@ class FirmaAnexo extends BaseModel
         'nota',
         'copia_entregada_en',
         'copia_registrada_por_id',
+        'firma_sesion_id',
     ];
 
     protected static function newFactory(): FirmaAnexoFactory
@@ -78,6 +79,11 @@ class FirmaAnexo extends BaseModel
     public function firmante(): BelongsTo
     {
         return $this->belongsTo(User::class, 'firmante_id');
+    }
+
+    public function sesion(): BelongsTo
+    {
+        return $this->belongsTo(FirmaSesion::class, 'firma_sesion_id');
     }
 
     /** Quién registró la entrega de la copia digital (B2, D-12). @return BelongsTo<User, $this> */

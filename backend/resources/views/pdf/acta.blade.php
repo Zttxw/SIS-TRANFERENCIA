@@ -5,6 +5,10 @@
 @section('cuerpo')
     <table>
         <tr>
+            <td class="etiqueta">Versión / Declaración</td>
+            <td>{{ $acta['version'] }} — {{ $acta['declara'] }}</td>
+        </tr>
+        <tr>
             <td class="etiqueta">N.° de Acta</td>
             <td class="mono">{{ $acta['numero_acta'] }}</td>
         </tr>

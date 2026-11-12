@@ -65,6 +65,8 @@ class ActaPdf
         return [
             'contexto' => $contexto,
             'acta' => [
+                'version' => $acta->version,
+                'declara' => $acta->declara->etiqueta(),
                 'numero_acta' => $acta->numero_acta ?? '',
                 'dependencia' => $acta->dependencia?->nombre ?? '',
                 'nivel' => $acta->dependencia?->nivel ?? '',

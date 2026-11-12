@@ -8,6 +8,7 @@ use Database\Factories\FirmaSesionFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FirmaSesion extends Model
 {
@@ -33,5 +34,10 @@ class FirmaSesion extends Model
     public function expirada(): bool
     {
         return now()->greaterThanOrEqualTo($this->expires_at);
+    }
+
+    public function documento(): BelongsTo
+    {
+        return $this->belongsTo(DocumentoFirma::class, 'documento_firma_id');
     }
 }

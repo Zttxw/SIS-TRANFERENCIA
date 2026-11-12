@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\Transferencia\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Transferencia\Models\ActaTransferencia;
 use App\Modules\Transferencia\Services\ActaPdf;
+use App\Modules\Transferencia\Services\FirmaperuRegistroService;
 use App\Modules\Transferencia\Services\TransferenciaService;
 use App\Support\Concerns\AutorizaAmbito;
+use App\Support\Enums\Permiso;
 use App\Support\Http\ApiResponse;
+use App\Support\Services\ContextoTransferencia;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -127,7 +131,13 @@ class TransferenciaController extends Controller
 
         $this->autorizarDependencia($request->user(), $dependenciaId);
 
-        $acta = $this->transferenciaService->obtenerActa($dependenciaId, $request->user());
+        if ($request->user()->tienePermiso(Permiso::GenerarActas)) {
+            $acta = $this->transferenciaService->obtenerActa($dependenciaId, $request->user());
+        } else {
+            app(FirmaperuRegistroService::class)->caracter($request->user(), 'anexo07', $dependenciaId);
+            $acta = ActaTransferencia::where('proceso_transferencia_id', app(ContextoTransferencia::class)->procesoActivoId())
+                ->where('dependencia_id', $dependenciaId)->firstOrFail()->load(['dependencia', 'evidencias.subidoPor', 'generadaPor']);
+        }
 
         return ApiResponse::success($acta, 'Acta de transferencia obtenida.');
     }
@@ -142,6 +152,9 @@ class TransferenciaController extends Controller
         $dependenciaId = (int) $request->input('dependencia_id');
         abort_unless($dependenciaId > 0, 422, 'Debe especificar dependencia_id.');
         $this->autorizarDependencia($request->user(), $dependenciaId);
+        if (! $request->user()->tienePermiso(Permiso::GenerarActas)) {
+            app(FirmaperuRegistroService::class)->caracter($request->user(), 'anexo07', $dependenciaId);
+        }
 
         return $this->actaPdf->descargar($dependenciaId, $request->user());
     }

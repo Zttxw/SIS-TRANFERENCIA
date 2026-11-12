@@ -201,6 +201,11 @@ class ObservacionService
             ->first();
 
         if ($entrega !== null && $entrega->estado === EstadoEntrega::OBSERVADA) {
+            if (ProcesoTransferencia::find($observacion->proceso_transferencia_id)?->exige_firma_acta) {
+                app(TransferenciaService::class)->asegurarVersionCorreccion($observacion->proceso_transferencia_id, $dependenciaId);
+
+                return;
+            }
             $entrega->fill([
                 'emisor_id' => $usuario->id,
                 'estado' => EstadoEntrega::REMITIDA,

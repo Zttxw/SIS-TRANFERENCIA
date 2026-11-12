@@ -7,7 +7,6 @@ namespace App\Modules\Transferencia\Services;
 use App\Models\User;
 use App\Modules\Transferencia\Models\FirmaSesion;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
-use App\Support\Enums\Permiso;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -22,6 +21,7 @@ class FirmaperuSesionService
         private readonly FirmaperuAuthService $auth,
         private readonly FirmaperuPdfService $pdf,
         private readonly FirmaperuValidadorService $validador,
+        private readonly FirmaperuRegistroService $registro,
     ) {}
 
     /** @return array<string, mixed> */
@@ -31,16 +31,23 @@ class FirmaperuSesionService
         $this->jwt();
         $procesoId = ProcesoTransferencia::where('estado', 'abierto')->value('id');
         abort_unless($procesoId, 409, 'No existe un proceso de transferencia abierto.');
+        $caracter = $this->registro->caracter($usuario, $tipo, $dependenciaId);
+        $documento = $this->registro->documento($usuario, $tipo, $dependenciaId);
         $previo = $previoId ? FirmaSesion::whereKey($previoId)
             ->where('dependencia_id', $dependenciaId)->where('tipo_documento', $tipo)
             ->where('proceso_transferencia_id', $procesoId)->where('estado', 'firmada')->firstOrFail() : null;
 
         if ($previo) {
+            abort_unless($previo->documento_firma_id === $documento->id && $this->registro->vigente($previo),
+                409, 'El PDF anterior corresponde a otra versión. Firme los datos actuales.');
             abort_unless(Storage::disk('local')->exists($previo->firmado_path), 409, 'El documento firmado anterior no está disponible.');
             $contenido = Storage::disk('local')->get($previo->firmado_path);
             abort_unless(hash_equals($previo->firmado_sha256, hash('sha256', $contenido)), 409, 'El PDF firmado anterior no coincide con su huella.');
         } else {
-            $contenido = $this->pdf->generar($tipo, $dependenciaId, $usuario);
+            $captura = $this->pdf->capturar($tipo, $dependenciaId, $usuario);
+            abort_unless(hash_equals($documento->contenido_sha256, $captura['huella']), 409,
+                'Los datos cambiaron mientras se preparaba el PDF. Guarde los cambios y vuelva a firmar.');
+            $contenido = $captura['pdf'];
         }
 
         $id = (string) Str::uuid7();
@@ -57,6 +64,8 @@ class FirmaperuSesionService
                 'firmante_dni' => $usuario->dni,
                 'documento_previo_id' => $previo?->id,
                 'tipo_documento' => $tipo,
+                'documento_firma_id' => $documento->id,
+                'caracter' => $caracter->value,
                 'estado' => 'pendiente',
                 'param_token_hash' => hash('sha256', $token),
                 'pdf_path' => $ruta,
@@ -127,10 +136,7 @@ class FirmaperuSesionService
             $firmado = $archivo->getContent();
             $usuario = User::findOrFail($sesion->usuario_id);
             abort_unless($usuario->activo, 403, 'La cuenta que inició la firma está inactiva.');
-            abort_unless($usuario->tienePermiso(Permiso::RegistrarAnexos)
-                && $usuario->puedeAccederDependencia($sesion->dependencia_id)
-                && ($sesion->tipo_documento !== 'anexo07' || $usuario->tienePermiso(Permiso::GenerarActas)),
-                403, 'La cuenta que inició la firma ya no está autorizada para este documento.');
+            $this->registro->caracter($usuario, $sesion->tipo_documento, $sesion->dependencia_id);
             if (! $this->validador->tieneConfiguracion()) {
                 abort_unless(Storage::disk('local')->put($ruta, $firmado), 503, 'No se pudo conservar el PDF recibido.');
                 $sesion->update(['estado' => 'pendiente_validacion', 'firmado_path' => $ruta,
@@ -143,8 +149,11 @@ class FirmaperuSesionService
             }
             $detalles = $this->validador->validar($original, $firmado, $sesion->firmante_dni);
             abort_unless(Storage::disk('local')->put($ruta, $firmado), 503, 'No se pudo conservar el PDF firmado.');
-            $sesion->update(['estado' => 'firmada', 'firmado_path' => $ruta,
-                'firmado_sha256' => hash('sha256', $firmado), 'firmado_en' => now(), 'detalles' => $detalles]);
+            DB::transaction(function () use ($sesion, $ruta, $firmado, $detalles): void {
+                $sesion->update(['estado' => 'firmada', 'firmado_path' => $ruta,
+                    'firmado_sha256' => hash('sha256', $firmado), 'firmado_en' => now(), 'detalles' => $detalles]);
+                $this->registro->registrar($sesion);
+            });
         } catch (ValidationException $exception) {
             $sesion->update(['estado' => 'rechazada', 'mensaje' => $exception->errors()['signed_file'][0] ?? 'Firma rechazada.']);
             throw $exception;
@@ -173,8 +182,11 @@ class FirmaperuSesionService
             abort_unless(hash_equals($sesion->original_sha256, hash('sha256', $original))
                 && hash_equals($sesion->firmado_sha256, hash('sha256', $firmado)), 409, 'Un archivo conservado no coincide con su huella.');
             $detalles = $this->validador->validar($original, $firmado, $sesion->firmante_dni);
-            $sesion->update(['estado' => 'firmada', 'firmado_en' => now(), 'mensaje' => null,
-                'detalles' => array_merge($sesion->detalles ?? [], $detalles)]);
+            DB::transaction(function () use ($sesion, $detalles): void {
+                $sesion->update(['estado' => 'firmada', 'firmado_en' => now(), 'mensaje' => null,
+                    'detalles' => array_merge($sesion->detalles ?? [], $detalles)]);
+                $this->registro->registrar($sesion);
+            });
         } catch (ValidationException $exception) {
             $sesion->update(['estado' => 'rechazada', 'mensaje' => $exception->errors()['signed_file'][0] ?? 'Firma rechazada.']);
             throw $exception;

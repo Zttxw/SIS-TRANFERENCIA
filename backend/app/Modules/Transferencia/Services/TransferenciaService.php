@@ -23,6 +23,7 @@ use App\Support\Enums\EstadoEntrega;
 use App\Support\Enums\EstadoFirma;
 use App\Support\Enums\EstadoObservacion;
 use App\Support\Enums\EstadoVerificacionBien;
+use App\Support\Enums\Rol;
 use App\Support\Http\ApiResponse;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -316,7 +317,8 @@ class TransferenciaService
         // 07) debe tener su firma OBLIGATORIA del responsable del centro de costo
         // antes de remitir. Configurable por proceso y APAGADO por defecto: el
         // flujo actual sigue vigente mientras no haya proveedor real de firma.
-        $this->exigirActaFirmada($procesoId, $dep->id);
+        $this->asegurarVersionCorreccion($procesoId, $dep->id);
+        $this->exigirActaFirmada($procesoId, $dep->id, $usuario);
 
         return DB::transaction(function () use ($dep, $procesoId, $usuario, $comentario) {
             $entrega = Entrega::where('proceso_transferencia_id', $procesoId)
@@ -336,16 +338,6 @@ class TransferenciaService
                         409,
                     )
                 );
-            }
-
-            // B3c (D-06): corregir una entrega OBSERVADA produce una nueva versión
-            // del acta. La re-remisión no reutiliza las firmas de la versión
-            // anterior: las firmas obligatorias previas se invalidan (cancelada) y
-            // la versión del acta sube, para que una firma vieja no ampare la
-            // versión corregida. Las firmas previas quedan históricas sobre su
-            // propia versión (no se borran).
-            if ($entrega !== null && $entrega->estado === EstadoEntrega::OBSERVADA) {
-                $this->versionarActaPorCorreccion($procesoId, $dep->id);
             }
 
             return Entrega::updateOrCreate(
@@ -420,6 +412,11 @@ class TransferenciaService
                 'comentario' => $comentario ?? $entrega->comentario,
             ])->save();
 
+            if ($nuevoEstado === EstadoEntrega::OBSERVADA) {
+                $entrega->forceFill(['version_acta_correccion' => null])->save();
+                $this->asegurarVersionCorreccion($entrega->proceso_transferencia_id, $entrega->dependencia_id);
+            }
+
             return $entrega->fresh(['emisor', 'receptor', 'dependenciaDestino']);
         });
     }
@@ -469,6 +466,11 @@ class TransferenciaService
             'dependencia_id' => $dep->id,
         ]);
 
+        if ($acta->exists && $acta->declara !== $declara) {
+            $this->versionarActaPorCorreccion($procesoId, $dep->id);
+            $acta->refresh();
+        }
+
         $acta->fill([
             'numero_acta' => $acta->numero_acta ?? 'ACTA-'.Carbon::now()->year.'-'.str_replace('.', '', (string) $dep->codigo),
             'fecha_acta' => $acta->fecha_acta ?? Carbon::now()->toDateString(),
@@ -480,11 +482,31 @@ class TransferenciaService
             'estado' => $acta->estado === 'suscrita' ? 'suscrita' : 'generada',
             'declara' => $declara,
             'version' => $acta->version ?? 1,
-            'generada_por_id' => $usuario?->id ?? $acta->generada_por_id,
+            'generada_por_id' => $acta->generada_por_id ?? $usuario?->id,
         ]);
         $acta->save();
+        $this->asegurarVersionCorreccion($procesoId, $dep->id);
 
-        return $acta->load(['evidencias.subidoPor', 'generadaPor', 'dependencia']);
+        return $acta->refresh()->load(['evidencias.subidoPor', 'generadaPor', 'dependencia']);
+    }
+
+    /** La corrección obtiene versión antes de firmar, incluso para entregas observadas anteriores a esta integración. */
+    public function asegurarVersionCorreccion(int $procesoId, int $dependenciaId): void
+    {
+        DB::transaction(function () use ($procesoId, $dependenciaId): void {
+            Dependencia::whereKey($dependenciaId)->lockForUpdate()->firstOrFail();
+            $entrega = Entrega::where('proceso_transferencia_id', $procesoId)
+                ->where('dependencia_id', $dependenciaId)->lockForUpdate()->first();
+            if (! $entrega || $entrega->estado !== EstadoEntrega::OBSERVADA || $entrega->version_acta_correccion !== null) {
+                return;
+            }
+            $acta = ActaTransferencia::where('proceso_transferencia_id', $procesoId)
+                ->where('dependencia_id', $dependenciaId)->lockForUpdate()->first();
+            if ($acta) {
+                $this->versionarActaPorCorreccion($procesoId, $dependenciaId);
+                $entrega->forceFill(['version_acta_correccion' => $acta->fresh()->version])->save();
+            }
+        });
     }
 
     /**
@@ -524,6 +546,7 @@ class TransferenciaService
         $acta->fill([
             'version' => $versionAnterior + 1,
             'estado' => 'generada',
+            'ruta_pdf_suscrito' => null,
         ])->save();
     }
 
@@ -536,7 +559,7 @@ class TransferenciaService
      * Por defecto el gate está APAGADO: no bloquea el flujo actual ni presupone
      * un proveedor de firma. No impone orden entre firmantes (un solo obligatorio).
      */
-    private function exigirActaFirmada(int $procesoId, int $dependenciaId): void
+    private function exigirActaFirmada(int $procesoId, int $dependenciaId, User $usuario): void
     {
         $proceso = ProcesoTransferencia::find($procesoId);
         if ($proceso === null || ! $proceso->exige_firma_acta) {
@@ -547,13 +570,22 @@ class TransferenciaService
             ->where('dependencia_id', $dependenciaId)
             ->first();
 
+        if ($acta !== null) {
+            app(FirmaperuRegistroService::class)->documento($usuario, 'anexo07', $dependenciaId);
+            $acta->refresh();
+        }
+
         $firmada = $acta !== null && FirmaAnexo::query()
             ->where('firmable_type', $acta->getMorphClass())
             ->where('firmable_id', $acta->id)
             ->where('version', $acta->version ?? 1)
+            ->whereHas('firmante', fn ($q) => $q->where('activo', true)->whereHas('asignacionesRol', fn ($roles) => $roles
+                ->where('rol', Rol::RESPONSABLE_CENTRO_COSTO->value)
+                ->where('proceso_transferencia_id', $procesoId)->where('dependencia_id', $dependenciaId)))
             ->obligatorias()
             ->validas()
-            ->exists();
+            ->get()->contains(fn (FirmaAnexo $firma): bool => $firma->firma_sesion_id === null
+                || ($firma->sesion?->estado === 'firmada' && app(FirmaperuRegistroService::class)->vigente($firma->sesion)));
 
         if (! $firmada) {
             throw new HttpResponseException(

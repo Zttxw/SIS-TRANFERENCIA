@@ -33,6 +33,49 @@ class FirmaperuPdfService
      */
     public function generar(string $tipoDocumento, int $dependenciaId, User $usuario): string
     {
+        [$vista, $datos, $orientacion] = $this->plantilla($tipoDocumento, $dependenciaId, $usuario);
+
+        return $this->pdf->binario($vista, $datos, 'a4', $orientacion);
+    }
+
+    /** Huella del contenido impreso, sin hora de impresión ni estado operativo de entrega. */
+    public function huella(string $tipoDocumento, int $dependenciaId, User $usuario): string
+    {
+        [$vista, $datos] = $this->plantilla($tipoDocumento, $dependenciaId, $usuario);
+
+        return $this->huellaPlantilla($tipoDocumento, $vista, $datos, $dependenciaId, $usuario);
+    }
+
+    /** @return array{pdf: string, huella: string} */
+    public function capturar(string $tipoDocumento, int $dependenciaId, User $usuario): array
+    {
+        [$vista, $datos, $orientacion] = $this->plantilla($tipoDocumento, $dependenciaId, $usuario);
+
+        return ['pdf' => $this->pdf->binario($vista, $datos, 'a4', $orientacion),
+            'huella' => $this->huellaPlantilla($tipoDocumento, $vista, $datos, $dependenciaId, $usuario)];
+    }
+
+    /** @param array<string, mixed> $datos */
+    private function huellaPlantilla(string $tipoDocumento, string $vista, array $datos, int $dependenciaId, User $usuario): string
+    {
+        $datos['contexto']['emitido_en'] = '';
+        $datos['contexto']['entrega_estado'] = 'borrador';
+        $datos['contexto']['entrega_estado_etiqueta'] = '';
+        $datos['contexto']['es_borrador'] = true;
+
+        $contenido = view($vista, $datos)->render();
+        if ($tipoDocumento === 'anexo07') {
+            foreach (['anexo02', 'anexo03', 'anexo04', 'anexo05', 'anexo06'] as $anexo) {
+                $contenido .= $this->huella($anexo, $dependenciaId, $usuario);
+            }
+        }
+
+        return hash('sha256', $contenido);
+    }
+
+    /** @return array{string, array<string, mixed>, string} */
+    private function plantilla(string $tipoDocumento, int $dependenciaId, User $usuario): array
+    {
         [$vista, $datos, $orientacion] = match ($tipoDocumento) {
             'anexo01' => ['pdf.anexo01', $this->centros->datos($dependenciaId), 'portrait'],
             'anexo02' => ['pdf.anexo02', $this->gestion->datos($dependenciaId), 'portrait'],
@@ -44,6 +87,6 @@ class FirmaperuPdfService
             default => throw new InvalidArgumentException('Tipo de documento no soportado para firma.'),
         };
 
-        return $this->pdf->binario($vista, $datos, 'a4', $orientacion);
+        return [$vista, $datos, $orientacion];
     }
 }

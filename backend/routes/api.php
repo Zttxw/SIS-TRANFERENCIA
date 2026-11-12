@@ -36,7 +36,7 @@ Route::prefix('firmaperu')->middleware('throttle:60,1')->group(function () {
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('firmaperu')->group(function () {
-        Route::post('/preparar', [FirmaperuController::class, 'preparar'])->middleware('permiso:anexos.registrar')->middleware('throttle:10,1');
+        Route::post('/preparar', [FirmaperuController::class, 'preparar'])->middleware('permiso:anexos.registrar,firmas.firmar,actas.generar')->middleware('throttle:10,1');
         Route::middleware('permiso:anexos.ver')->group(function () {
             Route::get('/sesiones/{id}', [FirmaperuController::class, 'sesion'])->whereUuid('id');
             Route::get('/estado/{tipo}/{dependenciaId}', [FirmaperuController::class, 'estado'])->whereNumber('dependenciaId');
@@ -130,8 +130,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/estado', [TransferenciaController::class, 'estado'])->middleware('permiso:anexos.ver');
         Route::post('/remitir', [TransferenciaController::class, 'remitir'])->middleware('permiso:entregas.remitir');
         Route::post('/revisar', [TransferenciaController::class, 'revisar'])->middleware('permiso:entregas.revisar');
-        Route::get('/acta', [TransferenciaController::class, 'acta'])->middleware('permiso:actas.generar');
-        Route::get('/acta/pdf', [TransferenciaController::class, 'actaPdf'])->middleware('permiso:actas.generar');
+        Route::get('/acta', [TransferenciaController::class, 'acta'])->middleware('permiso:actas.generar,firmas.firmar');
+        Route::get('/acta/pdf', [TransferenciaController::class, 'actaPdf'])->middleware('permiso:actas.generar,firmas.firmar');
     });
 
     // Constancia de ausencia de firma ETTE + copia digital (RF-004/005, D-12).
