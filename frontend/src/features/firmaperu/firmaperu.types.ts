@@ -26,6 +26,8 @@ export interface EstadoFirma {
   firmado_en: string | null
   pendiente_validacion: boolean
   sesion_pendiente_id: string | null
+  borrador_generado: boolean
+  borrador_generado_en: string | null
 }
 
 declare global {

@@ -7,7 +7,8 @@
 - **Backend:** Laravel 11, PHP 8, PostgreSQL (`DB_DATABASE=sis_transferencia`, `APP_ENV=local`). Tests: `cd backend && php artisan test`. Hay 7 tests de `FirmaperuValidadorTest` que fallan **solo en esta máquina** por `openssl.cnf` ausente (`openssl_csr_new()` devuelve `false`); **no** es regresión — ignorarlos salvo que una tarea los aborde explícitamente. Suite útil: 193 verde.
 - **Frontend:** React + TypeScript + Vite + react-router + @tanstack/react-query + tailwind + sonner (toasts) + lucide icons. Typecheck: `cd frontend && npx tsc --noEmit` (hoy en verde, exit 0). Estructura por `features/` + primitivas en `components/ui/` + marco de anexos en `components/anexos/`.
 - **Primitivas UI existentes** (`frontend/src/components/ui/`): async-boundary, badge, button, card, combobox, confirm-dialog, data-table, dialog, editable-table, empty-state, form-field, input, label, pagination, **popover**, select, skeleton, spinner, textarea, tooltip. **NO existe** `dropdown-menu`.
-- **Firma Perú (frontend):** vive en `features/firmaperu/`. Pieza central: [BotonFirmaPeru.tsx](../../frontend/src/features/firmaperu/BotonFirmaPeru.tsx) — renderiza TODA la nube de botones de firma. Se incrusta en el header del anexo vía [AnexoLayout.tsx](../../frontend/src/components/anexos/AnexoLayout.tsx) (líneas 101-103, mapa `TIPOS_FIRMA`). También se usa suelto en `acta/ActaPage.tsx`, `organization/EstructuraOrganicaPage.tsx`, `organization/DespachoPersonalView.tsx`, `patrimonio/PatrimonioPage.tsx`.
+- **Firma Perú (frontend):** vive en `features/firmaperu/`. Pieza central: [BotonFirmaPeru.tsx](../../frontend/src/features/firmaperu/BotonFirmaPeru.tsx) — encapsula TODA la lógica de firma (firmar/agregar/descargar/`PrepararEquipoFirma`/versiones/`vigente`). **Tras la reestructuración de la Fase 3, deja de montarse en el header del anexo y pasa a «Mi entrega»** (`features/entregas/`). Hoy se incrusta vía [AnexoLayout.tsx](../../frontend/src/components/anexos/AnexoLayout.tsx) (mapa `TIPOS_FIRMA`) y suelto en `acta/ActaPage.tsx`, `patrimonio/PatrimonioPage.tsx`, `organization/EstructuraOrganicaPage.tsx`, `organization/DespachoPersonalView.tsx`. **El estado de firma ya expone `version` y `vigente` por documento** (`firmaperu.types.ts`) — el versionado-al-firmar ya está soportado en el modelo.
+- **«Mi entrega»:** es la pestaña `mi_entrega` («Remisión de mi Despacho») de [EntregasPage.tsx](../../frontend/src/features/entregas/EntregasPage.tsx) (líneas ~132-226). Ya muestra estado de la entrega + botón «Remitir». La Fase 3 la **amplía** con el panel de firma por documento. No se crea un módulo nuevo.
 - **Firma Perú (backend):** módulo `Transferencia`. Controllers `FirmaperuController`, `FirmaperuClienteController`. Services `FirmaperuAuthService`, `FirmaperuPdfService`, `FirmaperuRegistroService`, `FirmaperuSesionService`, `FirmaperuValidadorService`. Modelos `FirmaSesion` (uuid), `DocumentoFirma`, `FirmaAnexo`.
 - **Gate de firma del acta (B3b, ya implementado):** `TransferenciaService::exigirActaFirmada()` (líneas ~562-598). Ya valida sesión REAL de Firma Perú (`firma_sesion_id`, estado `firmada`, `vigente()`). Está **apagado por defecto**: columna `procesos_transferencia.exige_firma_acta` (boolean, default false). Encenderlo = política de la Tarea F3-1.
 - **Procesos:** NO hay controller/endpoint para gestionar `procesos_transferencia` por UI todavía (solo el cronograma los referencia en `routes/api.php:148`). La Tarea F3-1 lo crea.
@@ -30,7 +31,9 @@ En el header de cada anexo, la zona de acciones apila **hasta 7 controles** en u
 
 ## Orden de ejecución
 
-F1 (UX botones) → F2 (integración al flujo) → F3 (encender firma real, toggle admin) → F4 (navegación + limpieza). F1 primero porque es el dolor concreto y no depende de nada.
+F1 (UX botones) **✅ hecha** → **F3 (reestructuración: firma fuera del anexo, concentrada en «Mi entrega»)** → F2 (integración al flujo) → F4 (navegación + limpieza).
+
+> **Replanteo (2026-11-12):** la Fase 1 colapsó la nube de botones *dentro* del anexo. Pero la decisión posterior fue más de fondo: **sacar la firma del anexo por completo** y llevarla al módulo «Mi entrega». Por eso F3 cambió de alcance (ver su cabecera) y **F1-2/F1-3 quedan subsumidas** por F3-2/F3-3 (el colapso de botones ya no aplica si los botones dejan de estar en el anexo). F2 pasa a ejecutarse **después** de F3, porque reutiliza el panel de firma de «Mi entrega».
 
 ---
 
@@ -68,38 +71,72 @@ F1 (UX botones) → F2 (integración al flujo) → F3 (encender firma real, togg
 **Objetivo:** que al remitir se vea si el acta/anexos están firmados, no solo en el header del anexo.
 **Contexto:** `features/entregas/` (`EntregasPage.tsx`, `DetalleEntregaModal.tsx`, `BandejaRevisorView.tsx`). El backend expone estado de firma vía `firmaperuService.estado(tipoDocumento, dependenciaId)`.
 **Cambio:** en el detalle de entrega / acta, mostrar un indicador de estado de firma (firmado vigente / pendiente / sin verificar / histórico no vigente) reutilizando el query `['firmaperu', tipo, dependenciaId]`. Solo lectura; no duplicar la lógica de firmar.
-**Aceptación:** al abrir el detalle de una entrega cuyo proceso exige firma, se ve el estado de firma del acta. `tsc` verde.
-**Archivos:** `features/entregas/DetalleEntregaModal.tsx` (+ posible sub-componente). **Depende de:** F1-2 (para reutilizar presentación coherente).
+**Aceptación:** al abrir el detalle de una entrega, se ve el estado de firma de sus documentos. `tsc` verde.
+**Archivos:** `features/entregas/DetalleEntregaModal.tsx` (+ posible sub-componente). **Depende de:** F3-3 (reutiliza el panel/presentación de firma de «Mi entrega»).
 
-### Tarea F2-2 — "Qué sigue" incluye firmar el acta
-**Objetivo:** guiar al usuario cuando el proceso exige firma.
+### Tarea F2-2 — "Qué sigue" incluye firmar y remitir
+**Objetivo:** guiar al usuario hacia la firma ahora que vive en «Mi entrega».
 **Contexto:** `components/anexos/QueSigueCard.tsx` ya orquesta el "qué sigue" en el dashboard.
-**Cambio:** cuando el proceso tenga `exige_firma_acta` encendido y el acta no esté firmada vigente, añadir el paso "Firmar el Acta (Anexo 07)" con enlace a `/acta`. Requiere que el backend exponga `exige_firma_acta` en el payload de estado del proceso (verificar; si no, añadirlo en F3-1).
-**Aceptación:** con el gate encendido y acta sin firmar, el dashboard muestra el paso de firma; con gate apagado no aparece. `tsc` verde.
-**Archivos:** `components/anexos/QueSigueCard.tsx`. **Depende de:** F3-1 (expone el flag al frontend).
+**Cambio:** cuando haya documentos con PDF generado pero sin firmar, añadir el paso "Firmar los documentos de la entrega" con enlace a `/entregas` (pestaña «Mi entrega»). Reutilizar el estado de firma por documento ya expuesto. No depende del toggle `exige_firma_acta` (descartado en el replanteo de F3).
+**Aceptación:** con documentos generados sin firmar, el dashboard muestra el paso hacia «Mi entrega»; `tsc` verde.
+**Archivos:** `components/anexos/QueSigueCard.tsx`. **Depende de:** F3-3.
 
 ---
 
-## Fase 3 — Encender firma real: toggle admin por proceso
+## Fase 3 — Reestructuración: firma fuera del anexo, concentrada en «Mi entrega»
 
-> **Decisión del usuario (2026-11-12):** `exige_firma_acta` queda **apagado por defecto**; el administrador lo enciende **por proceso** desde la UI. Reversible. No se fuerza global.
+> **Decisión del usuario (2026-11-12) — reemplaza la F3 original (toggle admin de `exige_firma_acta`).** El problema real no era solo colapsar botones: es que **la firma no pertenece al anexo**. El anexo captura datos; la firma formaliza la entrega. Por eso:
+>
+> 1. **En cada anexo (02–06) y en el Acta (07) solo quedan dos acciones de documento:** `Previsualizar` y `Generar PDF`. **Se elimina `BotonFirmaPeru` del header del anexo.**
+> 2. **`Generar PDF` = borrador oficial sobrescribible** (un solo archivo, se regenera cada vez). **No** cuenta como versión. El contador de versiones (v1, v2…) arranca **solo con la primera firma** — «las versiones solo existen cuando están firmadas».
+> 3. **La firma se concentra en el módulo «Mi entrega»** (pestaña `mi_entrega` de `features/entregas/EntregasPage.tsx`, que **ya existe**): una fila por documento (02–07) con su estado de firma, versiones firmadas y la acción de firmar. Toda la lógica de `BotonFirmaPeru` se **reubica** aquí, no se reescribe.
+> 4. **La inmutabilidad la sigue mandando el Acta 07 / `EstadoEntrega`.** Firmar **no** congela el anexo. `esModificable` (deriva de `estado` de la entrega: borrador/observada = editable) **no se toca** en ninguna página. Cero riesgo de regresión.
+> 5. **Orden de firma:** libre para 02–06; el **Acta 07 al final** (se habilita solo con la entrega `consolidada`, como hoy — gate del 409 ya existente).
+>
+> **Backend de firma: no se reescribe.** `EstadoFirma`/`SesionFirma` ya exponen `version` y `vigente` (ver `firmaperu.types.ts`); `firmaperuService.estado/preparar/sesion/descargar` ya existen. La reestructuración es **de presentación y ubicación**, más un endpoint nuevo de «generar PDF borrador».
+>
+> **Diseño objetivo** (aprobado por el usuario, 2026-11-12):
+> ```
+> Header del anexo (02–06) / acta (07):
+>   Anexo 03 · Acervo       [Chip estado]  [Previsualizar] [Generar PDF]  [Nueva serie…]
+>
+> Mi entrega (pestaña de EntregasPage), una fila por documento:
+>   Anexo 02 · Informe de Gestión   PDF generado ✓ · Sin firmar      [Firmar ▾]
+>   Anexo 03 · Acervo               Firmado v1 · 12/11   [Descargar] [Agregar firma ▾]
+>   Anexo 04 · Patrimonio           ⚠ PDF no generado               [Generar]
+>   Anexo 07 · Acta                 (requiere entrega consolidada)
+>   Destino: ETTS Institucional                              [Remitir al Superior]
+> ```
 
-### Tarea F3-1 — Endpoint toggle `exige_firma_acta` por proceso
-**Objetivo:** permitir encender/apagar el gate de firma por proceso vía API, con permiso.
-**Contexto:** no hay controller de procesos. Columna `procesos_transferencia.exige_firma_acta` ya existe (migración `2026_11_11_000004`). El gate ya la respeta en `TransferenciaService::exigirActaFirmada()`.
+### Tarea F3-1 — Endpoint «Generar PDF borrador» del anexo
+**Objetivo:** materializar/sobrescribir el PDF borrador oficial de un documento (02–07) sin firmarlo. Es el insumo que luego se firma en «Mi entrega».
+**Contexto:** `FirmaperuPdfService` ya genera el PDF del anexo (lo usa `previsualizar` y `preparar`). Hoy el PDF solo se persiste al firmar. Falta un endpoint que persista el **borrador** (sobrescribible) y exponga si existe.
 **Cambio:**
-- Nuevo `ProcesoTransferenciaController` (o método en uno existente de `Transferencia`) con `PATCH /api/procesos/{proceso}/exige-firma-acta` (body `{ exige: bool }`), protegido por permiso de administración (reutilizar el permiso de gestión más cercano; revisar `auth/permisos` y seeder). Auditar el cambio (patrón `Auditable`/`MovimientoAuditoria` ya usado).
-- Exponer `exige_firma_acta` en el payload de estado del proceso que ya consume el frontend (para F2-2 y F3-2).
-- Registrar la ruta en `backend/routes/api.php`.
-**Aceptación:** un admin puede encender/apagar el flag por proceso; queda auditado; un no-admin recibe 403; el estado del proceso devuelve el flag. Test nuevo en `tests/Feature` (p. ej. `ToggleFirmaActaTest`). Suite verde (salvo los 7 de OpenSSL).
-**Archivos:** nuevo controller en `backend/app/Modules/Transferencia/Controllers/`, `routes/api.php`, posible Request de validación, test nuevo, espejo permiso en `frontend/src/auth/permisos.ts` si se crea permiso nuevo.
+- Endpoint `POST /api/firmaperu/generar-borrador` (body `{ tipo_documento, dependencia_id }`), permiso `anexos.registrar` (y `actas.generar` para `anexo07`), que genera y **sobrescribe** el PDF borrador del documento. Reutilizar `FirmaperuPdfService`. **No** crea `DocumentoFirma` (eso es solo para firmados) — persistir como borrador (nueva columna/tabla mínima o reutilizar almacenamiento existente; decidir en la sesión mirando cómo guarda `preparar`).
+- Extender el payload de `GET /firmaperu/estado/{tipo}/{dep}` con `borrador_generado: bool` y `borrador_generado_en: string|null`.
+- Registrar ruta en `backend/routes/api.php`. Test en `tests/Feature`.
+**Aceptación:** generar sobrescribe el borrador; el estado reporta `borrador_generado`; re-generar no crea versión; permiso respetado (403 si no); suite verde (salvo 7 OpenSSL).
+**Archivos:** controller de firma en `backend/app/Modules/Transferencia/Controllers/`, `FirmaperuPdfService`, `routes/api.php`, test. Espejo en `firmaperu.types.ts` (`EstadoFirma`).
 
-### Tarea F3-2 — Control de admin en la UI
-**Objetivo:** interruptor visible para el admin.
-**Contexto:** `features/admin/AdminPage.tsx` + `admin.service.ts` + `use-admin.ts`.
-**Cambio:** añadir un toggle "Exigir firma del acta para remitir" por proceso, que llame al endpoint de F3-1, con confirmación (`confirm-dialog`) porque cambia el flujo de remisión para todos en ese proceso. Mostrar estado actual. Solo visible con el permiso correspondiente.
-**Aceptación:** el admin ve y cambia el flag; la confirmación advierte el efecto; refleja el estado real tras guardar. `tsc` verde.
-**Archivos:** `features/admin/AdminPage.tsx`, `features/admin/admin.service.ts`, `features/admin/use-admin.ts`. **Depende de:** F3-1.
+### Tarea F3-2 — Sacar la firma del anexo; dejar `Previsualizar` + `Generar PDF`
+**Objetivo:** el header del anexo deja de montar `BotonFirmaPeru`.
+**Contexto:** la firma se monta vía `AnexoLayout` (mapa `TIPOS_FIRMA`, líneas 15-17, 105-110) para 02–06, y **suelta** en `ActaPage.tsx` (07) y `PatrimonioPage.tsx` (04, que no usa `AnexoLayout`).
+**Cambio:**
+- En `AnexoLayout.tsx`: quitar `<BotonFirmaPeru>`; conservar `<PrevisualizarAnexo>`; añadir un botón **`Generar PDF`** (llama a F3-1, con toast y `invalidateQueries` del estado de firma). Mantener el divisor/jerarquía.
+- Igual en `ActaPage.tsx` y `PatrimonioPage.tsx`: quitar `BotonFirmaPeru`, dejar `PrevisualizarAnexo` + `Generar PDF`.
+- `BotonFirmaPeru.tsx` **no se borra** todavía (lo consume «Mi entrega» en F3-3). Sí se retiran sus importaciones de los anexos.
+**Aceptación:** ningún header de anexo/acta muestra el control de firma; `Previsualizar` + `Generar PDF` presentes; `tsc` verde. (Las tareas F1-2/F1-3 de colapso de botones quedan **subsumidas** por esto — ver tablero.)
+**Archivos:** `AnexoLayout.tsx`, `ActaPage.tsx`, `PatrimonioPage.tsx`, nuevo `use-generar-borrador.ts` o método en `firmaperu.service.ts`.
+
+### Tarea F3-3 — «Mi entrega»: panel de firma por documento
+**Objetivo:** concentrar toda la firma en la pestaña `mi_entrega` de `EntregasPage.tsx`, una fila por documento (02–07).
+**Contexto:** la pestaña ya existe y muestra estado de entrega + «Remitir». `BotonFirmaPeru.tsx` ya encapsula toda la lógica (firmar/agregar/descargar/`PrepararEquipoFirma`/versiones/`vigente`).
+**Cambio:**
+- Nuevo sub-componente `features/entregas/DocumentosFirmaPanel.tsx`: por cada documento 02–07, una fila con nombre, `EstadoFirma` (reutilizar el query `['firmaperu', tipo, dep]`), indicador `borrador_generado`/`version`/`vigente`, y las acciones de firma **reubicando** `BotonFirmaPeru` (o extrayendo su cuerpo a un control por-fila). Mostrar `Generar PDF` en la fila si falta el borrador.
+- Acta 07: fila presente pero su acción de firma deshabilitada con nota «requiere entrega consolidada» salvo que lo esté.
+- Insertar el panel en la pestaña `mi_entrega`, encima del bloque de «Remitir».
+**Aceptación:** desde «Mi entrega» se firma cualquier anexo 02–06 (orden libre), se ven versiones firmadas y se descarga; el Acta 07 se firma solo si la entrega está consolidada; remitir sigue funcionando; `tsc` verde.
+**Archivos:** nuevo `features/entregas/DocumentosFirmaPanel.tsx`, `EntregasPage.tsx`, posible refactor menor de `BotonFirmaPeru.tsx` para reutilizar su control por fila.
 
 ---
 
@@ -169,13 +206,14 @@ F1 (UX botones) → F2 (integración al flujo) → F3 (encender firma real, togg
 
 | Tarea | Fase | Estado | Depende de |
 |---|---|---|---|
-| F1-1 | UX | ⬜ Pendiente | — |
-| F1-2 | UX | ⬜ Pendiente | F1-1 |
-| F1-3 | UX | ⬜ Pendiente | F1-2 |
-| F2-1 | Integración | ⬜ Pendiente | F1-2 |
-| F2-2 | Integración | ⬜ Pendiente | F3-1 |
-| F3-1 | Firma real | ⬜ Pendiente | — |
-| F3-2 | Firma real | ⬜ Pendiente | F3-1 |
+| F1-1 | UX | ✅ Hecho | — |
+| F1-2 | UX | ⤵️ Subsumida por F3-2/F3-3 | F1-1 |
+| F1-3 | UX | ⤵️ Subsumida por F3-2 | F1-2 |
+| F3-1 | Reestructuración · endpoint generar borrador | ✅ Hecho | — |
+| F3-2 | Reestructuración · firma fuera del anexo | ⬜ Pendiente | F3-1 |
+| F3-3 | Reestructuración · panel firma en «Mi entrega» | ⬜ Pendiente | F3-2 |
+| F2-1 | Integración | ⬜ Pendiente | F3-3 |
+| F2-2 | Integración | ⬜ Pendiente | F3-3 |
 | F4-1 | Navegación | ⬜ Pendiente | — |
 | F4-2 | QA/limpieza | ⬜ Pendiente | todas |
 | F5-1 | UI plan 06 · E1 sumilla | ⬜ Pendiente | — |

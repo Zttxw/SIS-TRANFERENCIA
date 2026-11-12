@@ -27,6 +27,14 @@ export const firmaperuService = {
     const res = await api.get<ApiSuccess<EstadoFirma>>(`/firmaperu/estado/${tipo}/${dependenciaId}`, { signal, timeout: 15000 })
     return res.data.data
   },
+  async generarBorrador(tipo: TipoDocumentoFirma, dependenciaId: number) {
+    const res = await api.post<ApiSuccess<{ borrador_generado: boolean; borrador_generado_en: string }>>(
+      '/firmaperu/generar-borrador',
+      { tipo_documento: tipo, dependencia_id: dependenciaId },
+      { timeout: 60000 },
+    )
+    return res.data.data
+  },
   descargar(id: string) {
     return descargarArchivo(`/firmaperu/documentos/${id}/descargar`, undefined, 'Anexo-firmado.pdf')
   },
