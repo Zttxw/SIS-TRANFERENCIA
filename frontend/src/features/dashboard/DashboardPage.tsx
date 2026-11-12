@@ -26,6 +26,8 @@ import {
 import { useAuth, useDependenciaActiva } from '@/auth/hooks'
 import { Can } from '@/auth/Can'
 import { QueSigueCard } from '@/components/anexos/QueSigueCard'
+import { FilaFirmaAnexo } from '@/features/firmaperu/FilaFirmaAnexo'
+import type { TipoDocumentoFirma } from '@/features/firmaperu/firmaperu.types'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Card,
@@ -150,8 +152,26 @@ export function DashboardPage() {
     ? 'Equipo de Transferencia del Titular Saliente (ETTS Institucional)'
     : 'su superior jerárquico inmediato'
 
-  // Lista oficial de los 7 Anexos normativos según Directiva N.° 001-2026-MDSJ/GM
-  const filasAnexos = [
+  // Lista oficial de los 7 Anexos normativos según Directiva N.° 001-2026-MDSJ/GM.
+  // `tipoFirma` marca los documentos que se firman en «Mi entrega» (02-07); el
+  // anexo 01 (organigrama) se firma en su propio módulo, no aquí.
+  const filasAnexos: Array<{
+    id: string
+    tipoFirma?: TipoDocumentoFirma
+    codigo: string
+    nombre: string
+    icono: typeof FolderTree
+    fuente: string
+    colorFuente: string
+    resumen: string
+    detalle: string
+    ruta: string
+    accion: string
+    estado: string
+    completado: boolean
+    esPatrimonio?: boolean
+    avance?: number
+  }> = [
     {
       id: 'anexo01',
       codigo: 'Anexo 01',
@@ -170,6 +190,7 @@ export function DashboardPage() {
     },
     {
       id: 'anexo02',
+      tipoFirma: 'anexo02' as TipoDocumentoFirma,
       codigo: 'Anexo 02',
       nombre: 'Informe de Gestión',
       icono: ClipboardList,
@@ -190,6 +211,7 @@ export function DashboardPage() {
     },
     {
       id: 'anexo03',
+      tipoFirma: 'anexo03' as TipoDocumentoFirma,
       codigo: 'Anexo 03',
       nombre: 'Acervo Documental',
       icono: Archive,
@@ -204,6 +226,7 @@ export function DashboardPage() {
     },
     {
       id: 'anexo04',
+      tipoFirma: 'anexo04' as TipoDocumentoFirma,
       codigo: 'Anexo 04',
       nombre: 'Bienes Patrimoniales',
       icono: Package,
@@ -221,6 +244,7 @@ export function DashboardPage() {
     },
     {
       id: 'anexo05',
+      tipoFirma: 'anexo05' as TipoDocumentoFirma,
       codigo: 'Anexo 05',
       nombre: 'Personal de la Dependencia',
       icono: Users,
@@ -235,6 +259,7 @@ export function DashboardPage() {
     },
     {
       id: 'anexo06',
+      tipoFirma: 'anexo06' as TipoDocumentoFirma,
       codigo: 'Anexo 06',
       nombre: 'Bienes No Patrimoniales',
       icono: PackageOpen,
@@ -252,6 +277,7 @@ export function DashboardPage() {
     },
     {
       id: 'anexo07',
+      tipoFirma: 'anexo07' as TipoDocumentoFirma,
       codigo: 'Anexo 07',
       nombre: 'Acta de Transferencia y Entrega',
       icono: FileCheck2,
@@ -372,10 +398,8 @@ export function DashboardPage() {
               {filasAnexos.map((anexo) => {
                 const Icono = anexo.icono
                 return (
-                  <div
-                    key={anexo.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 gap-3 hover:bg-muted transition-colors"
-                  >
+                  <div key={anexo.id} className="p-3.5 hover:bg-muted transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     {/* Identificación y Título */}
                     <div className="flex items-start gap-3 min-w-0 sm:w-[42%]">
                       <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0 mt-0.5">
@@ -449,6 +473,18 @@ export function DashboardPage() {
                         <ArrowRight className="h-3 w-3" />
                       </Link>
                     </div>
+                  </div>
+
+                  {/* Firma del documento (02-07). El acta 07 se firma solo con
+                      la entrega consolidada. No afecta la edición del anexo. */}
+                  {anexo.tipoFirma && (
+                    <FilaFirmaAnexo
+                      tipoDocumento={anexo.tipoFirma}
+                      dependenciaId={dependencia.id}
+                      bloqueado={anexo.tipoFirma === 'anexo07' && estadoEntrega !== 'consolidada'}
+                      notaBloqueo="Requiere entrega consolidada"
+                    />
+                  )}
                   </div>
                 )
               })}

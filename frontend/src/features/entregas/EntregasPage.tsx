@@ -25,7 +25,6 @@ import type {
 import { ArbolDependenciasView } from './ArbolDependenciasView'
 import { BandejaRevisorView } from './BandejaRevisorView'
 import { DetalleEntregaModal } from './DetalleEntregaModal'
-import { DocumentosFirmaPanel } from './DocumentosFirmaPanel'
 import { useEntregas, useEstadoEntrega } from './use-entregas'
 
 type PestañaActiva = 'bandeja' | 'arbol' | 'mi_entrega'
@@ -146,11 +145,6 @@ export function EntregasPage() {
               <p className="text-xs text-muted-foreground">Consultando estado de entrega...</p>
             </Card>
           ) : (
-            <>
-            <DocumentosFirmaPanel
-              dependenciaId={dependenciaId}
-              estadoEntrega={estadoMiDep?.entrega?.estado ?? null}
-            />
             <Card className="border shadow-xs">
               <CardHeader className="bg-muted/15 pb-4">
                 <div className="flex items-center justify-between">
@@ -227,7 +221,6 @@ export function EntregasPage() {
                 </div>
               </CardContent>
             </Card>
-            </>
           )}
         </div>
       )}
