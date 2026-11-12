@@ -234,7 +234,7 @@ export function ActaPage() {
       <AnexoHeader
         numeroAnexo="Anexo 07"
         titulo="Acta de Transferencia Administrativa y Entrega de Cargo"
-        subtitulo="Cierre oficial del procedimiento de transferencia conforme a la Directiva N.° 001-2026-MDSJ/A §7.10"
+        subtitulo={`Versión ${acta.version} · ${acta.declara === 'recepcion_consolidacion' ? 'Recepción y consolidación' : 'Suscripción de la dependencia antes de remitir'}`}
         dependenciaCodigo={depActual.codigo}
         dependenciaNombre={depActual.nombre}
         acciones={

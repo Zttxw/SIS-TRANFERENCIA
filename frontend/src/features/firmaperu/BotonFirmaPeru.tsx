@@ -21,7 +21,10 @@ export function BotonFirmaPeru(props: PropsFirma) {
 function ControlFirma({ tipoDocumento, dependenciaId }: PropsFirma) {
   const puedeRegistrar = usePermiso('anexos.registrar')
   const puedeActa = usePermiso('actas.generar')
-  const puedeFirmar = puedeRegistrar && (tipoDocumento !== 'anexo07' || puedeActa)
+  const puedeFirma = usePermiso('firmas.firmar')
+  const puedeFirmar = (puedeRegistrar || puedeActa || puedeFirma)
+    && (tipoDocumento !== 'anexo07' || puedeActa || puedeFirma)
+    && (tipoDocumento !== 'anexo01' || puedeRegistrar || puedeActa)
   const confirmar = useConfirm()
   const cliente = useQueryClient()
   const [mensaje, setMensaje] = useState<string | null>(null)
@@ -69,8 +72,12 @@ function ControlFirma({ tipoDocumento, dependenciaId }: PropsFirma) {
       })
       if (!scope.signal.aborted) {
         await cliente.invalidateQueries({ queryKey: clave })
+        await cliente.invalidateQueries({ queryKey: ['acta'] })
+        await cliente.invalidateQueries({ queryKey: ['transferencia', 'estado'] })
         if (resultado.estado === 'pendiente_validacion') {
           toast.info('PDF recibido. Su verificación institucional está pendiente.')
+        } else if (resultado.vigente === false) {
+          toast.info('PDF verificado conservado como histórico. Los datos cambiaron; firme la versión actual antes de remitir.')
         } else {
           toast.success('PDF firmado recibido. Puede descargarlo.')
         }
@@ -112,9 +119,9 @@ function ControlFirma({ tipoDocumento, dependenciaId }: PropsFirma) {
         <>
           <Button size="sm" variant="outline" onClick={() => void descargar()} disabled={descargando} className="gap-2"
             title={estado.firmado_en ? `PDF conservado el ${new Date(estado.firmado_en).toLocaleString('es-PE')}` : undefined}>
-            <Download className="h-4 w-4" /> PDF firmado
+            <Download className="h-4 w-4" /> {estado.vigente === false ? 'PDF firmado anterior' : 'PDF firmado'}
           </Button>
-          {puedeFirmar && <Button size="sm" variant="ghost" disabled={Boolean(mensaje)} onClick={() => void firmar(estado.documento_id!)} className="gap-1"><Plus className="h-4 w-4" /> Agregar firma</Button>}
+          {puedeFirmar && estado.vigente !== false && <Button size="sm" variant="ghost" disabled={Boolean(mensaje)} onClick={() => void firmar(estado.documento_id!)} className="gap-1"><Plus className="h-4 w-4" /> Agregar firma</Button>}
         </>
       )}
       {mensaje && <span role="status" className="text-xs text-muted-foreground">{mensaje}</span>}

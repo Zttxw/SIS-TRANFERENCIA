@@ -7,7 +7,11 @@ Se usa el cliente API actual, con el envoltorio `ApiResponse` del proyecto.
 
 ## Preparar una sesión (autenticado)
 
-`POST /preparar` con permiso `anexos.registrar` y ámbito de dependencia.
+`POST /preparar` con permiso de registro, firma o generación de actas, más
+autorización de rol y ámbito en el proceso. El personal habilitado suscribe firmas
+obligatorias; el delegado ETTE designado firma opcionalmente anexos 02–07, sin
+editar datos. Para el acta, el personal requiere `actas.generar` y el delegado
+requiere un acta previamente emitida por el responsable.
 
 ```json
 {"tipo_documento":"anexo03","dependencia_id":12}
@@ -20,6 +24,9 @@ del proceso; los restantes corresponden a la dependencia seleccionada.
 Para agregar una firma, enviar además `documento_previo_id` con el ID de un PDF
 firmado del mismo proceso, tipo y dependencia. Se conservan sus bytes como base;
 no se regenera desde datos editables. Cada sesión conserva su propio resultado.
+El PDF previo debe corresponder al mismo `DocumentoFirma` vigente; un PDF antiguo
+o sin vínculo de versión responde 409. Una firma verificada crea un `FirmaAnexo`
+único por sesión. Los pendientes no crean registros de firma institucional.
 
 Respuesta `201`:
 
@@ -69,6 +76,9 @@ institucional configurada en el servidor. Es un resultado terminal de recepción
 la UI informa la espera y no lo declara verificado. Puede verificarse después
 mediante `firmaperu:validar-pendientes`.
 `documento_id` se informa cuando el firmado está validado y disponible.
+Se incluyen `version` y `vigente`. Un resultado `firmada` con `vigente:false` es
+un PDF verificado histórico, descargable pero sin cumplimiento de la versión
+actual. No ofrecer «Agregar firma» para ese resultado.
 Tras `signatureOk`, consultar esta sesión hasta estado terminal, con espera entre
 consultas y timeout. No mostrar «firmado» al recibir únicamente el callback.
 `signatureCancel` termina la espera en UI; no implica modificar la entrega.
@@ -79,6 +89,7 @@ consultas y timeout. No mostrar «firmado» al recibir únicamente el callback.
 
 `data`: `{firmado:boolean, documento_id:string|null, firmado_en:string|null}`.
 Incluye además `pendiente_validacion:boolean` y `sesion_pendiente_id:string|null`.
+Incluye `version:number|null` y `vigente:boolean` para el PDF verificado encontrado.
 Siempre se acota al proceso activo. `firmado` se refiere al PDF conservado;
 no implica automáticamente que el contenido editable actual tenga esa firma.
 Mostrar «Ver PDF firmado» y fecha; no etiquetar datos editables como firmados.
@@ -128,8 +139,11 @@ visual de sus revisiones. No comprueba OCSP/CRL ni ofrece validación a largo pl
 Los tests criptográficos usan certificados efímeros, no credenciales institucionales.
 La compatibilidad exacta con el firmador instalado se confirma con una firma real.
 
-No se cambia el estado de la entrega ni se declara el acta `suscrita` automáticamente:
-la definición de intervinientes y del momento de suscripción pertenece a la etapa
-de integración con el flujo institucional.
+La firma verificada del responsable del centro de costo sobre el acta vigente la
+marca `suscrita` y registra su archivo conservado. Firmar no remite ni consolida
+la entrega. Si el proceso exige firma del acta, remitir consulta esa firma
+institucional y la versión actual. Una firma opcional ETTE, pendiente de validación
+o de una versión anterior no satisface el requisito. Observar genera la versión
+de corrección antes de la nueva firma; remitir no vuelve a incrementarla.
 
 Referencia: https://resources.firmaperu.gob.pe/documentos/firmador-componente-web.pdf

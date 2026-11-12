@@ -36,6 +36,8 @@ export interface EvidenciaItem {
 }
 
 export interface ActaTransferencia {
+  version: number
+  declara: 'suscripcion_hija' | 'recepcion_consolidacion'
   id: number
   proceso_transferencia_id: number
   dependencia_id: number

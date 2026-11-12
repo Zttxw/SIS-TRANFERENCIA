@@ -9,6 +9,8 @@ export interface PreparacionFirma {
 }
 
 export interface SesionFirma {
+  version?: number | null
+  vigente?: boolean
   sesion_id: string
   estado: 'pendiente' | 'emitida' | 'validando' | 'pendiente_validacion' | 'firmada' | 'rechazada' | 'expirada'
   documento_id: string | null
@@ -17,6 +19,8 @@ export interface SesionFirma {
 }
 
 export interface EstadoFirma {
+  version?: number | null
+  vigente?: boolean
   firmado: boolean
   documento_id: string | null
   firmado_en: string | null

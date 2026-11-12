@@ -140,19 +140,41 @@ visualmente revisiones y no consulta revocación OCSP/CRL. La firma solicitada e
 nivel B, sin sello de tiempo ni validación LTV. No afirmar una validación IOFE
 integral a partir de estos controles.
 
-El acta no pasa automáticamente a `suscrita`, ni la entrega cambia de estado.
-El bloqueo optativo de remisión importado de `main` (`exige_firma_acta`, apagado
-por defecto) consulta `FirmaAnexo` y la versión del acta. El conector v2 guarda
-resultados en `FirmaSesion`: aún no registra esas firmas en `FirmaAnexo` ni enlaza
-su vigencia con la versión institucional. Activar el bloqueo no convierte una
-sesión v2 en cumplimiento de ese requisito. La emisión previa a remisión y el
-versionado se conservan; la unión de ambos registros requiere una integración posterior.
-En la revisión del flujo importado se detectó además que, al re-remitir una entrega
-observada con ese bloqueo activado, se comprueba la firma antes de incrementar la
-versión y cancelar las firmas anteriores. Ese orden requiere corregirse y probarse
-antes de activar el requisito: la comprobación debe corresponder a la versión que
-se remite, no a la anterior. Esta integración conserva la lógica de `main` sin
-activar esa opción ni resolver todavía la matriz institucional de firmantes.
+Las sesiones nuevas se vinculan a `DocumentoFirma`: proceso, dependencia, tipo,
+versión y huella del contenido impreso. Cada sesión verificada genera un único
+registro `FirmaAnexo`, tanto al recibir el PDF como al verificarlo posteriormente.
+La relación única con la sesión evita duplicados. El acta se vincula al modelo
+`ActaTransferencia`; los anexos de registros agregados se vinculan a su copia lógica
+`DocumentoFirma`. Los PDF se conservan en el almacenamiento privado de la sesión.
+
+La firma del responsable del centro de costo marca su acta vigente como `suscrita`.
+La firma del delegado ETTE es opcional y no reemplaza la del responsable; se mantiene
+su ámbito exacto y no recibe permiso de edición ni remisión. El bloqueo de remisión
+`exige_firma_acta` sigue configurable y apagado por defecto, como en `main`. Cuando
+está activo, exige una firma obligatoria del responsable asignado sobre la versión
+vigente y comprueba también la vigencia de la sesión v2 vinculada.
+
+Observar una entrega genera la versión de corrección antes de volver a firmar.
+Las entregas observadas antiguas se preparan al consultar el acta o intentar remitir.
+Reintentar la remisión no incrementa otra vez esa versión. Con el bloqueo activo,
+cerrar la última observación deja la entrega observada hasta firmar y remitir
+expresamente. Cambiar los datos firmados obliga a preparar otra versión; para el
+acta se incluyen también las huellas de los anexos 02–06, aunque su presencia no
+cambie. La hora de impresión no crea otra versión. Cambiar la declaración del acta
+de suscripción a recepción/consolidación también produce una versión distinta.
+
+Un PDF recibido después de cambiar su contenido o versión se conserva verificado
+como histórico (`FirmaSesion.firmada`), con su registro institucional cancelado:
+no habilita remisión ni sirve de base para nuevas firmas. La UI lo identifica como
+«PDF firmado anterior». Los PDF `pendiente_validacion` no generan hechos de firma.
+Las sesiones antiguas sin vínculo de versión se conservan para descarga, pero no
+se convierten automáticamente en firmas institucionales ni admiten agregar firmas;
+se debe firmar la versión actual para establecer esa vinculación.
+
+Aplicar la migración adicional `integrar_sesiones_con_firmas_anexo` antes de usar
+el conector actualizado (`docker compose exec -T backend php artisan migrate`).
+La matriz de etapas y suscriptores ETTS adicional a lo definido en `main` sigue
+pendiente; no se impone una firma ETTS nueva a cada entrega.
 El PDF de expediente regenerado sigue siendo un documento distinto de los anexos
 firmados; los originales firmados se descargan individualmente.
 
@@ -202,3 +224,10 @@ vigencia, limpieza de callbacks y exclusión de operaciones simultáneas.
   además de 16 Node. Compilación correcta y lint sin errores; se conservan las
   seis advertencias previas. La prueba de PDF del acta cubre emisión pre-remisión,
   declaración de suscripción de la dependencia y versión inicial.
+- Acoplamiento institucional: suite backend de 182 pruebas aprobada (592 aserciones),
+  con pruebas de firma obligatoria/opcional, verificación diferida, versión corregida,
+  cambios de contenido y cierre de observaciones. La suite específica incorpora
+  los casos de firma antigua recibida después de la versión vigente y firma tardía
+  de un proceso cerrado. Compilación y 16 pruebas Node aprobadas; lint sin errores.
+  Las pruebas de flujo simulan la criptografía y el binario PDF; las pruebas del
+  validador continúan comprobando CMS, identidad y confianza por separado.
