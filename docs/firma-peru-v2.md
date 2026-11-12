@@ -79,6 +79,42 @@ del proxy externo y permitir el acceso del firmador a las rutas efímeras.
 
 ## Prueba con certificado institucional
 
+Antes de firmar, el botón **Opciones de firma** comprueba si responde el servicio
+local de Firma Perú en el puerto 48596. Chrome firma directamente cuando ese
+servicio está abierto y accesible. Si no responde, en Windows se ofrece iniciar
+el cliente oficial con Edge y volver a Chrome, o abrir el sistema completo en Edge
+como respaldo. Esta última opción conserva la ruta de la página, sin trasladar
+parámetros, fragmentos ni la sesión de Chrome: puede requerir iniciar sesión y
+volver a seleccionar la dependencia y el anexo. Guarde los cambios antes de cambiar
+de navegador. No se agregan extensiones ni FirmaBridge; el cliente oficial sigue
+siendo necesario y puede solicitar instalación si falta en el equipo.
+
+En macOS/Linux se ofrece abrir el iniciador Java después de preparar el equipo
+según la guía oficial. La comprobación por sí sola no permite distinguir entre una
+instalación ausente, un cliente cerrado y un bloqueo del navegador. No crea sesiones
+de firma ni envía documentos.
+
+El backend sirve los manifiestos y dependencias oficiales de ClickOnce desde
+`/api/firmaperu/cliente/`, conservando sus bytes y tipos de contenido. Solo admite
+rutas del paquete oficial y conserva una caché privada: cinco minutos para el
+manifiesto inicial y un día para dependencias de versión. No requiere credenciales
+del usuario para que Windows pueda descargar los archivos asociados.
+
+La compatibilidad con Chrome utiliza el componente JavaScript oficial y el servicio
+local del cliente; no agrega soporte nativo de ClickOnce a Chrome. No se reutilizan
+ejecutables, código ni registros de la extensión FirmaBridge. El inicio del cliente
+cerrado desde Chrome no está garantizado sin complementos; Edge se ofrece como
+iniciador y como navegador de respaldo, sujeto a permisos y políticas del equipo.
+
+Para probar desde una PC sin Firma Perú, abrir el sistema en Chrome y pulsar
+«Firmar con Firma Perú». Si el cliente no responde, elegir «Iniciar cliente con
+Edge», aceptar la instalación/apertura oficial y volver a Chrome para comprobar
+la conexión y firmar. Si no responde allí, elegir «Abrir sistema en Microsoft Edge».
+La firma real requiere el certificado correspondiente o DNIe y sus controladores.
+Usar una URL accesible desde esa PC, preferiblemente HTTPS; `localhost` corresponde
+a esa misma computadora. Clonar la rama no copia credenciales, datos ni `.env`:
+para ejecutar el proyecto allí también hay que preparar el entorno y la base de datos.
+
 1. Ingresar con una cuenta con permiso de registro y DNI correspondiente al
    certificado. Para el acta se requiere también `actas.generar`.
 2. Guardar los datos del anexo. En el acta se mantiene su restricción previa de
@@ -124,6 +160,7 @@ En Windows, con Node 24 (disponible en el equipo), desde `frontend`:
 
 ```sh
 node --test tests/firmaperu-runtime.test.mjs
+node --test tests/equipo-firmaperu.test.mjs
 ```
 
 La compilación valida TypeScript. Las pruebas Node cubren callbacks, cancelación,
@@ -144,3 +181,7 @@ vigencia, limpieza de callbacks y exclusión de operaciones simultáneas.
   desde el equipo del usuario sigue pendiente de probar.
 - El inicio ya no exige un bundle CA. Su ausencia mantiene los PDF recibidos
   pendientes de verificación; la confianza institucional se configura después.
+- Preparación del equipo y respaldo en Edge: 16 pruebas Node aprobadas entre
+  comprobación local y runtime; 66 pruebas Laravel de Firma Perú aprobadas (220 aserciones).
+  Manifiesto inicial y manifiesto dependiente comprobados mediante HTTP local.
+  La apertura de ClickOnce y la firma con certificado real siguen pendientes.
