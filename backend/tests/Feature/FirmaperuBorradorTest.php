@@ -99,4 +99,21 @@ class FirmaperuBorradorTest extends TestCase
         $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'inexistente', 'dependencia_id' => $dep->id])
             ->assertUnprocessable()->assertJsonValidationErrors('tipo_documento');
     }
+
+    public function test_previsualizar_carga_el_borrador_persistido_si_existe(): void
+    {
+        $dep = $this->iniciarUsuario();
+
+        // Sin borrador: previsualizar genera al vuelo.
+        $this->get('/api/firmaperu/previsualizar?tipo_documento=anexo03&dependencia_id='.$dep->id)
+            ->assertOk()->assertHeader('Content-Type', 'application/pdf')
+            ->assertHeader('Content-Disposition', 'inline; filename="Previsualizacion-anexo03.pdf"');
+
+        // Con borrador: previsualizar sirve el archivo persistido (nombre Borrador-*).
+        $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id])
+            ->assertCreated();
+        $this->get('/api/firmaperu/previsualizar?tipo_documento=anexo03&dependencia_id='.$dep->id)
+            ->assertOk()->assertHeader('Content-Type', 'application/pdf')
+            ->assertHeader('Content-Disposition', 'inline; filename="Borrador-anexo03.pdf"');
+    }
 }

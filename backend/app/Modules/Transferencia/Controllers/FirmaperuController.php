@@ -58,8 +58,24 @@ class FirmaperuController extends Controller
         $this->autorizarDependencia($request->user(), $dependenciaId);
         $procesoId = app(ContextoTransferencia::class)->procesoActivoId();
         abort_unless(Dependencia::whereKey($dependenciaId)->where('proceso_transferencia_id', $procesoId)->exists(), 409);
+        $tipo = $datos['tipo_documento'] === 'acta' ? 'anexo07' : $datos['tipo_documento'];
         if (in_array($datos['tipo_documento'], ['acta', 'anexo07'], true)) {
             $this->registro->caracter($request->user(), 'anexo07', $dependenciaId);
+        }
+
+        // Si existe el PDF borrador persistido (y su huella coincide), se muestra
+        // ese archivo exacto. Si no, se genera al vuelo con los datos actuales.
+        $borrador = FirmaBorrador::where('tipo_documento', $tipo)
+            ->where('dependencia_id', $dependenciaId)->where('proceso_transferencia_id', $procesoId)->first();
+        if ($borrador && Storage::disk('local')->exists($borrador->pdf_path)) {
+            $contenido = Storage::disk('local')->get($borrador->pdf_path);
+            if (hash_equals($borrador->pdf_sha256, hash('sha256', $contenido))) {
+                return response($contenido, 200, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="Borrador-'.$tipo.'.pdf"',
+                    'Cache-Control' => 'private, no-store',
+                ]);
+            }
         }
 
         return response($pdf->generar($datos['tipo_documento'], $dependenciaId, $request->user()), 200, [

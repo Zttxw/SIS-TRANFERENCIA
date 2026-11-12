@@ -26,7 +26,6 @@ import {
 import { useAuth, useDependenciaActiva } from '@/auth/hooks'
 import { Can } from '@/auth/Can'
 import { QueSigueCard } from '@/components/anexos/QueSigueCard'
-import { FilaFirmaAnexo } from '@/features/firmaperu/FilaFirmaAnexo'
 import type { TipoDocumentoFirma } from '@/features/firmaperu/firmaperu.types'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
@@ -38,7 +37,9 @@ import {
 import { Spinner } from '@/components/ui/spinner'
 import type { EstadoEntrega } from '@/types/transferencia'
 import { RemitirModal } from './RemitirModal'
+import { ResumenAnexos } from './ResumenAnexos'
 import { RevisarModal } from './RevisarModal'
+import { TablaAnexos } from './TablaAnexos'
 import { TableroOperativoView } from './TableroOperativoView'
 import { useEstadoEntrega, useResumenDocumentos } from './use-dashboard'
 
@@ -381,115 +382,24 @@ export function DashboardPage() {
             COLUMNA IZQUIERDA: INFORMACIÓN A VERIFICAR Y COMPLETAR
             ======================================================== */}
         <div className="lg:col-span-8 space-y-4">
-          <Card className="border shadow-xs overflow-hidden">
-            <CardHeader className="py-3 px-4 border-b border-border bg-muted">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-                  <ClipboardList className="h-4 w-4 text-primary" />
-                  <span>Información a verificar y completar</span>
-                </CardTitle>
-                <span className="text-nota font-mono text-primary font-semibold">
-                  7 Anexos Normativos
-                </span>
-              </div>
-            </CardHeader>
+          {/* Encabezado + resumen compacto de avance */}
+          <div className="flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-bold tracking-tight text-foreground">
+              <ClipboardList className="h-4 w-4 text-primary" />
+              Anexos de Transferencia de Gestión
+            </h2>
+            <span className="font-mono text-nota font-semibold text-muted-foreground">
+              {filasAnexos.length} anexos normativos
+            </span>
+          </div>
 
-            <CardContent className="p-0 divide-y divide-border text-xs">
-              {filasAnexos.map((anexo) => {
-                const Icono = anexo.icono
-                return (
-                  <div key={anexo.id} className="p-3.5 hover:bg-muted transition-colors">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    {/* Identificación y Título */}
-                    <div className="flex items-start gap-3 min-w-0 sm:w-[42%]">
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0 mt-0.5">
-                        <Icono className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-foreground hover:text-primary transition-colors">
-                            {anexo.codigo} · {anexo.nombre}
-                          </span>
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-mini font-semibold ${
-                              anexo.completado
-                                ? 'border-success-border bg-success-soft text-success-fg'
-                                : 'border-warning-border bg-warning-soft text-warning-fg'
-                            }`}
-                          >
-                            {anexo.completado
-                              ? <CheckCircle2 className="h-3 w-3" />
-                              : <Clock className="h-3 w-3" />}
-                            {anexo.estado}
-                          </span>
-                        </div>
-                        <p className="text-nota text-muted-foreground truncate mt-0.5">
-                          {anexo.detalle}
-                        </p>
-                      </div>
-                    </div>
+          <ResumenAnexos filas={filasAnexos} />
 
-                    {/* Fuente de Datos */}
-                    <div className="sm:w-[15%] shrink-0">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded text-mini font-mono font-semibold border ${anexo.colorFuente}`}
-                      >
-                        {anexo.fuente}
-                      </span>
-                    </div>
-
-                    {/* Resumen y Avance */}
-                    <div className="sm:w-[25%] min-w-0">
-                      <p className="font-medium text-foreground text-xs truncate">
-                        {anexo.resumen}
-                      </p>
-                      {anexo.esPatrimonio && typeof anexo.avance === 'number' && (
-                        <div className="mt-1 flex items-center gap-2">
-                          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
-                            <div
-                              className="h-full bg-success rounded-full transition-all duration-300"
-                              style={{ width: `${anexo.avance}%` }}
-                            />
-                          </div>
-                          <span className="text-mini font-mono font-bold text-success-fg">
-                            {anexo.avance}%
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Acciones */}
-                    <div className="sm:w-[18%] flex items-center justify-end gap-1.5 shrink-0">
-                      <Link
-                        to={anexo.ruta}
-                        className={buttonVariants({
-                          variant: 'outline',
-                          size: 'sm',
-                          className:
-                            'h-7 text-xs px-2.5 font-medium border-primary/30 text-primary hover:bg-primary/10 gap-1 cursor-pointer',
-                        })}
-                      >
-                        <span>{anexo.accion}</span>
-                        <ArrowRight className="h-3 w-3" />
-                      </Link>
-                    </div>
-                  </div>
-
-                  {/* Firma del documento (02-07). El acta 07 se firma solo con
-                      la entrega consolidada. No afecta la edición del anexo. */}
-                  {anexo.tipoFirma && (
-                    <FilaFirmaAnexo
-                      tipoDocumento={anexo.tipoFirma}
-                      dependenciaId={dependencia.id}
-                      bloqueado={anexo.tipoFirma === 'anexo07' && estadoEntrega !== 'consolidada'}
-                      notaBloqueo="Requiere entrega consolidada"
-                    />
-                  )}
-                  </div>
-                )
-              })}
-            </CardContent>
-          </Card>
+          <TablaAnexos
+            filas={filasAnexos}
+            dependenciaId={dependencia.id}
+            entregaConsolidada={estadoEntrega === 'consolidada'}
+          />
 
           {/* Módulo Operativo: Documentos SGD (Asuntos Pendientes) */}
           <Card className="border shadow-xs overflow-hidden">
