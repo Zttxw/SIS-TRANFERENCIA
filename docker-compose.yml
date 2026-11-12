@@ -1,5 +1,19 @@
 services:
+  backend-dependencies:
+    image: sis-transferencia-backend:local
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    user: root
+    working_dir: /var/www/html
+    entrypoint: ["sh", "/opt/docker/prepare-dependencies.sh"]
+    volumes:
+      - ./backend:/var/www/html
+      - ./docker/php/prepare-dependencies.sh:/opt/docker/prepare-dependencies.sh:ro
+      - backend_vendor:/var/www/html/vendor
+
   backend:
+    image: sis-transferencia-backend:local
     build:
       context: .
       dockerfile: docker/php/Dockerfile
@@ -15,12 +29,16 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
     volumes:
       - ./backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
       - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini:ro
       - ./storage-secure:/var/www/html/storage/secure-evidence
     networks:
       - sis_network
     depends_on:
-      - db
+      backend-dependencies:
+        condition: service_completed_successfully
+      db:
+        condition: service_started
 
   frontend:
     image: node:20-alpine
@@ -74,4 +92,6 @@ networks:
 
 volumes:
   pgdata:
+    driver: local
+  backend_vendor:
     driver: local

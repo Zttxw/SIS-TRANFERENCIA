@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Patrimonio\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Patrimonio\Models\BienPatrimonial;
 use App\Modules\Patrimonio\Requests\VerificarBienRequest;
 use App\Modules\Patrimonio\Services\PatrimonioPdf;
 use App\Modules\Patrimonio\Services\PatrimonioService;
@@ -70,7 +71,7 @@ class PatrimonioController extends Controller
     public function verificar(VerificarBienRequest $request, int $id): JsonResponse
     {
         // El ámbito se verifica contra la dependencia del bien, no de un payload.
-        $bien = $this->patrimonioService->obtenerBien($id);
+        $bien = BienPatrimonial::query()->findOrFail($id, ['id', 'dependencia_id']);
         $this->autorizarDependencia($request->user(), (int) $bien->dependencia_id);
 
         $bien = $this->patrimonioService->verificarBien(

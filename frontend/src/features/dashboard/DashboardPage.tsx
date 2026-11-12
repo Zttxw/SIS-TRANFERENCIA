@@ -165,6 +165,7 @@ export function DashboardPage() {
       detalle: 'Carga oficial del organigrama y centros de costo institucionales',
       ruta: '/organigrama',
       accion: 'Ver Organigrama',
+      estado: 'Disponible',
       completado: true,
     },
     {
@@ -174,13 +175,18 @@ export function DashboardPage() {
       icono: ClipboardList,
       fuente: 'Manual',
       colorFuente: 'bg-muted text-foreground border-border',
-      resumen: anexo02_gestion.existe
-        ? 'Informe registrado y formulado'
-        : 'Pendiente de formulación',
+      resumen: anexo02_gestion.estado === 'completado'
+        ? 'Informe de gestión completado'
+        : anexo02_gestion.existe
+          ? 'Informe guardado en borrador'
+          : 'Pendiente de formulación',
       detalle: 'Memoria, funciones, logros y dificultades de la unidad',
       ruta: '/gestion',
       accion: 'Ver / Completar',
-      completado: anexo02_gestion.existe,
+      estado: anexo02_gestion.estado === 'completado'
+        ? 'Completado'
+        : anexo02_gestion.existe ? 'En borrador' : 'Pendiente',
+      completado: anexo02_gestion.estado === 'completado',
     },
     {
       id: 'anexo03',
@@ -194,6 +200,7 @@ export function DashboardPage() {
       ruta: '/acervo',
       accion: 'Ver / Completar',
       completado: anexo03_acervo.total_series > 0,
+      estado: anexo03_acervo.total_series > 0 ? 'Registrado' : 'Pendiente',
     },
     {
       id: 'anexo04',
@@ -208,7 +215,9 @@ export function DashboardPage() {
       accion: 'Ver / Cotejar',
       esPatrimonio: true,
       avance: anexo04_patrimonio.porcentaje_avance,
-      completado: anexo04_patrimonio.pendientes === 0 && anexo04_patrimonio.total_bienes > 0,
+      completado: anexo04_patrimonio.confirmados === anexo04_patrimonio.total_bienes && anexo04_patrimonio.total_bienes > 0,
+      estado: anexo04_patrimonio.confirmados === anexo04_patrimonio.total_bienes && anexo04_patrimonio.total_bienes > 0
+        ? 'Verificado' : 'Pendiente de verificación',
     },
     {
       id: 'anexo05',
@@ -222,6 +231,7 @@ export function DashboardPage() {
       ruta: '/personal',
       accion: 'Ver / Completar',
       completado: anexo05_personal.total_personal > 0,
+      estado: anexo05_personal.total_personal > 0 ? 'Registrado' : 'Pendiente',
     },
     {
       id: 'anexo06',
@@ -238,6 +248,7 @@ export function DashboardPage() {
       ruta: '/nopatrimonial',
       accion: 'Ver / Completar',
       completado: true,
+      estado: anexo06_nopatrimonial.total_bienes > 0 ? 'Registrado' : 'Sin registros',
     },
     {
       id: 'anexo07',
@@ -254,6 +265,7 @@ export function DashboardPage() {
       ruta: '/acta',
       accion: estadoEntrega === 'consolidada' ? 'Ver / Firmar' : 'Ver / Completar / Enviar',
       completado: estadoEntrega === 'consolidada',
+      estado: estadoEntrega === 'consolidada' ? 'Consolidada' : 'Pendiente de consolidación',
     },
   ]
 
@@ -373,6 +385,18 @@ export function DashboardPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-foreground hover:text-primary transition-colors">
                             {anexo.codigo} · {anexo.nombre}
+                          </span>
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-mini font-semibold ${
+                              anexo.completado
+                                ? 'border-success-border bg-success-soft text-success-fg'
+                                : 'border-warning-border bg-warning-soft text-warning-fg'
+                            }`}
+                          >
+                            {anexo.completado
+                              ? <CheckCircle2 className="h-3 w-3" />
+                              : <Clock className="h-3 w-3" />}
+                            {anexo.estado}
                           </span>
                         </div>
                         <p className="text-nota text-muted-foreground truncate mt-0.5">

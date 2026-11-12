@@ -9,6 +9,7 @@ use App\Modules\Auth\Models\AsignacionRol;
 use App\Modules\Gestion\Services\InformeGestionPdf;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Organization\Models\Servidor;
+use App\Modules\Patrimonio\Models\BienPatrimonial;
 use App\Modules\Personal\Models\Personal;
 use App\Modules\Personal\Services\IngestaPersonalSgd;
 use App\Modules\Personal\Services\PersonalPdf;
@@ -27,6 +28,48 @@ class AnexosExperienciaTest extends TestCase
     private ProcesoTransferencia $proceso;
 
     private Dependencia $dep;
+
+    public function test_verificar_patrimonio_guarda_y_devuelve_el_bien_actualizado(): void
+    {
+        $bien = BienPatrimonial::create([
+            'proceso_transferencia_id' => $this->proceso->id,
+            'dependencia_id' => $this->dep->id,
+            'codigo_patrimonial' => 'PAT-001',
+            'denominacion' => 'Escritorio',
+        ]);
+
+        $this->postJson('/api/patrimonio/bienes/'.$bien->id.'/verificar', [
+            'estado' => 'confirmado',
+            'estado_conservacion' => 'bueno',
+            'ubicacion' => 'Oficina de administración',
+        ])->assertOk()
+            ->assertJsonPath('data.id', $bien->id)
+            ->assertJsonPath('data.ubicacion', 'Oficina de administración')
+            ->assertJsonPath('data.verificacion.estado', 'confirmado')
+            ->assertJsonPath('data.dependencia.id', $this->dep->id);
+
+        $this->assertDatabaseHas('verificaciones_bien', [
+            'bien_patrimonial_id' => $bien->id,
+            'estado' => 'confirmado',
+        ]);
+    }
+
+    public function test_verificar_patrimonio_de_otra_dependencia_devuelve_403(): void
+    {
+        $ajena = Dependencia::factory()->create(['proceso_transferencia_id' => $this->proceso->id]);
+        $bien = BienPatrimonial::create([
+            'proceso_transferencia_id' => $this->proceso->id,
+            'dependencia_id' => $ajena->id,
+            'codigo_patrimonial' => 'PAT-002',
+            'denominacion' => 'Escritorio ajeno',
+        ]);
+
+        $this->postJson('/api/patrimonio/bienes/'.$bien->id.'/verificar', [
+            'estado' => 'confirmado',
+        ])->assertForbidden();
+
+        $this->assertDatabaseMissing('verificaciones_bien', ['bien_patrimonial_id' => $bien->id]);
+    }
 
     protected function setUp(): void
     {

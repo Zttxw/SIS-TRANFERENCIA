@@ -14,7 +14,7 @@ export function useTableroOperativo() {
 
 export function useEstadoEntrega(dependenciaId: number | null) {
   return useQuery({
-    queryKey: ['transferencia', 'estado', dependenciaId],
+    queryKey: ['transferencia-estado', dependenciaId],
     queryFn: () => dashboardService.obtenerEstadoEntrega(dependenciaId!),
     enabled: typeof dependenciaId === 'number' && dependenciaId > 0,
   })
@@ -37,7 +37,7 @@ export function useRemitirEntrega() {
     onSuccess: (_, variables) => {
       toast.success('Entrega remitida con éxito al nivel superior.')
       queryClient.invalidateQueries({
-        queryKey: ['transferencia', 'estado', variables.dependencia_id],
+        queryKey: ['transferencia-estado', variables.dependencia_id],
       })
     },
     onError: (error: Error) => {
@@ -57,7 +57,7 @@ export function useRevisarEntrega() {
         variables.accion === 'consolidar' ? 'consolidada' : 'observada'
       toast.success(`Entrega ${accion} correctamente.`)
       queryClient.invalidateQueries({
-        queryKey: ['transferencia', 'estado', variables.dependencia_id],
+        queryKey: ['transferencia-estado', variables.dependencia_id],
       })
     },
     onError: (error: Error) => {

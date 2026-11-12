@@ -9,7 +9,7 @@ import type {
 } from '@/types/patrimonio'
 
 export const patrimonioService = {
-  async listarBienes(filtros: FiltrosPatrimonio = {}): Promise<ApiPaginated<BienPatrimonial>> {
+  async listarBienes(filtros: FiltrosPatrimonio = {}, signal?: AbortSignal): Promise<ApiPaginated<BienPatrimonial>> {
     const params = new URLSearchParams()
     if (filtros.dependencia_id) params.set('dependencia_id', String(filtros.dependencia_id))
     if (filtros.servidor_id) params.set('servidor_id', String(filtros.servidor_id))
@@ -18,7 +18,7 @@ export const patrimonioService = {
     if (filtros.per_page) params.set('per_page', String(filtros.per_page))
     if (filtros.page) params.set('page', String(filtros.page))
 
-    const res = await api.get<ApiPaginated<BienPatrimonial>>(`/patrimonio/bienes?${params.toString()}`)
+    const res = await api.get<ApiPaginated<BienPatrimonial>>(`/patrimonio/bienes?${params.toString()}`, { signal })
     return res.data
   },
 
