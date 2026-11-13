@@ -26,12 +26,127 @@ import { Input } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/pagination'
 import { Spinner } from '@/components/ui/spinner'
 import { ActivarCuentaModal } from './ActivarCuentaModal'
+import { UsuariosRolesTab } from './UsuariosRolesTab'
 import { useServidores } from './use-admin'
 import type { ServidorPadronItem } from '@/types/admin'
 
 export function AdminPage() {
   const puedeGestionarUsuarios = usePermiso(PERMISOS.GestionarUsuarios)
+  const puedeGestionarRoles = usePermiso(PERMISOS.GestionarRoles)
 
+  const [pestana, setPestana] = useState<'padron' | 'usuarios'>('padron')
+
+  // Sin ninguno de los dos permisos de administración: acceso denegado.
+  if (!puedeGestionarUsuarios && !puedeGestionarRoles) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Panel de Administración Institucional
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Gestión de usuarios y activación de credenciales según Directiva N.° 001-2026-MDSJ/A §7.1
+          </p>
+        </div>
+
+        <Card className="border-destructive/40 bg-destructive/5 p-8 text-center shadow-sm">
+          <ShieldAlert className="mx-auto h-12 w-12 text-destructive" />
+          <h2 className="mt-4 text-base font-semibold text-destructive">
+            Acceso Exclusivo de Administración
+          </h2>
+          <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground">
+            El módulo de alta de usuarios, padrón de servidores y asignación de credenciales requiere el permiso{' '}
+            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-foreground font-semibold">
+              usuarios.gestionar
+            </code>
+            {' '}o{' '}
+            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-foreground font-semibold">
+              roles.gestionar
+            </code>
+            , reservados para la Administración del Sistema.
+          </p>
+        </Card>
+      </div>
+    )
+  }
+
+  // La pestaña inicial se adapta a los permisos del usuario.
+  const pestanaActiva = !puedeGestionarUsuarios ? 'usuarios' : pestana
+
+  return (
+    <div className="space-y-6">
+      {/* Cabecera Principal */}
+      <div className="border-b pb-4">
+        <div className="flex items-center gap-2">
+          <span className="rounded bg-primary/10 px-2 py-0.5 font-mono text-xs font-semibold text-primary">
+            Módulo §7.1
+          </span>
+          <span className="text-xs font-medium text-muted-foreground">
+            Directiva N.° 001-2026-MDSJ/A
+          </span>
+        </div>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
+          Administración de Usuarios y Roles
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Activación de cuentas del padrón, alta de usuarios externos (ETTE / personal externo) y asignación de roles institucionales.
+        </p>
+      </div>
+
+      {/* Pestañas */}
+      <div className="flex items-center gap-1 border-b">
+        {puedeGestionarUsuarios && (
+          <TabButton
+            activo={pestanaActiva === 'padron'}
+            onClick={() => setPestana('padron')}
+          >
+            Padrón de servidores
+          </TabButton>
+        )}
+        {puedeGestionarRoles && (
+          <TabButton
+            activo={pestanaActiva === 'usuarios'}
+            onClick={() => setPestana('usuarios')}
+          >
+            Usuarios externos y roles
+          </TabButton>
+        )}
+      </div>
+
+      {pestanaActiva === 'padron' && puedeGestionarUsuarios ? (
+        <PadronTab />
+      ) : (
+        <UsuariosRolesTab />
+      )}
+    </div>
+  )
+}
+
+function TabButton({
+  activo,
+  onClick,
+  children,
+}: {
+  activo: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+        activo
+          ? 'border-primary text-foreground'
+          : 'border-transparent text-muted-foreground hover:text-foreground'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
+
+function PadronTab() {
   const [buscar, setBuscar] = useState('')
   const [pagina, setPagina] = useState(1)
   const [filtroEstado, setFiltroEstado] = useState<'todos' | 'con_cuenta' | 'sin_cuenta'>('todos')
@@ -68,58 +183,8 @@ export function AdminPage() {
   const cuentasPendientes = (itemsServidores ?? []).filter((s) => s.cuenta === null).length
   const totalResponsables = (itemsServidores ?? []).filter((s) => s.es_responsable).length
 
-  // Si no cuenta con el permiso usuarios.gestionar
-  if (!puedeGestionarUsuarios) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Panel de Administración Institucional
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Gestión de usuarios y activación de credenciales según Directiva N.° 001-2026-MDSJ/A §7.1
-          </p>
-        </div>
-
-        <Card className="border-destructive/40 bg-destructive/5 p-8 text-center shadow-sm">
-          <ShieldAlert className="mx-auto h-12 w-12 text-destructive" />
-          <h2 className="mt-4 text-base font-semibold text-destructive">
-            Acceso Exclusivo de Administración
-          </h2>
-          <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground">
-            El módulo de alta de usuarios, padrón de servidores y asignación de credenciales requiere el permiso{' '}
-            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-foreground font-semibold">
-              usuarios.gestionar
-            </code>
-            , reservado para la Administración del Sistema.
-          </p>
-        </Card>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
-      {/* Cabecera Principal */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="rounded bg-primary/10 px-2 py-0.5 font-mono text-xs font-semibold text-primary">
-              Módulo §7.1
-            </span>
-            <span className="text-xs font-medium text-muted-foreground">
-              Directiva N.° 001-2026-MDSJ/A
-            </span>
-          </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
-            Padrón de Servidores y Activación de Cuentas
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Administración de cuentas de acceso, roles asignados y credenciales de los servidores institucionales.
-          </p>
-        </div>
-      </div>
-
       {/* Tarjetas KPI */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="shadow-sm">

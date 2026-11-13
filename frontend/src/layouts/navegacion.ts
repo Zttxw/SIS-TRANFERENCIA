@@ -33,6 +33,7 @@ export interface ItemNav {
   ruta?: string
   icono: LucideIcon
   permiso: Permiso
+  permisosAlternativos?: readonly Permiso[]
   hijos?: SubItemNav[]
 }
 
@@ -128,6 +129,7 @@ export const ITEMS_NAV: ItemNav[] = [
     ruta: '/usuarios',
     icono: UserCog,
     permiso: PERMISOS.GestionarUsuarios,
+    permisosAlternativos: [PERMISOS.GestionarRoles],
   },
   {
     etiqueta: 'Cronograma',

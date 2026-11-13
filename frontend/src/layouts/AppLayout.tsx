@@ -41,7 +41,11 @@ export function AppLayout() {
 
   const infoEstructura = getInfoEstructura(false)
   const infoEstructuraSubmenu = getInfoEstructura(true)
-  const items = ITEMS_NAV.filter((item) => permisos.has(item.permiso))
+  const items = ITEMS_NAV.filter(
+    (item) =>
+      permisos.has(item.permiso) ||
+      item.permisosAlternativos?.some((permiso) => permisos.has(permiso)),
+  )
 
   const nav = (
     <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2 text-xs">

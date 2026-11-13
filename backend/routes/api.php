@@ -4,6 +4,7 @@ use App\Modules\Acervo\Controllers\AcervoController;
 use App\Modules\Auth\Controllers\ActivacionController;
 use App\Modules\Auth\Controllers\AuthController;
 use App\Modules\Auth\Controllers\DelegadoController;
+use App\Modules\Auth\Controllers\GestionUsuariosController;
 use App\Modules\Documentos\Controllers\DocumentoPendienteController;
 use App\Modules\Expediente\Controllers\ExpedienteController;
 use App\Modules\Gestion\Controllers\GestionController;
@@ -65,6 +66,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/servidores', [ActivacionController::class, 'index']);
         Route::post('/servidores/{servidor}/preparar-activacion', [ActivacionController::class, 'preparar']);
         Route::post('/servidores/{servidor}/activar', [ActivacionController::class, 'activar']);
+    });
+
+    // Administración de cuentas y roles institucionales (roles.gestionar).
+    // Alta de usuarios externos al padrón SGD (ETTE/personal externo) y
+    // asignación/revocación de roles institucionales a cuentas existentes.
+    Route::prefix('usuarios')->middleware('permiso:roles.gestionar')->group(function () {
+        Route::get('/', [GestionUsuariosController::class, 'index']);
+        Route::get('/roles-asignables', [GestionUsuariosController::class, 'rolesAsignables']);
+        Route::post('/externos', [GestionUsuariosController::class, 'crearExterno']);
+        Route::post('/{user}/roles', [GestionUsuariosController::class, 'asignarRol']);
+        Route::delete('/roles/{asignacion}', [GestionUsuariosController::class, 'revocarRol'])->whereNumber('asignacion');
     });
 
     // Gestión de delegados ETTE por el comité (RF-008). Alta/designación/
