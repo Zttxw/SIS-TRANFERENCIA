@@ -26,46 +26,36 @@
 
     {{-- Anexo 02 --}}
     @if (isset($anexo02))
-        <div style="page-break-before: always"></div>
-        <div class="anexo-titulo" style="color:#3484A5;font-size:12px;font-weight:bold;margin-bottom:6px">
-            Anexo 02 — Informe de Gestión
-        </div>
+        <div class="salto-pagina"></div>
+        <div class="titulo-anexo-interno">Anexo 02 — Informe de Gestión</div>
         @include('pdf.partials.anexo02', ['informe' => $anexo02['informe'], 'nivelCheck' => $anexo02['nivelCheck']])
     @endif
 
     {{-- Anexo 03 --}}
     @if (isset($anexo03))
-        <div style="page-break-before: always"></div>
-        <div class="anexo-titulo" style="color:#3484A5;font-size:12px;font-weight:bold;margin-bottom:6px">
-            Anexo 03 — Registro del Acervo Documentario
-        </div>
+        <div class="salto-pagina"></div>
+        <div class="titulo-anexo-interno">Anexo 03 — Registro del Acervo Documentario</div>
         @include('pdf.partials.anexo03', ['cabecera' => $anexo03['cabecera'], 'grupos' => $anexo03['grupos']])
     @endif
 
     {{-- Anexo 04 --}}
     @if (isset($anexo04))
-        <div style="page-break-before: always"></div>
-        <div class="anexo-titulo" style="color:#3484A5;font-size:12px;font-weight:bold;margin-bottom:6px">
-            Anexo 04 — Registro de Bienes Patrimoniales
-        </div>
+        <div class="salto-pagina"></div>
+        <div class="titulo-anexo-interno">Anexo 04 — Registro de Bienes Patrimoniales</div>
         @include('pdf.partials.anexo04', ['cabecera' => $anexo04['cabecera'], 'grupos' => $anexo04['grupos']])
     @endif
 
     {{-- Anexo 05 --}}
     @if (isset($anexo05))
-        <div style="page-break-before: always"></div>
-        <div class="anexo-titulo" style="color:#3484A5;font-size:12px;font-weight:bold;margin-bottom:6px">
-            Anexo 05 — Información del Personal a Cargo
-        </div>
+        <div class="salto-pagina"></div>
+        <div class="titulo-anexo-interno">Anexo 05 — Información del Personal a Cargo</div>
         @include('pdf.partials.anexo05', ['cabecera' => $anexo05['cabecera'], 'personal' => $anexo05['personal']])
     @endif
 
     {{-- Anexo 06 --}}
     @if (isset($anexo06))
-        <div style="page-break-before: always"></div>
-        <div class="anexo-titulo" style="color:#3484A5;font-size:12px;font-weight:bold;margin-bottom:6px">
-            Anexo 06 — Bienes No Patrimoniales
-        </div>
+        <div class="salto-pagina"></div>
+        <div class="titulo-anexo-interno">Anexo 06 — Bienes No Patrimoniales</div>
         @include('pdf.partials.anexo06', ['cabecera' => $anexo06['cabecera'], 'bienes' => $anexo06['bienes']])
     @endif
 @endsection
