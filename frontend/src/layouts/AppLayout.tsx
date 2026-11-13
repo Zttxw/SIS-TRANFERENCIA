@@ -62,8 +62,8 @@ export function AppLayout() {
   const roles = new Set(usuario?.roles.map(({ rol }) => rol) ?? [])
   const soloEtte = roles.has('ette') && !roles.has('etts') && !roles.has('administrador')
   const soloEtts = roles.has('etts') && !roles.has('ette') && !roles.has('administrador')
-  const rutasEtte = new Set(['/', '/organigrama', '/reportes', '/observaciones', '/delegados'])
-  const rutasEtts = new Set(['/', '/organigrama', '/entregas', '/observaciones', '/reportes', '/cronograma', '/acta'])
+  const rutasEtte = new Set(['/', '/organigrama', '/anexos-entidad', '/reportes', '/observaciones', '/delegados'])
+  const rutasEtts = new Set(['/', '/organigrama', '/anexos-entidad', '/entregas', '/observaciones', '/reportes', '/cronograma', '/acta'])
   const items = ITEMS_NAV.filter(
     (item) =>
       (!soloEtte || (item.ruta !== undefined && rutasEtte.has(item.ruta))) &&

@@ -6,6 +6,7 @@ import {
   FileCheck2,
   Files,
   FileText,
+  FolderOpen,
   FolderTree,
   LayoutDashboard,
   type LucideIcon,
@@ -93,6 +94,12 @@ export const ITEMS_NAV: ItemNav[] = [
         permisosAlternativos: [PERMISOS.FirmarAnexos],
       },
     ],
+  },
+  {
+    etiqueta: 'Anexos de la Entidad',
+    ruta: '/anexos-entidad',
+    icono: FolderOpen,
+    permiso: PERMISOS.VerAnexos,
   },
   {
     etiqueta: 'Documentos SGD',

@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Clock,
   FileSpreadsheet,
+  FolderOpen,
   Layers,
   Package,
   RefreshCw,
@@ -862,7 +863,20 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
       {/* ========================================================
           ACCESOS RÁPIDOS INFERIORES
           ======================================================== */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-2">
+        <Link
+          to="/anexos-entidad"
+          className="flex items-center gap-2.5 p-3 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors"
+        >
+          <div className="p-2 rounded-lg bg-primary/10 text-primary">
+            <FolderOpen className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-foreground">Anexos de la Entidad</p>
+            <p className="text-microdato text-muted-foreground">Carpetas por dependencia</p>
+          </div>
+        </Link>
+
         <Link
           to="/organigrama"
           className="flex items-center gap-2.5 p-3 rounded-xl border border-border bg-card hover:bg-muted transition-colors"
