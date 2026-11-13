@@ -119,10 +119,17 @@ class CronogramaService
             return;
         }
 
+        $vencimiento = $actividad->instanteVencimiento();
+        $vencioLima = $vencimiento?->copy()->setTimezone(CronogramaActividad::ZONA_PLAZO);
+        // Con hora de corte se informa fecha y hora de Lima; sin ella, solo el día.
+        $cuando = $actividad->hora_vencimiento !== null
+            ? $vencioLima?->format('d/m/Y H:i').' (hora de Lima)'
+            : $actividad->fecha_vencimiento?->toDateString();
+
         throw new HttpResponseException(
             ApiResponse::error(
                 'La operación está bloqueada: el plazo de la actividad "'.$actividad->nombre.'" venció el '
-                    .$actividad->fecha_vencimiento?->toDateString().'.',
+                    .$cuando.'.',
                 409,
                 [
                     'cronograma' => [
@@ -130,6 +137,8 @@ class CronogramaService
                         'actividad' => $actividad->nombre,
                         'operacion' => $actividad->operacion,
                         'fecha_vencimiento' => $actividad->fecha_vencimiento?->toDateString(),
+                        'hora_vencimiento' => $actividad->hora_vencimiento,
+                        'vencio_en' => $vencimiento?->toIso8601String(),
                     ],
                 ],
             )

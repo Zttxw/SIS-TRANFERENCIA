@@ -28,6 +28,7 @@ class CronogramaActividadFactory extends Factory
             'descripcion' => null,
             'fecha_inicio' => Carbon::now()->subDays(5)->toDateString(),
             'fecha_vencimiento' => Carbon::now()->addDays(5)->toDateString(),
+            'hora_vencimiento' => null,
             'estado' => EstadoActividadCronograma::EN_CURSO,
             'operacion' => 'remision',
             'orden' => 0,
@@ -62,5 +63,11 @@ class CronogramaActividadFactory extends Factory
     public function paraOperacion(string $operacion): static
     {
         return $this->state(fn (array $attributes) => ['operacion' => $operacion]);
+    }
+
+    /** Fija una hora de corte exacta (H:i o H:i:s) para el plazo (D-03). */
+    public function conHora(string $hora): static
+    {
+        return $this->state(fn (array $attributes) => ['hora_vencimiento' => $hora]);
     }
 }

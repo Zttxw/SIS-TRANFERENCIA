@@ -51,17 +51,31 @@ class CronogramaActividadTest extends TestCase
         $this->assertFalse($actividad->estaVencida());
     }
 
-    public function test_el_plazo_vence_al_terminar_el_dia_de_vencimiento(): void
+    public function test_el_plazo_vence_al_terminar_el_dia_de_vencimiento_en_lima(): void
     {
         $actividad = CronogramaActividad::factory()->create([
+            'fecha_vencimiento' => '2026-12-25',
+            'hora_vencimiento' => null,
+            'estado' => EstadoActividadCronograma::EN_CURSO,
+        ]);
+
+        // El corte es fin del día en America/Lima (UTC-5): 2026-12-26 04:59:59 UTC.
+        // A las 23:59 de Lima aún no está vencida.
+        $this->assertFalse($actividad->estaVencida(Carbon::parse('2026-12-25 23:59:00', 'America/Lima')));
+        // Pasada la medianoche de Lima, sí.
+        $this->assertTrue($actividad->estaVencida(Carbon::parse('2026-12-26 00:01:00', 'America/Lima')));
+    }
+
+    public function test_la_hora_de_corte_se_evalua_en_zona_de_lima(): void
+    {
+        $actividad = CronogramaActividad::factory()->conHora('17:00')->create([
             'fecha_vencimiento' => '2026-12-25',
             'estado' => EstadoActividadCronograma::EN_CURSO,
         ]);
 
-        // Durante el propio día de vencimiento aún no está vencida.
-        $this->assertFalse($actividad->estaVencida(Carbon::parse('2026-12-25 23:59:00')));
-        // Al día siguiente, sí.
-        $this->assertTrue($actividad->estaVencida(Carbon::parse('2026-12-26 00:01:00')));
+        // Antes de las 17:00 de Lima no está vencida; un minuto después, sí.
+        $this->assertFalse($actividad->estaVencida(Carbon::parse('2026-12-25 16:59:00', 'America/Lima')));
+        $this->assertTrue($actividad->estaVencida(Carbon::parse('2026-12-25 17:01:00', 'America/Lima')));
     }
 
     public function test_scope_aplicables_a_combina_generales_y_de_la_dependencia(): void

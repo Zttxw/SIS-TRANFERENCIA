@@ -70,6 +70,7 @@ class CronogramaController extends Controller
             'descripcion' => ['nullable', 'string', 'max:1000'],
             'fecha_inicio' => ['nullable', 'date'],
             'fecha_vencimiento' => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
+            'hora_vencimiento' => ['nullable', 'date_format:H:i,H:i:s'],
             'estado' => ['nullable', Rule::enum(EstadoActividadCronograma::class)],
             'operacion' => ['nullable', 'string', 'max:40'],
             'orden' => ['nullable', 'integer', 'min:0'],

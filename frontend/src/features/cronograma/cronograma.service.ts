@@ -10,6 +10,7 @@ export interface ActividadCronograma {
   dependencia?: { codigo: string; nombre: string } | null
   fecha_inicio: string | null
   fecha_vencimiento: string | null
+  hora_vencimiento: string | null
   estado: 'pendiente' | 'en_curso' | 'completada'
   vencida: boolean
   operacion: string
@@ -24,6 +25,7 @@ export type ActividadPayload = Pick<
   | 'dependencia_id'
   | 'fecha_inicio'
   | 'fecha_vencimiento'
+  | 'hora_vencimiento'
   | 'estado'
   | 'operacion'
   | 'orden'

@@ -29,6 +29,12 @@ class CronogramaActividad extends BaseModel
     /** @use HasFactory<CronogramaActividadFactory> */
     use Auditable, HasFactory, SoftDeletes;
 
+    /**
+     * Zona horaria del corte de plazo. El vencimiento se interpreta en hora de
+     * Lima aunque la aplicación persista en UTC (config/app.php: 'UTC'). D-03.
+     */
+    public const ZONA_PLAZO = 'America/Lima';
+
     protected $table = 'cronograma_actividades';
 
     protected $appends = ['vencida'];
@@ -46,6 +52,7 @@ class CronogramaActividad extends BaseModel
         'descripcion',
         'fecha_inicio',
         'fecha_vencimiento',
+        'hora_vencimiento',
         'estado',
         'operacion',
         'orden',
@@ -62,6 +69,7 @@ class CronogramaActividad extends BaseModel
             'estado' => EstadoActividadCronograma::class,
             'fecha_inicio' => 'date',
             'fecha_vencimiento' => 'date',
+            'hora_vencimiento' => 'string',
             'orden' => 'integer',
         ];
     }
@@ -73,21 +81,49 @@ class CronogramaActividad extends BaseModel
     }
 
     /**
+     * Instante exacto en que vence el plazo, en zona America/Lima (D-03). Con
+     * `hora_vencimiento` vence a esa hora de Lima; sin ella, al terminar el día
+     * de Lima. null cuando no hay fecha de vencimiento (no hay plazo que vencer).
+     */
+    public function instanteVencimiento(): ?Carbon
+    {
+        if ($this->fecha_vencimiento === null) {
+            return null;
+        }
+
+        // `fecha_vencimiento` es un cast 'date' (medianoche); se toma solo el día
+        // y se ancla en la zona de Lima, sin arrastrar la hora/zona del cast.
+        $dia = $this->fecha_vencimiento->format('Y-m-d');
+
+        if ($this->hora_vencimiento === null) {
+            return Carbon::parse($dia, self::ZONA_PLAZO)->endOfDay();
+        }
+
+        $hora = substr((string) $this->hora_vencimiento, 0, 8); // H:i:s
+
+        return Carbon::parse($dia.' '.$hora, self::ZONA_PLAZO);
+    }
+
+    /**
      * ¿La actividad está vencida en la fecha de referencia? Una actividad
      * completada no se considera vencida (ya se cumplió). Sin fecha de
-     * vencimiento no hay plazo que vencer.
+     * vencimiento no hay plazo que vencer. El corte se evalúa en hora de Lima.
      */
     public function estaVencida(?Carbon $referencia = null): bool
     {
-        if ($this->fecha_vencimiento === null || $this->estado?->estaCompletada()) {
+        if ($this->estado?->estaCompletada()) {
+            return false;
+        }
+
+        $vencimiento = $this->instanteVencimiento();
+
+        if ($vencimiento === null) {
             return false;
         }
 
         $referencia = $referencia ?? Carbon::now();
 
-        // El plazo vence al terminar el día de vencimiento (zona horaria/hora
-        // exacta pendientes de D-03; se usa fin del día como mínimo razonable).
-        return $referencia->greaterThan($this->fecha_vencimiento->copy()->endOfDay());
+        return $referencia->greaterThan($vencimiento);
     }
 
     /** Actividades que gobiernan una operación dada (p. ej. 'remision'). @param Builder<static> $query */

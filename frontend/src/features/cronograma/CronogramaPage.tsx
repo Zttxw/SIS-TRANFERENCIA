@@ -27,9 +27,52 @@ const valoresIniciales: ActividadPayload = {
   dependencia_id: null,
   fecha_inicio: '',
   fecha_vencimiento: '',
+  hora_vencimiento: '',
   estado: 'pendiente',
   operacion: 'remision',
   orden: 0,
+}
+
+/** Etiqueta legible de la operación que gobierna el plazo. */
+const ETIQUETA_OPERACION: Record<string, string> = {
+  remision: 'Remisión',
+}
+
+/**
+ * Vencimiento legible: fecha + hora de corte (hora de Lima). Sin hora, se
+ * entiende «fin del día». Se muestra tal cual lo guarda el backend, que ya
+ * interpreta el corte en America/Lima.
+ */
+function formatearVencimiento(
+  fecha: string | null,
+  hora: string | null,
+): string {
+  if (!fecha) return 'Sin plazo'
+  const dia = fecha.slice(0, 10)
+  if (!hora) return `${dia} · fin del día`
+  return `${dia} · ${hora.slice(0, 5)}`
+}
+
+/**
+ * Situación del plazo en lenguaje humano: cuántos días faltan o hace cuánto
+ * venció. El bloqueo real lo calcula el backend (`vencida`); esto solo orienta.
+ */
+function situacionPlazo(
+  fecha: string | null,
+  vencida: boolean,
+): { texto: string; tono: 'danger' | 'warning' | 'muted' } {
+  if (!fecha) return { texto: 'Sin fecha de vencimiento', tono: 'muted' }
+  if (vencida) return { texto: 'Plazo vencido', tono: 'danger' }
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  const fin = new Date(`${fecha.slice(0, 10)}T00:00:00`)
+  const dias = Math.round((fin.getTime() - hoy.getTime()) / 86_400_000)
+  if (dias <= 0) return { texto: 'Vence hoy', tono: 'warning' }
+  if (dias === 1) return { texto: 'Vence mañana', tono: 'warning' }
+  return {
+    texto: `Faltan ${dias} días`,
+    tono: dias <= 3 ? 'warning' : 'muted',
+  }
 }
 
 export function CronogramaPage() {
@@ -73,6 +116,7 @@ export function CronogramaPage() {
           descripcion: datos.descripcion?.trim() || null,
           fecha_inicio: datos.fecha_inicio || null,
           fecha_vencimiento: datos.fecha_vencimiento || null,
+          hora_vencimiento: datos.hora_vencimiento || null,
         },
       ),
     onSuccess: async () => {
@@ -110,6 +154,7 @@ export function CronogramaPage() {
             ...actividad,
             fecha_inicio: actividad.fecha_inicio?.slice(0, 10) ?? '',
             fecha_vencimiento: actividad.fecha_vencimiento?.slice(0, 10) ?? '',
+            hora_vencimiento: actividad.hora_vencimiento?.slice(0, 5) ?? '',
           },
     )
     setEdicion(actividad)
@@ -125,7 +170,15 @@ export function CronogramaPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Cronograma de transferencia</h1>
+        <div>
+          <h1 className="text-2xl font-semibold">Cronograma de transferencia</h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Define las etapas y plazos del proceso. Cuando una actividad de{' '}
+            <strong>remisión</strong> vence, el sistema bloquea la remisión de
+            las dependencias de su ámbito hasta que se prorrogue el plazo. Las
+            horas de corte se interpretan en hora de Lima.
+          </p>
+        </div>
         <Button onClick={() => abrir('nueva')}>Nueva actividad</Button>
       </div>
       <DataTable
@@ -136,7 +189,15 @@ export function CronogramaPage() {
         rowKey={(actividad) => actividad.id}
         vacio={{ titulo: 'El proceso todavía no tiene actividades' }}
         columnas={[
-          { id: 'etapa', header: 'Etapa', cell: (a) => a.etapa ?? 'General' },
+          {
+            id: 'etapa',
+            header: 'Etapa',
+            cell: (a) => (
+              <span className="inline-block rounded bg-muted px-2 py-0.5 text-xs font-medium">
+                {a.etapa ?? 'General'}
+              </span>
+            ),
+          },
           {
             id: 'nombre',
             header: 'Actividad',
@@ -144,20 +205,39 @@ export function CronogramaPage() {
               <div>
                 <p className="font-medium">{a.nombre}</p>
                 <p className="text-xs text-muted-foreground">
-                  {a.dependencia?.nombre ?? 'Todo el proceso'}
+                  {a.dependencia?.nombre ?? 'Todo el proceso'} ·{' '}
+                  {ETIQUETA_OPERACION[a.operacion] ?? a.operacion}
                 </p>
               </div>
             ),
           },
           {
             id: 'fechas',
-            header: 'Inicio / vencimiento',
-            cell: (a) => (
-              <span>
-                {a.fecha_inicio?.slice(0, 10) ?? '—'} /{' '}
-                {a.fecha_vencimiento?.slice(0, 10) ?? '—'}
-              </span>
-            ),
+            header: 'Vencimiento',
+            cell: (a) => {
+              const sit = situacionPlazo(a.fecha_vencimiento, a.vencida)
+              return (
+                <div>
+                  <p>
+                    {formatearVencimiento(
+                      a.fecha_vencimiento,
+                      a.hora_vencimiento,
+                    )}
+                  </p>
+                  <p
+                    className={
+                      sit.tono === 'danger'
+                        ? 'text-xs text-danger-fg'
+                        : sit.tono === 'warning'
+                          ? 'text-xs text-warning-fg'
+                          : 'text-xs text-muted-foreground'
+                    }
+                  >
+                    {sit.texto}
+                  </p>
+                </div>
+              )
+            },
           },
           {
             id: 'estado',
@@ -330,6 +410,22 @@ export function CronogramaPage() {
             </div>
           </div>
           <div className="space-y-1">
+            <Label htmlFor="actividad-hora">Hora de corte (opcional)</Label>
+            <Input
+              id="actividad-hora"
+              type="time"
+              {...register('hora_vencimiento')}
+            />
+            <p className="text-xs text-muted-foreground">
+              Hora de Lima. Si la dejas vacía, el plazo vence al terminar el día.
+            </p>
+            {errors.hora_vencimiento && (
+              <p className="text-xs text-danger-fg">
+                {errors.hora_vencimiento.message}
+              </p>
+            )}
+          </div>
+          <div className="space-y-1">
             <Label htmlFor="actividad-estado">Estado</Label>
             <Controller
               name="estado"
@@ -352,7 +448,8 @@ export function CronogramaPage() {
             )}
           </div>
           <p className="text-xs text-muted-foreground">
-            Esta actividad controla el plazo de remisión.
+            Esta actividad controla el plazo de remisión: al vencer, bloquea la
+            remisión de su ámbito hasta que se prorrogue.
           </p>
           <div className="flex justify-end gap-2">
             <Button
