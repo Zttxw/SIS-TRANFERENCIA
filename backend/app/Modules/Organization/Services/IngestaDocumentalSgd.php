@@ -71,42 +71,48 @@ class IngestaDocumentalSgd
         $anio = $this->anioProceso($proceso);
         $extraidoEn = Carbon::now();
 
-        $acervo = $this->ingestarAcervoDigital($proceso, $anio, $soloDependencia, $extraidoEn);
+        // El acervo digital abarca todos los años del SGD (histórico documental).
+        $acervo = $this->ingestarAcervoDigital($proceso, $soloDependencia, $extraidoEn);
+        // Los pendientes sí se acotan al año del proceso: son la bandeja vigente.
         $pendientes = $this->ingestarDocumentosPendientes($proceso, $anio, $soloDependencia, $extraidoEn);
 
         return ['anio' => $anio, 'acervo' => $acervo, 'pendientes' => $pendientes];
     }
 
     /**
-     * Acervo digital (Anexo 03): una fila-resumen por dependencia emisora y tipo
-     * documental, con el conteo de documentos emitidos en el año. Agregado en SQL
+     * Acervo digital (Anexo 03): una fila-resumen por dependencia emisora, tipo
+     * documental y AÑO, con el conteo de documentos emitidos. Agregado en SQL
      * Server con GROUP BY; no trae documentos individuales.
+     *
+     * Se ingieren TODOS los años presentes en el SGD (que arrancó en sep-2025),
+     * no solo el año del proceso: el acervo refleja todo el archivo digital que la
+     * oficina generó desde que existe el SGD. La vista «Por año» del Anexo 03 ya
+     * agrupa por el año de cada fila.
      */
     private function ingestarAcervoDigital(
         ProcesoTransferencia $proceso,
-        string $anio,
         ?string $soloDependencia,
         Carbon $extraidoEn,
     ): int {
-        $sql = "SELECT r.CO_DEP_EMI AS dep, r.CO_TIP_DOC_ADM AS tipo, COUNT(*) AS total
+        $sql = "SELECT r.NU_ANN AS anio, r.CO_DEP_EMI AS dep, r.CO_TIP_DOC_ADM AS tipo, COUNT(*) AS total
                 FROM {$this->esquema}.TDTV_REMITOS r
-                WHERE r.NU_ANN = ?
-                  AND r.ES_ELI = '0'
+                WHERE r.ES_ELI = '0'
                   AND r.ES_DOC_EMI NOT IN ('9')
-                  AND r.CO_DEP_EMI IS NOT NULL";
-        $bindings = [$anio];
+                  AND r.CO_DEP_EMI IS NOT NULL
+                  AND r.NU_ANN IS NOT NULL";
+        $bindings = [];
         if ($soloDependencia !== null) {
             $sql .= ' AND r.CO_DEP_EMI = ?';
             $bindings[] = $soloDependencia;
         }
-        $sql .= ' GROUP BY r.CO_DEP_EMI, r.CO_TIP_DOC_ADM';
+        $sql .= ' GROUP BY r.NU_ANN, r.CO_DEP_EMI, r.CO_TIP_DOC_ADM';
 
         $filas = DB::connection($this->conexionSgd)->select($sql, $bindings);
 
         $depPorCodigo = $this->dependenciasPorCodigo($proceso);
         $tiposPorCodigo = TipoDocumentalSgd::query()->pluck('descripcion', 'codigo');
 
-        return DB::transaction(function () use ($filas, $proceso, $anio, $depPorCodigo, $tiposPorCodigo, $extraidoEn) {
+        return DB::transaction(function () use ($filas, $proceso, $depPorCodigo, $tiposPorCodigo, $extraidoEn) {
             $total = 0;
             foreach ($filas as $fila) {
                 $depCodigo = $this->texto($fila->dep);
@@ -114,6 +120,12 @@ class IngestaDocumentalSgd
                 if ($dependenciaId === null) {
                     continue; // Dependencia fuera del proceso; se omite (incidencia silenciosa).
                 }
+
+                $anioFila = $this->texto($fila->anio);
+                if ($anioFila === null) {
+                    continue;
+                }
+                $anioEntero = (int) $anioFila;
 
                 $tipoCodigo = $this->texto($fila->tipo);
                 $serie = $tipoCodigo !== null
@@ -126,14 +138,17 @@ class IngestaDocumentalSgd
                         'dependencia_id' => $dependenciaId,
                         'tipo' => AcervoDocumental::TIPO_DIGITAL,
                         'serie_documental' => $serie,
-                        'periodo' => $anio,
+                        'periodo' => $anioFila,
                     ],
                     [
+                        'anio' => $anioEntero,
+                        'desde_anio' => $anioEntero,
+                        'hasta_anio' => $anioEntero,
                         'cantidad_unidades' => (int) $fila->total,
                         'unidad_conservacion' => 'documento digital (SGD)',
-                        'descripcion' => "Documentos emitidos en {$anio} de tipo «{$serie}», según el SGD.",
+                        'descripcion' => "Documentos emitidos en {$anioFila} de tipo «{$serie}», según el SGD.",
                         'fuente' => FuenteDato::SGD->value,
-                        'fuente_referencia' => "TDTV_REMITOS CO_DEP_EMI={$depCodigo} CO_TIP_DOC_ADM={$tipoCodigo} NU_ANN={$anio}",
+                        'fuente_referencia' => "TDTV_REMITOS CO_DEP_EMI={$depCodigo} CO_TIP_DOC_ADM={$tipoCodigo} NU_ANN={$anioFila}",
                         'extraido_en' => $extraidoEn,
                     ],
                 );
