@@ -164,6 +164,7 @@ class FirmaperuSesionService
                 return $sesion;
             }
             $detalles = $this->validador->validar($original, $firmado, $sesion->firmante_dni);
+            $this->registro->exigirFirmanteAsignado($sesion);
             abort_unless(Storage::disk('local')->put($ruta, $firmado), 503, 'No se pudo conservar el PDF firmado.');
             DB::transaction(function () use ($sesion, $ruta, $firmado, $detalles): void {
                 $sesion->update(['estado' => 'firmada', 'firmado_path' => $ruta,
@@ -198,6 +199,7 @@ class FirmaperuSesionService
             abort_unless(hash_equals($sesion->original_sha256, hash('sha256', $original))
                 && hash_equals($sesion->firmado_sha256, hash('sha256', $firmado)), 409, 'Un archivo conservado no coincide con su huella.');
             $detalles = $this->validador->validar($original, $firmado, $sesion->firmante_dni);
+            $this->registro->exigirFirmanteAsignado($sesion);
             DB::transaction(function () use ($sesion, $detalles): void {
                 $sesion->update(['estado' => 'firmada', 'firmado_en' => now(), 'mensaje' => null,
                     'detalles' => array_merge($sesion->detalles ?? [], $detalles)]);

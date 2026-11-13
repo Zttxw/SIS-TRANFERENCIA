@@ -265,6 +265,35 @@ class FirmaperuSesionTest extends TestCase
         $this->assertDatabaseHas('firma_sesiones', ['id' => $sesion->id, 'firmado_path' => null]);
     }
 
+    public function test_no_acepta_firma_si_firmante_perdio_su_asignacion_de_rol_durante_la_sesion(): void
+    {
+        $dep = $this->iniciarUsuario();
+        $preparacion = $this->preparar($dep);
+        $parametros = $this->emitir($preparacion);
+        $sesion = FirmaSesion::findOrFail($preparacion['sesion_id']);
+        AsignacionRol::where('user_id', $sesion->usuario_id)->delete();
+
+        $this->postJson($this->subir($parametros), ['signed_file' => UploadedFile::fake()->createWithContent('firmado.pdf', self::PDF)])
+            ->assertForbidden();
+        $this->assertDatabaseHas('firma_sesiones', ['id' => $sesion->id, 'firmado_path' => null]);
+        $this->assertDatabaseCount('firmas_anexo', 0);
+    }
+
+    public function test_rechaza_firma_si_la_responsabilidad_del_firmante_cambio_durante_la_sesion(): void
+    {
+        $dep = $this->iniciarUsuario();
+        $preparacion = $this->preparar($dep);
+        $parametros = $this->emitir($preparacion);
+        $sesion = FirmaSesion::findOrFail($preparacion['sesion_id']);
+        // El carácter registrado al preparar ya no coincide con el que corresponde al firmante.
+        $sesion->update(['caracter' => 'opcional']);
+
+        $this->postJson($this->subir($parametros), ['signed_file' => UploadedFile::fake()->createWithContent('firmado.pdf', self::PDF)])
+            ->assertStatus(422);
+        $this->assertDatabaseHas('firma_sesiones', ['id' => $sesion->id, 'estado' => 'rechazada', 'firmado_path' => null]);
+        $this->assertDatabaseCount('firmas_anexo', 0);
+    }
+
     public function test_sin_bundle_permite_iniciar_y_conserva_recepcion_sin_declarar_firma_verificada(): void
     {
         $dep = $this->iniciarUsuario();

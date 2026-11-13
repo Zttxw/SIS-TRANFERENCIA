@@ -18,10 +18,37 @@ use App\Support\Enums\Permiso;
 use App\Support\Enums\Rol;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class FirmaperuRegistroService
 {
     public function __construct(private readonly FirmaperuPdfService $pdf) {}
+
+    /**
+     * Al verificar la firma, confirma que el firmante conserva una asignación de
+     * rol vigente que lo habilita a suscribir este documento en esta dependencia.
+     * El DNI del certificado ya se verificó contra la cuenta en la validación
+     * criptográfica, de modo que esta comprobación ata el certificado a un
+     * firmante formalmente asignado al proceso, no a una cuenta con permiso suelto,
+     * y detecta revocaciones ocurridas entre la preparación y la firma.
+     */
+    public function exigirFirmanteAsignado(FirmaSesion $sesion): void
+    {
+        $usuario = User::findOrFail($sesion->usuario_id);
+        try {
+            $caracter = $this->caracter($usuario, $sesion->tipo_documento, $sesion->dependencia_id);
+        } catch (HttpExceptionInterface $e) {
+            throw ValidationException::withMessages(['signed_file' => [
+                'El firmante ya no tiene una asignación de rol vigente que lo habilite a suscribir este documento.',
+            ]]);
+        }
+        if ($caracter->value !== $sesion->caracter) {
+            throw ValidationException::withMessages(['signed_file' => [
+                'La responsabilidad del firmante cambió entre la preparación y la firma del documento.',
+            ]]);
+        }
+    }
 
     /** @return array{puede_remitir: bool, firmados: int, pendientes: list<string>} */
     public function requisitosRemision(int $dependenciaId, User $usuario): array
