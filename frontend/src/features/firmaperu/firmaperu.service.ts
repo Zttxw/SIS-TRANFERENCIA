@@ -1,15 +1,19 @@
 import { api } from '@/lib/api'
 import { descargarArchivo } from '@/lib/descargas'
 import type { ApiSuccess } from '@/types/api'
-import type { EstadoFirma, PreparacionFirma, SesionFirma, TipoDocumentoFirma } from './firmaperu.types'
+import type { EstadoFirma, PreparacionFirma, SesionFirma, TipoDocumentoFirma, RequisitosRemision } from './firmaperu.types'
 
 export const firmaperuService = {
-  async previsualizar(tipo: TipoDocumentoFirma, dependenciaId: number, signal: AbortSignal) {
+  async previsualizar(tipo: TipoDocumentoFirma, dependenciaId: number, signal: AbortSignal, soloGenerado = false) {
     const res = await api.get<Blob>('/firmaperu/previsualizar', {
-      params: { tipo_documento: tipo, dependencia_id: dependenciaId },
+      params: { tipo_documento: tipo, dependencia_id: dependenciaId, solo_generado: soloGenerado ? 1 : 0 },
       responseType: 'blob', signal, timeout: 60000,
     })
     return res.data
+  },
+  async requisitosRemision(dependenciaId: number, signal: AbortSignal) {
+    const res = await api.get<ApiSuccess<RequisitosRemision>>(`/firmaperu/requisitos-remision/${dependenciaId}`, { signal, timeout: 60000 })
+    return res.data.data
   },
   async preparar(tipo: TipoDocumentoFirma, dependenciaId: number, signal: AbortSignal, previoId?: string) {
     const res = await api.post<ApiSuccess<PreparacionFirma>>('/firmaperu/preparar', {

@@ -4,15 +4,17 @@ import { CheckCircle2, Clock3, FileText, Loader2, Lock } from 'lucide-react'
 import { BotonFirmaPeru } from './BotonFirmaPeru'
 import { BotonGenerarPdf } from './BotonGenerarPdf'
 import { PrevisualizarAnexo } from './PrevisualizarAnexo'
+import { BotonDescargarPdf } from '@/components/anexos/BotonDescargarPdf'
 import { firmaperuService } from './firmaperu.service'
 import type { EstadoFirma, TipoDocumentoFirma } from './firmaperu.types'
 
 interface Props {
   tipoDocumento: TipoDocumentoFirma
   dependenciaId: number
-  /** El acta 07 solo se firma con la entrega consolidada. */
+  /** Restricción explícita para contextos que no permiten acciones. */
   bloqueado?: boolean
   notaBloqueo?: string
+  soloLectura?: boolean
 }
 
 /**
@@ -22,8 +24,8 @@ interface Props {
  * y firmar — reusando BotonGenerarPdf + BotonFirmaPeru. El estado de firma es
  * independiente del estado de llenado del anexo. Firmar no congela el anexo.
  */
-export function DocumentoFirmaDetalle({ tipoDocumento, dependenciaId, bloqueado = false, notaBloqueo }: Props) {
-  const { data: estado, isLoading } = useQuery<EstadoFirma>({
+export function DocumentoFirmaDetalle({ tipoDocumento, dependenciaId, bloqueado = false, notaBloqueo, soloLectura = false }: Props) {
+  const { data: estado, isLoading, isError, refetch } = useQuery<EstadoFirma>({
     queryKey: ['firmaperu', tipoDocumento, dependenciaId],
     queryFn: ({ signal }) => firmaperuService.estado(tipoDocumento, dependenciaId, signal),
     retry: false,
@@ -41,23 +43,30 @@ export function DocumentoFirmaDetalle({ tipoDocumento, dependenciaId, bloqueado 
           <span className="inline-flex items-center gap-1 text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin" /> Consultando…
           </span>
+        ) : isError ? (
+          <button type="button" className="text-danger-fg underline" onClick={() => void refetch()}>No se pudo consultar. Reintentar</button>
         ) : (
           <EstadoDocumento estado={estado} bloqueado={bloqueado} notaBloqueo={notaBloqueo} />
         )}
       </div>
 
       {/* Acciones secundarias */}
-      {!bloqueado && (
-        <div className="flex items-center gap-1.5">
-          <PrevisualizarAnexo tipoDocumento={tipoDocumento} dependenciaId={dependenciaId} />
+      {!bloqueado && !isError && (!soloLectura || estado?.pdf_generado_vigente) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <PrevisualizarAnexo tipoDocumento={tipoDocumento} dependenciaId={dependenciaId} etiqueta={soloLectura ? 'Ver PDF generado' : 'Visualizar PDF'} soloGenerado={soloLectura} />
+          {soloLectura && estado?.firmado && estado.vigente && estado.documento_id && <BotonDescargarPdf
+            etiqueta="Descargar firmado"
+            descargar={() => firmaperuService.descargar(estado.documento_id!)}
+          />}
+          {!soloLectura && <>
           <BotonGenerarPdf
             tipoDocumento={tipoDocumento}
             dependenciaId={dependenciaId}
-            compacto
             etiqueta={tieneBorrador ? 'Regenerar PDF' : 'Generar PDF'}
           />
           <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
-          <BotonFirmaPeru tipoDocumento={tipoDocumento} dependenciaId={dependenciaId} compacto />
+          <BotonFirmaPeru tipoDocumento={tipoDocumento} dependenciaId={dependenciaId} />
+          </>}
         </div>
       )}
     </div>
@@ -93,6 +102,9 @@ function EstadoDocumento({ estado, bloqueado, notaBloqueo }: { estado?: EstadoFi
         <Clock3 className="h-3.5 w-3.5" /> PDF recibido · verificación pendiente
       </span>
     )
+  }
+  if (estado?.borrador_generado && estado.pdf_generado_vigente === false) {
+    return <span className="text-warning-fg">Los datos cambiaron · regenere el PDF</span>
   }
   if (estado?.borrador_generado) {
     return (

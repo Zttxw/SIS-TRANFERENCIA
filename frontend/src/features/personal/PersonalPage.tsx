@@ -4,15 +4,20 @@ import { toast } from 'sonner'
 
 import { useDependenciaActiva } from '@/auth/hooks'
 import { AnexoCrudPage } from '@/components/anexos/AnexoCrudPage'
+import { UsuarioRegistro } from '@/components/anexos/UsuarioRegistro'
 import type { ColumnaTabla } from '@/components/ui/data-table'
 import { aplicarErroresAFormulario } from '@/lib/api-errors'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
-import { personalService } from './personal.service'
 import { useEliminarPersonal, useGuardarPersonal, usePersonal } from './use-personal'
 import { PersonalModal } from './PersonalModal'
 import type { Personal } from '@/types/personal'
 
 const columnas: ColumnaTabla<Personal>[] = [
+  {
+    id: 'validado_por',
+    header: 'Último guardado por',
+    cell: (persona) => <UsuarioRegistro usuario={persona.validado_por} fecha={persona.updated_at} fuente={persona.fuente} />,
+  },
   {
     id: 'dni',
     header: 'DNI',

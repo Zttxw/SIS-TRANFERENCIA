@@ -8,7 +8,7 @@
     <thead>
         <tr>
             <th class="celda-n">N°</th><th>Serie Documental</th><th class="celda-n">Desde Año</th>
-            <th class="celda-n">Hasta Año</th><th>Cantidad U.C.</th><th>Tipo de Unidades de Conservación</th><th>Ubicación</th>
+            <th class="celda-n">Hasta Año</th><th>Cantidad de Unidades de Conservación</th><th>Tipo de Unidades de Conservación</th><th>Ubicación de Unidades de Conservación</th>
         </tr>
     </thead>
     <tbody>

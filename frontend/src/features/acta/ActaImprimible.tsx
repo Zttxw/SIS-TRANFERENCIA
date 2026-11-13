@@ -1,4 +1,4 @@
-import type { ActaTransferencia } from '@/types/acta'
+import type { ActaTransferencia, IdentidadInterviniente } from '@/types/acta'
 import type { Dependencia } from '@/types/auth'
 import type { DependenciaResumen } from '@/types/transferencia'
 
@@ -7,7 +7,17 @@ interface ActaImprimibleProps {
   dependencia: Dependencia | DependenciaResumen
 }
 
+function describirInterviniente(valor: string | IdentidadInterviniente | null | undefined): string {
+  if (typeof valor === 'string') return valor
+  if (!valor) return ''
+  return [valor.nombre, valor.dni ? `DNI ${valor.dni}` : '', valor.cargo].filter(Boolean).join(' · ')
+}
+
 export function ActaImprimible({ acta, dependencia }: ActaImprimibleProps) {
+  const saliente = describirInterviniente(acta.intervinientes?.titular_saliente)
+  const receptor = describirInterviniente(acta.intervinientes?.titular_entrante)
+    || describirInterviniente(acta.intervinientes?.coordinador_ette)
+    || describirInterviniente(acta.intervinientes?.responsable_superior)
   const fechaObj = new Date(acta.fecha_acta)
   const dia = isNaN(fechaObj.getDate()) ? '__' : fechaObj.getDate()
   const mes = isNaN(fechaObj.getMonth())
@@ -98,7 +108,7 @@ export function ActaImprimible({ acta, dependencia }: ActaImprimibleProps) {
           </div>
           <div>
             <span className="font-bold">UNIDAD DE LA CUAL DEPENDE: </span>
-            <span>{dependencia.parent_id ? `Dependencia Superior (ID ${dependencia.parent_id})` : 'Alcaldía / ETTS Institucional'}</span>
+            <span>{acta.dependencia?.padre?.nombre ?? (dependencia.parent_id ? 'Unidad inmediata superior' : 'Alcaldía / ETTS Institucional')}</span>
           </div>
         </div>
       </div>
@@ -113,17 +123,15 @@ export function ActaImprimible({ acta, dependencia }: ActaImprimibleProps) {
         <div>
           <h4 className="font-bold uppercase text-xs">I. RESPONSABLE QUE EFECTÚA LA ENTREGA:</h4>
           <p className="text-justify pl-4 text-xs mt-0.5">
-            {acta.intervinientes?.titular_saliente
-              ? acta.intervinientes.titular_saliente
-              : 'Servidor / Funcionario Responsable acreditado del Centro de Costo saliente.'}
+            {saliente || 'Servidor / Funcionario Responsable acreditado del Centro de Costo saliente.'}
           </p>
         </div>
 
         <div>
           <h4 className="font-bold uppercase text-xs">II. RESPONSABLE DE LA RECEPCIÓN / VERIFICACIÓN:</h4>
           <p className="text-justify pl-4 text-xs mt-0.5">
-            {acta.intervinientes?.coordinador_ette
-              ? acta.intervinientes.coordinador_ette
+            {receptor
+              ? receptor
               : dependencia.parent_id === null
                 ? 'Coordinador acreditado por el Equipo de Trabajo de Transferencia (ETTS) de la Municipalidad Distrital de San Jerónimo.'
                 : 'Responsable de la Unidad Inmediata Superior / Revisor Jerárquico.'}
@@ -171,7 +179,9 @@ export function ActaImprimible({ acta, dependencia }: ActaImprimibleProps) {
         <p className="text-justify text-xs pl-4">
           {acta.observaciones
             ? acta.observaciones
-            : 'Se deja constancia de que las observaciones formuladas durante el proceso de remisión fueron debidamente evaluadas y subsanadas, encontrándose la entrega en estado CONSOLIDADA conforme a las directrices institucionales.'}
+            : acta.declara === 'recepcion_consolidacion'
+              ? 'Se deja constancia de la recepción y consolidación de la entrega por la dependencia superior.'
+              : 'Se deja constancia de la preparación de la documentación para su suscripción y remisión a la dependencia superior. La recepción y revisión jerárquica se encuentran pendientes.'}
         </p>
       </div>
 
@@ -185,6 +195,7 @@ export function ActaImprimible({ acta, dependencia }: ActaImprimibleProps) {
         <div className="border-t border-gray-700 pt-2">
           <p className="font-bold uppercase">ENTREGUÉ CONFORME</p>
           <p className="mt-1">Responsable del Centro de Costo</p>
+          {saliente && <p className="mt-1">{saliente}</p>}
           <p className="text-[11px] text-gray-600">Firma, Posfirma y Sello</p>
         </div>
 
@@ -193,6 +204,7 @@ export function ActaImprimible({ acta, dependencia }: ActaImprimibleProps) {
           <p className="mt-1">
             {dependencia.parent_id === null ? 'Coordinador ETTS / Comisión' : 'Responsable Unidad Superior'}
           </p>
+          {receptor && <p className="mt-1">{receptor}</p>}
           <p className="text-[11px] text-gray-600">Firma, Posfirma y Sello</p>
         </div>
       </div>

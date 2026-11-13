@@ -2,6 +2,19 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { ancestrosVisibles } from '../src/features/organization/organigrama-utils.ts'
 import { reunirPaginasAcervo } from '../src/features/acervo/paginacion-acervo.ts'
+import { anioDeAgrupacion, rangoAniosAcervo } from '../src/features/acervo/agrupar-por-anio.ts'
+
+test('el formulario recupera desde y hasta año de periodos guardados anteriormente', () => {
+  const serie = { periodo: '2023 - 2024' }
+  assert.deepEqual(rangoAniosAcervo(serie), { desde: 2023, hasta: 2024 })
+  assert.equal(anioDeAgrupacion(serie), 2023)
+  assert.deepEqual(rangoAniosAcervo({ anio: 2026, periodo: '2026' }), { desde: 2026, hasta: 2026 })
+})
+
+test('los años explícitos prevalecen sobre el periodo antiguo y los vacíos no inventan años', () => {
+  assert.deepEqual(rangoAniosAcervo({ desde_anio: 2021, hasta_anio: 2022, periodo: '2023 - 2024' }), { desde: 2021, hasta: 2022 })
+  assert.deepEqual(rangoAniosAcervo({ periodo: 'Sin fecha' }), { desde: null, hasta: null })
+})
 
 test('el organigrama abre la ruta hasta la oficina asignada con IDs propios de cada instalación', () => {
   const unidades = [

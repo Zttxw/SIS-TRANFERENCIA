@@ -8,12 +8,15 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { useDependenciaActiva } from '@/auth/hooks'
+import { useAuth, useDependenciaActiva } from '@/auth/hooks'
+import { puedeConsultarActa } from '@/auth/sesion-runtime'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
 import type { DependenciaResumen } from '@/types/transferencia'
 import { useEstadoEntrega } from './use-entregas'
+import { DocumentoFirmaDetalle } from '@/features/firmaperu/DocumentoFirmaDetalle'
+import type { TipoDocumentoFirma } from '@/features/firmaperu/firmaperu.types'
 
 interface DetalleEntregaModalProps {
   dependencia: DependenciaResumen | null
@@ -27,6 +30,7 @@ export function DetalleEntregaModal({
   onClose,
 }: DetalleEntregaModalProps) {
   const { setDependenciaId } = useDependenciaActiva()
+  const { permisos } = useAuth()
   const { data: estado, isLoading, isError } = useEstadoEntrega(dependencia?.id)
 
   if (!dependencia) return null
@@ -44,7 +48,7 @@ export function DetalleEntregaModal({
       title={`${dependencia.codigo} · ${dependencia.nombre}`}
       description="Resumen cuantitativo institucional de los 6 anexos de la transferencia."
     >
-      <div className="space-y-4 py-1">
+      <div className="max-h-[70vh] space-y-4 overflow-y-auto py-1 pr-1">
         {isLoading ? (
           <div className="py-8 text-center">
             <Spinner className="mx-auto h-6 w-6 text-primary" />
@@ -131,6 +135,17 @@ export function DetalleEntregaModal({
                   {estado.anexo06_nopatrimonial.total_bienes} bienes auxiliares inventariados
                 </div>
               </div>
+            </div>
+
+            <div className="space-y-3 border-t pt-3">
+              <h3 className="text-sm font-semibold">Documentos generados · consulta previa a la remisión</h3>
+              {(['anexo02', 'anexo03', 'anexo04', 'anexo05', 'anexo06', 'anexo07'] as TipoDocumentoFirma[])
+                .filter((tipo) => tipo !== 'anexo07' || puedeConsultarActa(permisos)).map((tipo) => (
+                <div key={tipo} className="space-y-1">
+                  <p className="text-xs font-medium">{tipo === 'anexo07' ? 'Acta 07' : `Anexo ${tipo.slice(-2)}`}</p>
+                  <DocumentoFirmaDetalle tipoDocumento={tipo} dependenciaId={dependencia.id} soloLectura />
+                </div>
+              ))}
             </div>
 
             {/* Acciones */}

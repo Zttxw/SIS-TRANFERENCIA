@@ -85,6 +85,11 @@ export function DropdownMenu({ trigger, children, align = 'start', className }: 
     const items = itemsRef.current
     const actual = items.indexOf(document.activeElement as HTMLButtonElement)
     switch (e.key) {
+      case 'Escape':
+        e.preventDefault()
+        e.stopPropagation()
+        cerrar()
+        break
       case 'ArrowDown':
         e.preventDefault()
         moverFoco(actual, 1)
@@ -105,6 +110,7 @@ export function DropdownMenu({ trigger, children, align = 'start', className }: 
   }
 
   const trigO = trigger.props as { onClick?: (e: React.MouseEvent) => void; ref?: React.Ref<HTMLElement> }
+  React.useImperativeHandle(trigO.ref, () => disparadorRef.current!)
   const disparador = React.cloneElement(trigger, {
     onClick: (e: React.MouseEvent) => {
       trigO.onClick?.(e)
@@ -112,9 +118,6 @@ export function DropdownMenu({ trigger, children, align = 'start', className }: 
     },
     ref: (el: HTMLElement | null) => {
       disparadorRef.current = el
-      const r = trigO.ref
-      if (typeof r === 'function') r(el)
-      else if (r && typeof r === 'object') (r as React.MutableRefObject<HTMLElement | null>).current = el
     },
     'aria-haspopup': 'menu',
     'aria-expanded': abierto,

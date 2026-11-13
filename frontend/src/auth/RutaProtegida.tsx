@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 
 import { useAuth } from '@/auth/hooks'
+import { destinoPermitidoSesion } from '@/auth/sesion-runtime'
 import { Spinner } from '@/components/ui/spinner'
 
 /**
@@ -9,7 +10,7 @@ import { Spinner } from '@/components/ui/spinner'
  * las rutas hijas.
  */
 export function RutaProtegida() {
-  const { estado } = useAuth()
+  const { estado, permisos } = useAuth()
   const location = useLocation()
 
   if (estado === 'cargando') {
@@ -24,6 +25,11 @@ export function RutaProtegida() {
     return (
       <Navigate to="/login" replace state={{ from: location.pathname }} />
     )
+  }
+
+  const destino = destinoPermitidoSesion(location.pathname, permisos)
+  if (destino !== location.pathname) {
+    return <Navigate to={destino} replace />
   }
 
   return <Outlet />

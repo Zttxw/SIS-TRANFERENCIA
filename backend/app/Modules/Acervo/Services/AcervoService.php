@@ -42,6 +42,7 @@ class AcervoService
             $term = trim((string) $filtros['search']);
             $query->where(function ($q) use ($term) {
                 $q->whereLike('serie_documental', "%{$term}%")
+                    ->orWhereLike('identificacion_archivador', "%{$term}%")
                     ->orWhereLike('descripcion', "%{$term}%")
                     ->orWhereLike('periodo', "%{$term}%")
                     ->orWhereLike('ubicacion', "%{$term}%");
@@ -68,6 +69,8 @@ class AcervoService
             'registrado_por_id' => $usuario->id,
             'tipo' => $datos['tipo'],
             'serie_documental' => $datos['serie_documental'],
+            'identificacion_archivador' => $datos['tipo'] === AcervoDocumental::TIPO_FISICO ? ($datos['identificacion_archivador'] ?? null) : null,
+            'total_folios' => $datos['tipo'] === AcervoDocumental::TIPO_FISICO ? ($datos['total_folios'] ?? null) : null,
             'anio' => $datos['anio'] ?? null,
             'desde_anio' => $datos['desde_anio'] ?? null,
             'hasta_anio' => $datos['hasta_anio'] ?? null,
@@ -88,6 +91,10 @@ class AcervoService
     {
         $acervo = AcervoDocumental::findOrFail($id);
         $this->exigirEntregaModificable((int) $acervo->dependencia_id);
+        if ($datos['tipo'] === AcervoDocumental::TIPO_DIGITAL) {
+            $datos['identificacion_archivador'] = null;
+            $datos['total_folios'] = null;
+        }
         $acervo->update($datos);
 
         return $acervo->fresh(['dependencia', 'registradoPor']);

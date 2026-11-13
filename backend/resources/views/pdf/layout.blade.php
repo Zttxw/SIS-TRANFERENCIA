@@ -80,8 +80,8 @@
             padding-top: 4px;
         }
 
-        footer .izq { float: left; max-width: 68%; }
-        footer .der { float: right; }
+        footer .izq { position: absolute; left: 0; width: 65%; }
+        footer .der { position: absolute; right: 0; width: 35%; text-align: right; }
 
         footer .pagina:after {
             content: counter(page) " / " counter(pages);
@@ -120,6 +120,8 @@
             padding: 3px 5px;
             vertical-align: top;
             text-align: left;
+            line-height: 1.3;
+            word-wrap: break-word;
         }
 
         th {

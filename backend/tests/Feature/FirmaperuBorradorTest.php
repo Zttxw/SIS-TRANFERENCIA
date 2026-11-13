@@ -7,7 +7,10 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Modules\Auth\Models\AsignacionRol;
 use App\Modules\Organization\Models\Dependencia;
+use App\Modules\Transferencia\Models\FirmaBorrador;
+use App\Modules\Transferencia\Models\FirmaSesion;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Modules\Transferencia\Services\FirmaperuAuthService;
 use App\Modules\Transferencia\Services\FirmaperuPdfService;
 use App\Support\Enums\Rol;
 use Database\Seeders\RolesPermisosSeeder;
@@ -23,6 +26,8 @@ class FirmaperuBorradorTest extends TestCase
 
     private const PDF = "%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF\n";
 
+    private string $huella = 'contenido-original';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -32,6 +37,8 @@ class FirmaperuBorradorTest extends TestCase
             // Solo mockeamos la generación del binario; generarBorrador se ejerce real.
             $mock->makePartial();
             $mock->shouldReceive('generar')->andReturn(self::PDF);
+            $mock->shouldReceive('capturar')->andReturnUsing(fn (): array => ['pdf' => self::PDF, 'huella' => hash('sha256', $this->huella)]);
+            $mock->shouldReceive('huella')->andReturnUsing(fn (): string => hash('sha256', $this->huella));
         });
     }
 
@@ -59,7 +66,7 @@ class FirmaperuBorradorTest extends TestCase
             ->assertCreated()->assertJsonPath('data.borrador_generado', true);
 
         $this->assertDatabaseCount('firma_borradores', 1);
-        $borrador = \App\Modules\Transferencia\Models\FirmaBorrador::firstOrFail();
+        $borrador = FirmaBorrador::firstOrFail();
         Storage::disk('local')->assertExists($borrador->pdf_path);
 
         $this->getJson('/api/firmaperu/estado/anexo03/'.$dep->id)
@@ -114,6 +121,24 @@ class FirmaperuBorradorTest extends TestCase
             ->assertCreated();
         $this->get('/api/firmaperu/previsualizar?tipo_documento=anexo03&dependencia_id='.$dep->id)
             ->assertOk()->assertHeader('Content-Type', 'application/pdf')
-            ->assertHeader('Content-Disposition', 'inline; filename="Borrador-anexo03.pdf"');
+            ->assertHeader('Content-Disposition', 'inline; filename="Generado-anexo03.pdf"');
+    }
+
+    public function test_firma_el_mismo_pdf_del_borrador_revisado(): void
+    {
+        $dep = $this->iniciarUsuario();
+        config(['firmaperu.public_url' => 'https://transferencia.example']);
+        $this->mock(FirmaperuAuthService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('obtenerJwtToken')->andReturn('jwt-de-prueba');
+        });
+        $datos = ['tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id];
+        $this->postJson('/api/firmaperu/generar-borrador', $datos)->assertCreated();
+        $this->postJson('/api/firmaperu/preparar', $datos)->assertCreated();
+        $sesion = FirmaSesion::firstOrFail();
+        $this->assertSame(self::PDF, Storage::disk('local')->get($sesion->pdf_path));
+
+        $this->huella = 'contenido-corregido';
+        $this->postJson('/api/firmaperu/preparar', $datos)->assertConflict();
+        $this->assertDatabaseCount('firma_sesiones', 1);
     }
 }

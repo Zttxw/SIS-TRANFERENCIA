@@ -107,14 +107,13 @@ enum Permiso: string
                 self::VerReportes,
                 self::ExportarReportes,
             ],
-            // Servidor público: verifica lo precargado, registra lo faltante y
-            // remite su entrega.
+            // Servidor público: verifica lo precargado y registra lo faltante.
+            // La remisión corresponde al responsable.
             Rol::SERVIDOR => [
                 self::AccederPlataforma,
                 self::VerAnexos,
                 self::RegistrarAnexos,
                 self::VerificarBienes,
-                self::RemitirEntrega,
                 self::SubsanarObservaciones,
                 self::VerExpediente,
             ],

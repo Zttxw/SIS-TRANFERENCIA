@@ -74,9 +74,17 @@ class GestionService
         $this->exigirEntregaModificable((int) $datos['dependencia_id'], $procesoId);
 
         $cabecera = $this->cabecera((int) $datos['dependencia_id'], $procesoId);
-        $cargoPeriodo = $cabecera['cargo'];
-        if (array_key_exists('periodo_gestion', $datos)) {
-            $cargoPeriodo = implode(' · ', array_filter([$cabecera['cargo'], trim($datos['periodo_gestion'] ?? '')]));
+        $existente = InformeGestion::where('proceso_transferencia_id', $procesoId)
+            ->where('dependencia_id', (int) $datos['dependencia_id'])->first();
+        $cargo = array_key_exists('cargo_responsable', $datos)
+            ? $datos['cargo_responsable']
+            : ($existente?->cargo_responsable ?? $cabecera['cargo']);
+        $periodo = array_key_exists('periodo_gestion', $datos)
+            ? trim($datos['periodo_gestion'] ?? '')
+            : $existente?->periodo_gestion;
+        $cargoPeriodo = implode(' · ', array_filter([$cargo, $periodo], fn ($valor) => $valor !== null && $valor !== ''));
+        if (! array_key_exists('periodo_gestion', $datos) && ! array_key_exists('cargo_responsable', $datos)) {
+            $cargoPeriodo = $existente?->cargo_periodo ?? $cargoPeriodo;
         }
         if (mb_strlen($cargoPeriodo ?? '') > 255) {
             throw ValidationException::withMessages(['periodo_gestion' => 'Abrevie el periodo para que, junto al cargo, no exceda 255 caracteres.']);
@@ -90,8 +98,12 @@ class GestionService
             [
                 'servidor_responsable_id' => $cabecera['responsable']?->id,
                 'elaborado_por_id' => $usuario->id,
-                'nivel_organizacional' => $cabecera['nivel_organizacional'],
+                'nivel_organizacional' => $datos['nivel_organizacional'] ?? $existente?->nivel_organizacional ?? $cabecera['nivel_organizacional'],
                 'cargo_periodo' => $cargoPeriodo,
+                'responsable_nombre' => array_key_exists('responsable_nombre', $datos)
+                    ? $datos['responsable_nombre'] : $existente?->responsable_nombre,
+                'cargo_responsable' => $cargo,
+                'periodo_gestion' => $periodo,
                 'funciones' => $this->numerarFilas($datos['funciones'] ?? []),
                 'logros_items' => $this->numerarFilas($datos['logros_items'] ?? []),
                 'dificultades_items' => $this->numerarFilas($datos['dificultades_items'] ?? []),

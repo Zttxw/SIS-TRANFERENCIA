@@ -10,17 +10,22 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { aOpcionesSelect, TIPOS_ACERVO, UNIDADES_CONSERVACION } from '@/lib/catalogos'
+import { rangoAniosAcervo } from './agrupar-por-anio'
 import type { AcervoDocumental, GuardarAcervoPayload, TipoAcervo } from '@/types/acervo'
 
+const anioSchema = z.number().int().min(1990).max(2100)
 const acervoSchema = z.object({
   tipo: z.enum(['fisico', 'digital']),
-  serie_documental: z.string().min(2, 'La serie documental es requerida'),
-  periodo: z.string().optional().nullable(),
-  cantidad_unidades: z.number().min(1, 'La cantidad debe ser mayor o igual a 1'),
-  unidad_conservacion: z.string().min(1, 'La unidad de conservación es requerida'),
-  ubicacion: z.string().optional().nullable(),
+  serie_documental: z.string().trim().min(2, 'La serie documental es requerida'),
+  desde_anio: anioSchema,
+  hasta_anio: anioSchema,
+  cantidad_unidades: z.number().int().min(1, 'La cantidad debe ser mayor o igual a 1'),
+  unidad_conservacion: z.string().trim().min(1, 'La unidad de conservación es requerida'),
+  ubicacion: z.string().max(255).optional().nullable(),
   descripcion: z.string().optional().nullable(),
-  observaciones: z.string().optional().nullable(),
+}).refine((datos) => datos.hasta_anio >= datos.desde_anio, {
+  path: ['hasta_anio'],
+  message: 'El año final debe ser igual o posterior al inicial.',
 })
 
 type FormValues = z.infer<typeof acervoSchema>
@@ -28,10 +33,6 @@ type FormValues = z.infer<typeof acervoSchema>
 interface AcervoModalProps {
   open: boolean
   onClose: () => void
-  /**
-   * Guarda el payload. Recibe `setError` del formulario para que el `onError`
-   * de la mutación pueda mapear un 422 al campo exacto (ver `aplicarErroresAFormulario`).
-   */
   onSave: (
     payload: GuardarAcervoPayload,
     helpers: { setError: UseFormSetError<FormValues> },
@@ -50,7 +51,6 @@ export function AcervoModal({
   loading = false,
 }: AcervoModalProps) {
   const isEditing = Boolean(acervo)
-
   const {
     register,
     handleSubmit,
@@ -63,177 +63,102 @@ export function AcervoModal({
     defaultValues: {
       tipo: 'fisico',
       serie_documental: '',
-      periodo: '',
       cantidad_unidades: 1,
-      unidad_conservacion: 'Tomos / Archivadores',
+      unidad_conservacion: 'Archivadores de Palanca',
       ubicacion: '',
       descripcion: '',
-      observaciones: '',
     },
   })
 
   useEffect(() => {
     if (!open) return
-    if (acervo) {
-      reset({
-        tipo: acervo.tipo,
-        serie_documental: acervo.serie_documental || '',
-        periodo: acervo.periodo || '',
-        cantidad_unidades: acervo.cantidad_unidades || 1,
-        unidad_conservacion: acervo.unidad_conservacion || 'Tomos / Archivadores',
-        ubicacion: acervo.ubicacion || '',
-        descripcion: acervo.descripcion || '',
-        observaciones: acervo.observaciones || '',
-      })
-    } else {
-      reset({
-        tipo: 'fisico',
-        serie_documental: '',
-        periodo: '',
-        cantidad_unidades: 1,
-        unidad_conservacion: 'Archivadores de Palanca',
-        ubicacion: 'Archivo de gestión de oficina',
-        descripcion: '',
-        observaciones: '',
-      })
-    }
+    const rango = acervo ? rangoAniosAcervo(acervo) : null
+    reset({
+      tipo: acervo?.tipo ?? 'fisico',
+      serie_documental: acervo?.serie_documental ?? '',
+      desde_anio: rango?.desde ?? undefined,
+      hasta_anio: rango?.hasta ?? undefined,
+      cantidad_unidades: acervo?.cantidad_unidades ?? 1,
+      unidad_conservacion: acervo?.unidad_conservacion ?? 'Archivadores de Palanca',
+      ubicacion: acervo?.ubicacion ?? '',
+      descripcion: acervo?.descripcion ?? '',
+    })
   }, [acervo, reset, open])
 
+  const opcionesUnidades = aOpcionesSelect(UNIDADES_CONSERVACION)
+  if (acervo?.unidad_conservacion && !opcionesUnidades.some((opcion) => opcion.value === acervo.unidad_conservacion)) {
+    opcionesUnidades.push({ value: acervo.unidad_conservacion, label: acervo.unidad_conservacion })
+  }
+
   const onSubmit = (values: FormValues) => {
-    onSave(
-      {
-        dependencia_id: dependenciaId,
-        tipo: values.tipo,
-        serie_documental: values.serie_documental,
-        periodo: values.periodo || null,
-        cantidad_unidades: values.cantidad_unidades,
-        unidad_conservacion: values.unidad_conservacion,
-        ubicacion: values.ubicacion || null,
-        descripcion: values.descripcion || null,
-        observaciones: values.observaciones || null,
-      },
-      { setError },
-    )
+    onSave({
+      dependencia_id: dependenciaId,
+      ...values,
+      anio: values.desde_anio,
+      periodo: values.desde_anio === values.hasta_anio
+        ? String(values.desde_anio)
+        : `${values.desde_anio} - ${values.hasta_anio}`,
+      ubicacion: values.ubicacion?.trim() || null,
+      descripcion: values.descripcion?.trim() || null,
+    }, { setError })
   }
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title={isEditing ? 'Editar Serie Documental' : 'Registrar Acervo Documental'}
-      description="Registre los datos de sus archivadores físicos o repositorios digitales. Este formulario inventaría las series; no adjunta ni digitaliza sus documentos."
-    >
+    <Dialog open={open} onClose={onClose} title={isEditing ? 'Editar serie documental' : 'Registrar acervo documental'}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {!isEditing && <p className="rounded-md bg-info-soft p-3 text-xs text-info-fg">El SGD opera desde septiembre de 2025. Los archivadores físicos y la documentación histórica se registran manualmente, incluso si no aparecen en la precarga.</p>}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <FormField
-            label="Formato del Acervo"
-            htmlFor="tipo"
-            requerido
-            error={errors.tipo?.message}
-            hint="Físico: papel, tomos o archivadores. Digital: repositorios, nube o unidades de disco. El digital suele provenir del SGD."
-          >
-            <Controller
-              control={control}
-              name="tipo"
-              render={({ field }) => (
-                <Select<TipoAcervo>
-                  id="tipo"
-                  options={aOpcionesSelect<TipoAcervo>(TIPOS_ACERVO)}
-                  value={field.value}
-                  onChange={field.onChange}
-                />
-              )}
-            />
-          </FormField>
-
-          <FormField label="Periodo Cronológico" htmlFor="periodo" hint="Rango de años que abarca la serie, p. ej. 2023 - 2026.">
-            <Input id="periodo" placeholder="Ej. 2023 - 2026" {...register('periodo')} />
-          </FormField>
-        </div>
-
-        <FormField
-          label="Serie o Tipología Documental"
-          htmlFor="serie"
-          requerido
-          error={errors.serie_documental?.message}
-          hint="Agrupe por tipo documental, no documento a documento. Ej.: «Comprobantes de pago», «Resoluciones de Gerencia», «Informes técnicos»."
-        >
-          <Input
-            id="serie"
-            placeholder="Ej. Comprobantes de pago, Informes técnicos, Resoluciones..."
-            {...register('serie_documental')}
-            aria-invalid={Boolean(errors.serie_documental)}
+        <FormField label="Formato del acervo" htmlFor="tipo" requerido error={errors.tipo?.message}>
+          <Controller
+            control={control}
+            name="tipo"
+            render={({ field }) => (
+              <Select<TipoAcervo> id="tipo" options={aOpcionesSelect<TipoAcervo>(TIPOS_ACERVO)} value={field.value} onChange={field.onChange} />
+            )}
           />
         </FormField>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <FormField
-            label="Cantidad de Unidades"
-            htmlFor="cant"
-            requerido
-            error={errors.cantidad_unidades?.message}
-          >
-            <Input
-              id="cant"
-              type="number"
-              min={1}
-              {...register('cantidad_unidades', { valueAsNumber: true })}
-            />
-          </FormField>
+        <FormField label="Serie documental" htmlFor="serie" requerido error={errors.serie_documental?.message}>
+          <Input id="serie" placeholder="Ej. Memorándum, Informes, Oficios…" maxLength={255} {...register('serie_documental')} />
+        </FormField>
 
-          <FormField
-            label="Unidad de Conservación"
-            htmlFor="unidad_cons"
-            requerido
-            error={errors.unidad_conservacion?.message}
-            hint="Cómo se cuenta la cantidad: archivadores, tomos, folders, cajas. Para acervo digital use GB."
-          >
-            <Controller
-              control={control}
-              name="unidad_conservacion"
-              render={({ field }) => (
-                <Select
-                  id="unidad_cons"
-                  buscable
-                  options={aOpcionesSelect(UNIDADES_CONSERVACION)}
-                  value={field.value}
-                  onChange={field.onChange}
-                  placeholder="Ej. Archivadores, Tomos, GB…"
-                />
-              )}
-            />
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="Desde año" htmlFor="desde_anio" requerido error={errors.desde_anio?.message}>
+            <Input id="desde_anio" type="number" min={1990} max={2100} step={1} placeholder="2023" {...register('desde_anio', { valueAsNumber: true })} />
+          </FormField>
+          <FormField label="Hasta año" htmlFor="hasta_anio" requerido error={errors.hasta_anio?.message}>
+            <Input id="hasta_anio" type="number" min={1990} max={2100} step={1} placeholder="2023" {...register('hasta_anio', { valueAsNumber: true })} />
           </FormField>
         </div>
 
-        <FormField
-          label="Ubicación Física o Digital"
-          htmlFor="ubi"
-          hint="Dónde se custodia: estante físico o ruta del repositorio digital."
-        >
-          <Input
-            id="ubi"
-            placeholder="Ej. Estante 3, Balda 2 / Servidor OTI carpeta TRANSFERENCIA"
-            {...register('ubicacion')}
+        <FormField label="Cantidad de unidades de conservación" htmlFor="cant" requerido error={errors.cantidad_unidades?.message}>
+          <Input id="cant" type="number" min={1} step={1} {...register('cantidad_unidades', { valueAsNumber: true })} />
+        </FormField>
+
+        <FormField label="Tipo de unidades de conservación" htmlFor="unidad_cons" requerido error={errors.unidad_conservacion?.message}>
+          <Controller
+            control={control}
+            name="unidad_conservacion"
+            render={({ field }) => (
+              <Select id="unidad_cons" buscable options={opcionesUnidades} value={field.value} onChange={field.onChange} />
+            )}
           />
         </FormField>
 
-        <FormField label="Descripción del Contenido" htmlFor="desc">
+        <FormField label="Ubicación de unidades de conservación" htmlFor="ubi" error={errors.ubicacion?.message}>
+          <Input id="ubi" placeholder="Ej. Estante 3, nivel 2 / ruta del archivo digital" maxLength={255} {...register('ubicacion')} />
+        </FormField>
+
+        <FormField label="Descripción (opcional)" htmlFor="descripcion" error={errors.descripcion?.message}>
           <Textarea
-            id="desc"
+            id="descripcion"
             rows={2}
-            placeholder="Breve reseña del contenido o alcance de las series archivadas..."
+            placeholder="Ej. Informes emitidos de 2024, tomos 1 y 2"
             {...register('descripcion')}
           />
         </FormField>
 
         <div className="flex items-center justify-end gap-2 border-t pt-3">
-          <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button type="submit" loading={loading} disabled={loading}>
-            {isEditing ? 'Guardar Cambios' : 'Registrar Acervo'}
-          </Button>
+          <Button type="button" variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
+          <Button type="submit" loading={loading} disabled={loading}>{isEditing ? 'Guardar cambios' : 'Registrar acervo'}</Button>
         </div>
       </form>
     </Dialog>

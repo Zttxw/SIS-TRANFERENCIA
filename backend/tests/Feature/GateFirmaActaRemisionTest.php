@@ -8,7 +8,6 @@ use App\Models\User;
 use App\Modules\Auth\Models\AsignacionRol;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Models\ActaTransferencia;
-use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\FirmaAnexo;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Enums\CaracterFirma;
@@ -72,16 +71,15 @@ class GateFirmaActaRemisionTest extends TestCase
         $this->proceso->update(['exige_firma_acta' => true]);
     }
 
-    public function test_gate_apagado_permite_remitir_sin_firma(): void
+    public function test_bandera_anterior_apagada_no_permite_remitir_sin_las_seis_firmas(): void
     {
         // Por defecto el gate está apagado: el flujo actual no exige firma.
         $this->responsableDeLaHija();
 
         $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->hija->id])
-            ->assertOk();
+            ->assertConflict();
 
-        $entrega = Entrega::where('dependencia_id', $this->hija->id)->firstOrFail();
-        $this->assertSame(EstadoEntrega::REMITIDA, $entrega->estado);
+        $this->assertDatabaseCount('entregas', 0);
     }
 
     public function test_gate_encendido_sin_firma_del_acta_bloquea_con_409(): void
@@ -99,7 +97,7 @@ class GateFirmaActaRemisionTest extends TestCase
         ]);
     }
 
-    public function test_gate_encendido_con_firma_obligatoria_del_acta_permite_remitir(): void
+    public function test_firma_obligatoria_solo_del_acta_no_sustituye_las_seis_firmas_verificadas(): void
     {
         $this->encenderGate();
         $responsable = $this->responsableDeLaHija();
@@ -116,10 +114,9 @@ class GateFirmaActaRemisionTest extends TestCase
         ]);
 
         $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->hija->id])
-            ->assertOk();
+            ->assertConflict();
 
-        $entrega = Entrega::where('dependencia_id', $this->hija->id)->firstOrFail();
-        $this->assertSame(EstadoEntrega::REMITIDA, $entrega->estado);
+        $this->assertDatabaseCount('entregas', 0);
     }
 
     public function test_gate_encendido_solo_firma_opcional_no_basta(): void

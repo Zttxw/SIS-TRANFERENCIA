@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 
 import { useAuth, useDependenciaActiva } from '@/auth/hooks'
+import { puedeConsultarActa } from '@/auth/sesion-runtime'
 import { Can } from '@/auth/Can'
 import { QueSigueCard } from '@/components/anexos/QueSigueCard'
 import type { TipoDocumentoFirma } from '@/features/firmaperu/firmaperu.types'
@@ -37,11 +38,14 @@ import {
 import { Spinner } from '@/components/ui/spinner'
 import type { EstadoEntrega } from '@/types/transferencia'
 import { RemitirModal } from './RemitirModal'
+import { useRequisitosRemision } from '@/features/firmaperu/use-requisitos-remision'
 import { ResumenAnexos } from './ResumenAnexos'
 import { RevisarModal } from './RevisarModal'
 import { TablaAnexos } from './TablaAnexos'
 import { TableroOperativoView } from './TableroOperativoView'
 import { useEstadoEntrega, useResumenDocumentos } from './use-dashboard'
+import { DocumentosIndicadorModal } from '@/features/documentos/DocumentosIndicadorModal'
+import { nombreEstadoDocumento } from '@/features/documentos/estados-documentos'
 
 function renderBadgeEstado(estado: EstadoEntrega | null) {
   switch (estado) {
@@ -90,15 +94,17 @@ function renderBadgeEstado(estado: EstadoEntrega | null) {
  * - Para Despachos / Servidores: Cuadro compacto de 7 Anexos + Tarjeta lateral de Remisión y Trazabilidad.
  */
 export function DashboardPage() {
-  const { usuario } = useAuth()
+  const { usuario, permisos } = useAuth()
   const { dependenciaId, setDependenciaId } = useDependenciaActiva()
   const esGlobal = usuario?.es_global === true
 
   const { data: estadoData, isLoading, error } = useEstadoEntrega(dependenciaId)
   const { data: resumenDocs } = useResumenDocumentos(dependenciaId)
+  const { data: requisitosFirma, isFetching: comprobandoFirmas } = useRequisitosRemision(dependenciaId, permisos.has('entregas.remitir'))
 
   const [modalRemitir, setModalRemitir] = useState(false)
   const [modalRevisar, setModalRevisar] = useState(false)
+  const [indicadorDocumental, setIndicadorDocumental] = useState<{ estado?: string } | null>(null)
 
   // Si no hay una dependencia concreta seleccionada (visión global de admin / ETTS)
   if (!dependenciaId) {
@@ -154,8 +160,7 @@ export function DashboardPage() {
     : 'su superior jerárquico inmediato'
 
   // Lista oficial de los 7 Anexos normativos según Directiva N.° 001-2026-MDSJ/GM.
-  // `tipoFirma` marca los documentos que se firman en «Mi entrega» (02-07); el
-  // anexo 01 (organigrama) se firma en su propio módulo, no aquí.
+  // Los indicadores de firma enlazan con el módulo PDF y firma.
   const filasAnexos: Array<{
     id: string
     tipoFirma?: TipoDocumentoFirma
@@ -175,6 +180,7 @@ export function DashboardPage() {
   }> = [
     {
       id: 'anexo01',
+      tipoFirma: 'anexo01' as TipoDocumentoFirma,
       codigo: 'Anexo 01',
       nombre: 'Estructura Orgánica y Centros de Costo',
       icono: FolderTree,
@@ -287,14 +293,14 @@ export function DashboardPage() {
       resumen:
         estadoEntrega === 'consolidada'
           ? 'Acta oficial lista para firma y emisión'
-          : 'Requiere consolidación previa de la entrega',
+          : 'Suscripción previa a la remisión',
       detalle: 'Acta formal de cierre y entrega de cargo',
       ruta: '/acta',
-      accion: estadoEntrega === 'consolidada' ? 'Ver / Firmar' : 'Ver / Completar / Enviar',
+      accion: 'Ver acta',
       completado: estadoEntrega === 'consolidada',
-      estado: estadoEntrega === 'consolidada' ? 'Consolidada' : 'Pendiente de consolidación',
+      estado: estadoEntrega === 'consolidada' ? 'Consolidada' : 'Por suscribir',
     },
-  ]
+  ].filter((anexo) => anexo.id !== 'anexo07' || puedeConsultarActa(permisos))
 
   return (
     <div className="space-y-5 max-w-[1600px] mx-auto">
@@ -367,6 +373,7 @@ export function DashboardPage() {
 
       {/* ¿Qué sigue? — una sugerencia contextual, descartable */}
       <QueSigueCard
+        dependenciaId={dependencia.id}
         estadoEntrega={estadoEntrega}
         esEditable={esEditable}
         anexos={filasAnexos
@@ -377,16 +384,16 @@ export function DashboardPage() {
       {/* ========================================================
           TABLA DE ANEXOS — ancho completo
           ======================================================== */}
-      <div className="space-y-4">
+      <div id="anexos-entrega" className="scroll-mt-20 space-y-4">
         {/* Encabezado + resumen compacto de avance */}
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-sm font-bold tracking-tight text-foreground">
             <ClipboardList className="h-4 w-4 text-primary" />
             Anexos de Transferencia de Gestión
           </h2>
-          <span className="font-mono text-nota font-semibold text-muted-foreground">
-            {filasAnexos.length} anexos normativos
-          </span>
+          <Link to="/pdf-firma" className={buttonVariants({ variant: 'outline', size: 'sm', className: 'gap-1.5 text-xs' })}>
+            PDF y firma <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </div>
 
         <ResumenAnexos filas={filasAnexos} />
@@ -394,19 +401,19 @@ export function DashboardPage() {
         <TablaAnexos
           filas={filasAnexos}
           dependenciaId={dependencia.id}
-          entregaConsolidada={estadoEntrega === 'consolidada'}
         />
       </div>
 
       {/* ========================================================
           REMITIR MI ENTREGA — debajo de la tabla, ancho completo
           ======================================================== */}
+      {(permisos.has('entregas.remitir') || permisos.has('entregas.revisar')) && (
       <Card className="border shadow-xs">
         <CardHeader className="py-3 px-4 border-b border-border bg-muted">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
               <Send className="h-4 w-4 text-primary" />
-              <span>Remitir mi entrega</span>
+              <span>{permisos.has('entregas.remitir') ? 'Remitir mi entrega' : 'Revisión de la entrega'}</span>
             </CardTitle>
             <div>{renderBadgeEstado(estadoEntrega)}</div>
           </div>
@@ -453,8 +460,12 @@ export function DashboardPage() {
             {/* Acción principal de workflow */}
             <div className="shrink-0 lg:w-64">
               <Can permiso="entregas.remitir">
+                {esEditable && <p className="mb-2 text-xs text-muted-foreground">
+                  {comprobandoFirmas ? 'Comprobando firmas…' : `Firmas del jefe: ${requisitosFirma?.firmados ?? 0}/6 · anexos 02–07`}
+                </p>}
                 {esEditable && (
                   <Button
+                    disabled={comprobandoFirmas || !requisitosFirma?.puede_remitir}
                     onClick={() => setModalRemitir(true)}
                     className="w-full h-10 bg-primary hover:bg-primary-hover text-white font-semibold text-xs gap-2 shadow-xs cursor-pointer"
                   >
@@ -506,6 +517,7 @@ export function DashboardPage() {
         </CardContent>
       </Card>
 
+      )}
       {/* ========================================================
           SECUNDARIO: Trazabilidad + Documentos SGD (dos columnas)
           ======================================================== */}
@@ -579,20 +591,27 @@ export function DashboardPage() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
                 <FileText className="h-4 w-4 text-primary" />
-                <span>Documentos SGD · Asuntos Pendientes</span>
+                <span>Documentos pendientes de la oficina</span>
               </CardTitle>
               <span className="inline-block px-2 py-0.5 rounded text-mini font-mono font-semibold border bg-info-soft text-info-fg border-info-border">
-                Fuente: SGD
+                SGD + manuales
               </span>
             </div>
           </CardHeader>
           <CardContent className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
             <div className="space-y-1">
-              <p className="font-semibold text-foreground">
-                {resumenDocs?.total_pendientes ?? 0} expedientes o documentos pendientes precargados
-              </p>
+              <button type="button" onClick={() => setIndicadorDocumental({})} className="text-left font-semibold text-primary underline underline-offset-2">
+                {resumenDocs?.total_pendientes ?? 0} documentos por revisar
+              </button>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(resumenDocs?.por_estado ?? {}).map(([estado, total]) => (
+                  <button key={estado} type="button" onClick={() => setIndicadorDocumental({ estado })} className="text-xs text-primary underline underline-offset-2">
+                    {nombreEstadoDocumento(estado)} · {total}
+                  </button>
+                ))}
+              </div>
               <p className="text-nota text-muted-foreground">
-                Información precargada del SGD para verificar trámites no concluidos antes de remitir la entrega.
+                SGD: última importación · Manuales: agregados por la oficina.
               </p>
             </div>
             <Link
@@ -604,12 +623,15 @@ export function DashboardPage() {
                   'h-7 text-xs px-2.5 font-medium border-primary/30 text-primary hover:bg-primary/10 gap-1 shrink-0 cursor-pointer',
               })}
             >
-              <span>Ver Asuntos Pendientes</span>
+              <span>Revisar pendientes</span>
               <ArrowRight className="h-3 w-3" />
             </Link>
           </CardContent>
         </Card>
       </div>
+
+      {indicadorDocumental && <DocumentosIndicadorModal key={`${dependencia.id}-${indicadorDocumental.estado ?? 'todos'}`}
+        dependenciaId={dependencia.id} estado={indicadorDocumental.estado} onClose={() => setIndicadorDocumental(null)} />}
 
       {/* Modales de workflow */}
       <RemitirModal

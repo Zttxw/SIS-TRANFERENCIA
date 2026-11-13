@@ -18,6 +18,7 @@ import { useAuth, useDependenciaActiva } from '@/auth/hooks'
 import { Can } from '@/auth/Can'
 import { AlertaBloqueoEntrega } from '@/components/anexos/AlertaBloqueoEntrega'
 import { AnexoHeader } from '@/components/anexos/AnexoHeader'
+import { UsuarioRegistro } from '@/components/anexos/UsuarioRegistro'
 import { ObservacionesAnexoPanel } from '@/components/anexos/ObservacionesAnexoPanel'
 import { Button } from '@/components/ui/button'
 import {
@@ -31,7 +32,6 @@ import { Select } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
-import { BotonGenerarPdf } from '@/features/firmaperu/BotonGenerarPdf'
 import { PrevisualizarAnexo } from '@/features/firmaperu/PrevisualizarAnexo'
 import {
   useBienesPatrimoniales,
@@ -144,7 +144,7 @@ export function PatrimonioPage() {
 
   const bienes = paginado?.data ?? []
   const meta = paginado?.meta
-  const totalColumnas = dependenciaId ? 8 : 9
+  const totalColumnas = dependenciaId ? 9 : 10
   const esVistaServidor = vista === 'servidor'
 
   // Render de una fila de bien + su fila de verificación expandida (reutilizado
@@ -191,12 +191,19 @@ export function PatrimonioPage() {
           <td className="p-3 whitespace-nowrap capitalize text-muted-foreground">
             {verif?.estado_conservacion ?? '-'}
           </td>
+          <td className="p-3">
+            <UsuarioRegistro
+              usuario={verif?.verificado_por}
+              fecha={verif?.verificado_en}
+              sinUsuario={verif ? 'Sin usuario registrado' : 'Sin verificar'}
+            />
+          </td>
           <td className="p-3 text-right whitespace-nowrap">
             <Can permiso="bienes.verificar">
               <Button
-                variant={estadoVerif === 'pendiente' && !expandida ? 'default' : 'outline'}
+                variant="default"
                 size="sm"
-                className="h-8 gap-1.5 border border-sky-700 bg-sky-700 px-3 text-xs font-semibold text-white shadow-sm hover:bg-sky-800"
+                className="h-8 gap-1.5 border border-primary bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary-hover"
                 disabled={!esModificable}
                 aria-expanded={expandida}
                 onClick={() => alternarFila(bien.id)}
@@ -269,7 +276,6 @@ export function PatrimonioPage() {
         acciones={
           <>
             {dependenciaId != null && <PrevisualizarAnexo tipoDocumento="anexo04" dependenciaId={dependenciaId} />}
-            <BotonGenerarPdf tipoDocumento="anexo04" dependenciaId={dependenciaId} />
           </>
         }
       />
@@ -342,7 +348,7 @@ export function PatrimonioPage() {
       </div>
 
       {/* Barra de progreso global */}
-      <Card className="border-sky-200 bg-sky-50/50 p-5 dark:border-sky-900 dark:bg-sky-950/20">
+      <Card className="border-primary/20 bg-primary/5 p-5">
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs font-medium">
             <span className="text-muted-foreground">Progreso de verificación patrimonial:</span>
@@ -411,6 +417,7 @@ export function PatrimonioPage() {
                 <th className="p-3">Custodio Asignado</th>
                 <th className="p-3">Estado Verificación</th>
                 <th className="p-3">Conservación</th>
+                <th className="p-3">Última verificación por</th>
                 <th className="p-3 text-right">Acción</th>
               </tr>
             </thead>

@@ -143,4 +143,23 @@ class DelegadoGestionTest extends TestCase
             'dependencia_id' => $this->dependencia->id,
         ])->assertForbidden();
     }
+
+    public function test_el_comite_busca_cuentas_activas_sin_exponer_datos_privados(): void
+    {
+        $this->actuarComo(Rol::ETTE);
+        $candidato = User::factory()->create(['name' => 'Candidata de prueba', 'activo' => true]);
+        User::factory()->create(['name' => 'Candidata inactiva', 'activo' => false]);
+
+        $this->getJson('/api/delegados/candidatos?buscar=Candidata')
+            ->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $candidato->id)
+            ->assertJsonMissingPath('data.0.email')
+            ->assertJsonMissingPath('data.0.password');
+    }
+
+    public function test_buscar_candidatos_requiere_permiso_del_comite(): void
+    {
+        $this->actuarComo(Rol::DELEGADO_ETTE);
+        $this->getJson('/api/delegados/candidatos')->assertForbidden();
+    }
 }

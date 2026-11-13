@@ -36,10 +36,11 @@ Route::prefix('firmaperu')->middleware('throttle:60,1')->group(function () {
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('firmaperu')->group(function () {
-        Route::post('/preparar', [FirmaperuController::class, 'preparar'])->middleware('permiso:anexos.registrar,firmas.firmar,actas.generar')->middleware('throttle:10,1');
-        Route::post('/generar-borrador', [FirmaperuController::class, 'generarBorrador'])->middleware('permiso:anexos.registrar,actas.generar')->middleware('throttle:20,1');
+        Route::post('/preparar', [FirmaperuController::class, 'preparar'])->middleware('permiso:anexos.registrar,firmas.firmar,actas.generar')->middleware('throttle:10,1,firma-preparar');
+        Route::post('/generar-borrador', [FirmaperuController::class, 'generarBorrador'])->middleware('permiso:anexos.registrar,actas.generar')->middleware('throttle:20,1,firma-generar');
         Route::middleware('permiso:anexos.ver')->group(function () {
-            Route::get('/previsualizar', [FirmaperuController::class, 'previsualizar'])->middleware('throttle:20,1');
+            Route::get('/previsualizar', [FirmaperuController::class, 'previsualizar'])->middleware('throttle:20,1,firma-visualizar');
+            Route::get('/requisitos-remision/{dependenciaId}', [FirmaperuController::class, 'requisitosRemision'])->whereNumber('dependenciaId');
             Route::get('/sesiones/{id}', [FirmaperuController::class, 'sesion'])->whereUuid('id');
             Route::get('/estado/{tipo}/{dependenciaId}', [FirmaperuController::class, 'estado'])->whereNumber('dependenciaId');
             Route::get('/documentos/{id}/descargar', [FirmaperuController::class, 'descargar'])->whereUuid('id');
@@ -71,6 +72,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // usuarios/roles institucionales.
     Route::prefix('delegados')->middleware('permiso:delegados.gestionar')->group(function () {
         Route::get('/', [DelegadoController::class, 'index']);
+        Route::get('/candidatos', [DelegadoController::class, 'candidatos']);
         Route::post('/', [DelegadoController::class, 'store']);
         Route::delete('/{id}', [DelegadoController::class, 'destroy']);
     });
@@ -154,7 +156,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Cronograma del proceso (RF-007, C-03). Consulta con anexos.ver; la
     // modificación la reservan administrador y ETTS (cronograma.gestionar).
     Route::prefix('cronograma')->group(function () {
-        Route::get('/', [CronogramaController::class, 'index'])->middleware('permiso:anexos.ver');
+        Route::get('/', [CronogramaController::class, 'index'])->middleware('permiso:anexos.ver,cronograma.gestionar');
         Route::post('/', [CronogramaController::class, 'store'])->middleware('permiso:cronograma.gestionar');
         Route::put('/{id}', [CronogramaController::class, 'update'])->middleware('permiso:cronograma.gestionar');
         Route::delete('/{id}', [CronogramaController::class, 'destroy'])->middleware('permiso:cronograma.gestionar');

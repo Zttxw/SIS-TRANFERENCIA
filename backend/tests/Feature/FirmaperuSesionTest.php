@@ -36,6 +36,7 @@ class FirmaperuSesionTest extends TestCase
         config()->set('firmaperu.public_url', 'https://backend.example');
         $this->mock(FirmaperuAuthService::class, fn (MockInterface $mock) => $mock->shouldReceive('obtenerJwtToken')->andReturn('jwt-prueba'));
         $this->mock(FirmaperuPdfService::class, function (MockInterface $mock): void {
+            $mock->makePartial();
             $mock->shouldReceive('generar')->andReturn(self::PDF);
             $mock->shouldReceive('huella')->andReturn(hash('sha256', self::PDF));
             $mock->shouldReceive('capturar')->andReturn(['pdf' => self::PDF, 'huella' => hash('sha256', self::PDF)]);
@@ -61,6 +62,10 @@ class FirmaperuSesionTest extends TestCase
 
     private function preparar(Dependencia $dep, ?string $previo = null): array
     {
+        if (! $previo) {
+            $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id])->assertCreated();
+        }
+
         return $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo03',
             'dependencia_id' => $dep->id, 'documento_previo_id' => $previo])->assertCreated()->json('data');
     }

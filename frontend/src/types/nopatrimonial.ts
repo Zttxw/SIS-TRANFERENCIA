@@ -5,6 +5,7 @@ export interface BienNoPatrimonial {
   proceso_transferencia_id: number
   dependencia_id: number
   servidor_id: number | null
+  registrado_por?: { id: number; name: string } | null
   denominacion: string
   descripcion: string | null
   cantidad: number

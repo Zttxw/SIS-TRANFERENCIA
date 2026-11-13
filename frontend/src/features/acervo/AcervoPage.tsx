@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CalendarRange, FolderArchive, HardDrive, List, Plus } from 'lucide-react'
+import { CalendarRange, List, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { useDependenciaActiva } from '@/auth/hooks'
@@ -8,7 +8,6 @@ import { AnexoCrudPage } from '@/components/anexos/AnexoCrudPage'
 import { Button } from '@/components/ui/button'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { Select } from '@/components/ui/select'
-import type { ColumnaTabla } from '@/components/ui/data-table'
 import { aplicarErroresAFormulario } from '@/lib/api-errors'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
 import {
@@ -17,9 +16,9 @@ import {
   useCrearAcervo,
   useEliminarAcervo,
 } from './use-acervo'
-import { acervoService } from './acervo.service'
 import { AcervoModal } from './AcervoModal'
 import { AcervoPorAnio } from './AcervoPorAnio'
+import { AcervoLista } from './AcervoLista'
 import type { AcervoDocumental, TipoAcervo } from '@/types/acervo'
 
 type VistaAcervo = 'lista' | 'anio'
@@ -28,64 +27,6 @@ const FILTRO_TIPO_OPCIONES = [
   { value: '', label: 'Todos los formatos' },
   { value: 'fisico', label: 'Físico (Papel / Archivadores)' },
   { value: 'digital', label: 'Digital (Repositorios / Nube)' },
-]
-
-const columnas: ColumnaTabla<AcervoDocumental>[] = [
-  {
-    id: 'fuente',
-    header: 'Procedencia',
-    cell: (item) => <span className="text-xs text-muted-foreground">{item.fuente === 'sgd' ? 'Precarga SGD' : 'Registro manual'}</span>,
-  },
-  {
-    id: 'tipo',
-    header: 'Formato',
-    cell: (item) =>
-      item.tipo === 'digital' ? (
-        <span className="inline-flex items-center gap-1 rounded-full bg-info-soft px-2 py-0.5 text-mini font-semibold text-info-fg">
-          <HardDrive className="h-3 w-3" />
-          Digital
-        </span>
-      ) : (
-        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-mini font-semibold text-muted-foreground">
-          <FolderArchive className="h-3 w-3" />
-          Físico
-        </span>
-      ),
-  },
-  {
-    id: 'serie',
-    header: 'Serie / Tipología Documental',
-    className: 'max-w-xs',
-    cell: (item) => <p className="truncate font-semibold text-foreground">{item.serie_documental}</p>,
-  },
-  {
-    id: 'periodo',
-    header: 'Periodo',
-    cell: (item) => <span className="text-muted-foreground">{item.periodo ?? '-'}</span>,
-  },
-  {
-    id: 'cantidad',
-    header: 'Cantidad',
-    cell: (item) => (
-      <span className="font-medium text-foreground">
-        {item.cantidad_unidades} {item.unidad_conservacion}
-      </span>
-    ),
-  },
-  {
-    id: 'ubicacion',
-    header: 'Ubicación',
-    className: 'max-w-xs',
-    ocultarEnMovil: true,
-    cell: (item) => <p className="truncate text-muted-foreground">{item.ubicacion ?? '-'}</p>,
-  },
-  {
-    id: 'descripcion',
-    header: 'Descripción',
-    className: 'max-w-xs',
-    ocultarEnMovil: true,
-    cell: (item) => <p className="line-clamp-2 text-muted-foreground">{item.descripcion ?? '-'}</p>,
-  },
 ]
 
 export function AcervoPage() {
@@ -176,7 +117,7 @@ export function AcervoPage() {
         <aside className="space-y-1 rounded-lg border border-info-border bg-info-soft p-4 text-sm text-info-fg">
           <p className="font-semibold">SGD disponible desde septiembre de 2025</p>
           <p>La precarga muestra resúmenes de documentos digitales de los periodos importados, no todo el archivo histórico de la oficina ni sus documentos adjuntos.</p>
-          <p>Use «Nueva Serie Documental» para registrar sus archivadores físicos, tomos y cajas: indique serie, periodo, cantidad y ubicación. Incluya también la documentación anterior a septiembre de 2025 que esté bajo su custodia.</p>
+          <p>Use «Nueva Serie Documental» para registrar sus archivadores físicos, tomos y cajas: indique serie, desde año, hasta año, cantidad y ubicación. Incluya también la documentación anterior a septiembre de 2025 que esté bajo su custodia.</p>
         </aside>
       }
       anexoObservable="acervo"
@@ -192,7 +133,7 @@ export function AcervoPage() {
       onReintentar={refetch}
       meta={paginado?.meta}
       onPageChange={setPagina}
-      columnas={columnas}
+      columnas={[]}
       busqueda={busqueda}
       onBuscar={(v) => {
         setBusqueda(v)
@@ -246,7 +187,20 @@ export function AcervoPage() {
                 }
               />
             )
-          : undefined
+          : ({ abrirEdicion }) => (
+              <AcervoLista
+                registros={series}
+                loading={isLoading}
+                error={error}
+                onReintentar={refetch}
+                esModificable={esModificable}
+                onEditar={abrirEdicion}
+                onEliminar={eliminarConConfirmacion}
+                eliminando={eliminarMut.isPending}
+                meta={paginado?.meta}
+                onPageChange={setPagina}
+              />
+            )
       }
       renderModal={({ open, onClose, registro }) => (
         <AcervoModal

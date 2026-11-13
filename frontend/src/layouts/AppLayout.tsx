@@ -61,7 +61,9 @@ export function AppLayout() {
 
         // Si es un módulo contenedor con submódulos hijos (ej. "Anexos de Transferencia")
         if (item.hijos && item.hijos.length > 0) {
-          const hijosPermitidos = item.hijos.filter((h) => permisos.has(h.permiso))
+          const hijosPermitidos = item.hijos.filter((h) =>
+            permisos.has(h.permiso) || h.permisosAlternativos?.some((permiso) => permisos.has(permiso)),
+          )
           if (hijosPermitidos.length === 0) return null
 
           return (

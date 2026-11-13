@@ -1,9 +1,8 @@
-import { useState, type ComponentType } from 'react'
+import type { ComponentType } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, ChevronDown } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 import { buttonVariants } from '@/components/ui/button'
-import { DocumentoFirmaDetalle } from '@/features/firmaperu/DocumentoFirmaDetalle'
 import { MiniEstadoFirma } from '@/features/firmaperu/MiniEstadoFirma'
 import type { TipoDocumentoFirma } from '@/features/firmaperu/firmaperu.types'
 import { cn } from '@/lib/utils'
@@ -28,8 +27,6 @@ export interface FilaAnexo {
 interface Props {
   filas: FilaAnexo[]
   dependenciaId: number
-  /** `true` cuando la entrega está consolidada (habilita la firma del acta). */
-  entregaConsolidada: boolean
 }
 
 // Paleta de badges por estado de LLENADO del anexo (independiente del PDF/firma).
@@ -52,13 +49,11 @@ function clasesEstado(estado: string): string {
   return 'border-border bg-muted text-muted-foreground'
 }
 
-export function TablaAnexos({ filas, dependenciaId, entregaConsolidada }: Props) {
-  const [expandida, setExpandida] = useState<string | null>(null)
-
+export function TablaAnexos({ filas, dependenciaId }: Props) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <div className="rounded-xl border border-border bg-card">
       {/* Cabecera de la tabla (solo escritorio) */}
-      <div className="hidden grid-cols-[2.5rem_minmax(0,1fr)_7.5rem_minmax(0,1fr)_7rem] items-center gap-3 border-b border-border bg-muted/40 px-4 py-2.5 text-mini font-semibold uppercase tracking-wider text-muted-foreground sm:grid">
+      <div className="hidden grid-cols-[2.5rem_minmax(0,1fr)_7.5rem_minmax(0,1fr)_10rem] items-center gap-3 rounded-t-xl border-b border-border bg-muted/40 px-4 py-2.5 text-mini font-semibold uppercase tracking-wider text-muted-foreground sm:grid">
         <span className="text-center">N.º</span>
         <span>Anexo</span>
         <span>Estado</span>
@@ -69,19 +64,12 @@ export function TablaAnexos({ filas, dependenciaId, entregaConsolidada }: Props)
       <ul className="divide-y divide-border">
         {filas.map((anexo, indice) => {
           const Icono = anexo.icono
-          const abierta = expandida === anexo.id
-          const puedeExpandir = Boolean(anexo.tipoFirma)
 
           return (
-            <li key={anexo.id} className={cn('transition-colors', abierta ? 'bg-muted/30' : 'hover:bg-muted/20')}>
+            <li key={anexo.id} className="transition-colors hover:bg-muted/20">
               {/* ---- Fila principal ---- */}
               <div
-                className={cn(
-                  'grid items-center gap-3 px-4 py-3',
-                  'grid-cols-[2.5rem_1fr] sm:grid-cols-[2.5rem_minmax(0,1fr)_7.5rem_minmax(0,1fr)_7rem]',
-                  puedeExpandir && 'cursor-pointer',
-                )}
-                onClick={puedeExpandir ? () => setExpandida(abierta ? null : anexo.id) : undefined}
+                className="grid items-center gap-3 px-4 py-3 grid-cols-[2.5rem_1fr] sm:grid-cols-[2.5rem_minmax(0,1fr)_7.5rem_minmax(0,1fr)_10rem]"
               >
                 {/* N.º */}
                 <span className="text-center text-sm font-mono font-semibold text-muted-foreground">
@@ -106,7 +94,7 @@ export function TablaAnexos({ filas, dependenciaId, entregaConsolidada }: Props)
 
                 {/* Estado (llenado) */}
                 <div className="hidden sm:block">
-                  <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-mini font-semibold', clasesEstado(anexo.estado))}>
+                  <span className={cn('inline-flex items-center rounded border px-1.5 py-0.5 text-[9px] leading-tight font-medium', clasesEstado(anexo.estado))}>
                     {anexo.estado}
                   </span>
                 </div>
@@ -124,8 +112,8 @@ export function TablaAnexos({ filas, dependenciaId, entregaConsolidada }: Props)
                   )}
                 </div>
 
-                {/* Acción principal (única) + chevron para expandir documento */}
-                <div className="col-start-2 flex items-center justify-end gap-1 sm:col-start-auto" onClick={(e) => e.stopPropagation()}>
+                {/* Acceso al registro del anexo. Los documentos se gestionan en PDF y firma. */}
+                <div className="col-start-2 flex flex-wrap items-center justify-end gap-1 sm:col-start-auto">
                   <Link
                     to={anexo.ruta}
                     className={buttonVariants({
@@ -137,38 +125,16 @@ export function TablaAnexos({ filas, dependenciaId, entregaConsolidada }: Props)
                     <span>{anexo.accion}</span>
                     <ArrowRight className="h-3 w-3" />
                   </Link>
-                  {puedeExpandir && (
-                    <button
-                      type="button"
-                      aria-label={abierta ? 'Ocultar documento' : 'Ver documento'}
-                      aria-expanded={abierta}
-                      onClick={() => setExpandida(abierta ? null : anexo.id)}
-                      className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    >
-                      <ChevronDown className={cn('h-4 w-4 transition-transform', abierta && 'rotate-180')} />
-                    </button>
-                  )}
                 </div>
 
                 {/* En móvil: estado + mini-pastilla debajo del nombre */}
                 <div className="col-start-2 flex flex-wrap items-center gap-1.5 sm:hidden">
-                  <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-mini font-semibold', clasesEstado(anexo.estado))}>
+                  <span className={cn('inline-flex items-center rounded border px-1.5 py-0.5 text-[9px] leading-tight font-medium', clasesEstado(anexo.estado))}>
                     {anexo.estado}
                   </span>
                 </div>
               </div>
 
-              {/* ---- Detalle expandible: documento + firma ---- */}
-              {abierta && anexo.tipoFirma && (
-                <div className="border-t border-border bg-muted/20 px-4 py-3 sm:pl-[3.75rem]">
-                  <DocumentoFirmaDetalle
-                    tipoDocumento={anexo.tipoFirma}
-                    dependenciaId={dependenciaId}
-                    bloqueado={anexo.tipoFirma === 'anexo07' && !entregaConsolidada}
-                    notaBloqueo="El acta se firma una vez consolidada la entrega."
-                  />
-                </div>
-              )}
             </li>
           )
         })}

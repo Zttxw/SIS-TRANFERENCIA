@@ -1,6 +1,7 @@
 import type { Observacion } from './observaciones'
 
 export interface DocumentoPendiente {
+  registro_auditoria?: { usuario?: { id: number; name: string } | null; created_at: string } | null
   id: number
   proceso_transferencia_id: number
   dependencia_id: number
@@ -8,6 +9,8 @@ export interface DocumentoPendiente {
   numero_documento: string | null
   tipo_documento: string | null
   asunto: string
+  sumilla: string | null
+  justificacion_pendiente: string | null
   fecha_documento: string | null
   estado_atencion: string | null
   accion_pendiente: string | null
@@ -37,6 +40,8 @@ export interface GuardarDocumentoPayload {
   numero_documento?: string | null
   tipo_documento?: string | null
   asunto: string
+  sumilla?: string | null
+  justificacion_pendiente?: string | null
   fecha_documento?: string | null
   estado_atencion?: string | null
   accion_pendiente?: string | null
@@ -55,5 +60,15 @@ export interface FiltrosDocumentos {
   search?: string
   per_page?: number
   page?: number
+}
+
+export interface ListadoDocumentosIndicador {
+  total: number
+  per_page: number
+  current_page: number
+  last_page: number
+  items: Array<Pick<DocumentoPendiente, 'id' | 'numero_documento' | 'asunto' | 'sumilla' | 'estado_atencion'> & {
+    original_sgd: 'disponible' | 'restringido' | 'no_aplica'
+  }>
 }
 

@@ -67,6 +67,12 @@ export const TIPOS_ACERVO = [
 /** Unidades de conservación sugeridas para el acervo físico (Anexo 03). */
 export const UNIDADES_CONSERVACION = [
   { value: 'Archivadores de Palanca', label: 'Archivadores de Palanca' },
+  { value: 'Paquetes', label: 'Paquetes' },
+  { value: 'Empastados', label: 'Empastados' },
+  { value: 'Fólderes', label: 'Fólderes' },
+  { value: 'Cajas Archivadoras', label: 'Cajas Archivadoras' },
+  { value: 'Archivo Digital', label: 'Archivo Digital' },
+  { value: 'Otro', label: 'Otro' },
   { value: 'Tomos / Archivadores', label: 'Tomos / Archivadores' },
   { value: 'Folders', label: 'Folders' },
   { value: 'Cajas de archivo', label: 'Cajas de archivo' },

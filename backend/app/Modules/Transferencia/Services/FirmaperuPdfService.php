@@ -8,12 +8,14 @@ use App\Models\User;
 use App\Modules\Acervo\Services\AcervoPdf;
 use App\Modules\Gestion\Services\InformeGestionPdf;
 use App\Modules\NoPatrimonial\Services\NoPatrimonialPdf;
+use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Organization\Services\CentrosCostoPdf;
 use App\Modules\Patrimonio\Services\PatrimonioPdf;
 use App\Modules\Personal\Services\PersonalPdf;
 use App\Modules\Transferencia\Models\FirmaBorrador;
 use App\Support\Services\ContextoTransferencia;
 use App\Support\Services\PdfService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 
@@ -37,28 +39,43 @@ class FirmaperuPdfService
     public function generar(string $tipoDocumento, int $dependenciaId, User $usuario): string
     {
         [$vista, $datos, $orientacion] = $this->plantilla($tipoDocumento, $dependenciaId, $usuario);
+        $datos['contexto']['es_borrador'] = true;
 
         return $this->pdf->binario($vista, $datos, 'a4', $orientacion);
     }
 
     /**
-     * Genera y SOBRESCRIBE el borrador oficial de un documento (02-07) sin firmarlo.
-     * Un único archivo por (proceso, dependencia, tipo); no crea DocumentoFirma ni
-     * versiona. Es el insumo que luego se firma en «Mi entrega».
+     * Conserva el PDF generado sin marca de borrador, previo a su firma.
+     * Mantiene una fila por proceso, dependencia y tipo; los PDF suscritos
+     * se custodian por separado en sus sesiones de firma.
      */
     public function generarBorrador(string $tipoDocumento, int $dependenciaId, User $usuario): FirmaBorrador
     {
         $tipo = $tipoDocumento === 'acta' ? 'anexo07' : $tipoDocumento;
         $procesoId = app(ContextoTransferencia::class)->procesoActivoId();
-        $contenido = $this->generar($tipo, $dependenciaId, $usuario);
-        $ruta = 'firmaperu/borradores/'.$procesoId.'/'.$dependenciaId.'/'.$tipo.'.pdf';
-        abort_unless(Storage::disk('local')->put($ruta, $contenido), 503, 'No se pudo conservar el PDF borrador.');
 
-        return FirmaBorrador::updateOrCreate(
-            ['proceso_transferencia_id' => $procesoId, 'dependencia_id' => $dependenciaId, 'tipo_documento' => $tipo],
-            ['pdf_path' => $ruta, 'pdf_sha256' => hash('sha256', $contenido),
-                'generado_por' => $usuario->id, 'generado_en' => now()],
-        );
+        return DB::transaction(function () use ($tipo, $dependenciaId, $usuario, $procesoId): FirmaBorrador {
+            Dependencia::whereKey($dependenciaId)->lockForUpdate()->firstOrFail();
+            $rutaAnterior = FirmaBorrador::where('proceso_transferencia_id', $procesoId)
+                ->where('dependencia_id', $dependenciaId)->where('tipo_documento', $tipo)->value('pdf_path');
+            $captura = $this->capturar($tipo, $dependenciaId, $usuario);
+            $sha256 = hash('sha256', $captura['pdf']);
+            $ruta = 'firmaperu/generados/'.$procesoId.'/'.$dependenciaId.'/'.$tipo.'/'.$sha256.'.pdf';
+            abort_unless(Storage::disk('local')->put($ruta, $captura['pdf']), 503, 'No se pudo conservar el PDF generado.');
+
+            $borrador = FirmaBorrador::updateOrCreate(
+                ['proceso_transferencia_id' => $procesoId, 'dependencia_id' => $dependenciaId, 'tipo_documento' => $tipo],
+                ['pdf_path' => $ruta, 'pdf_sha256' => $sha256, 'contenido_sha256' => $captura['huella'],
+                    'generado_por' => $usuario->id, 'generado_en' => now()],
+            );
+            DB::afterCommit(function () use ($rutaAnterior, $ruta): void {
+                if ($rutaAnterior && $rutaAnterior !== $ruta) {
+                    Storage::disk('local')->delete($rutaAnterior);
+                }
+            });
+
+            return $borrador;
+        });
     }
 
     /** Huella del contenido impreso, sin hora de impresión ni estado operativo de entrega. */
@@ -73,9 +90,22 @@ class FirmaperuPdfService
     public function capturar(string $tipoDocumento, int $dependenciaId, User $usuario): array
     {
         [$vista, $datos, $orientacion] = $this->plantilla($tipoDocumento, $dependenciaId, $usuario);
+        $datos['contexto']['es_borrador'] = false;
 
         return ['pdf' => $this->pdf->binario($vista, $datos, 'a4', $orientacion),
             'huella' => $this->huellaPlantilla($tipoDocumento, $vista, $datos, $dependenciaId, $usuario)];
+    }
+
+    public function generadoVigente(?FirmaBorrador $pdf, string $tipo, int $dependenciaId, User $usuario): bool
+    {
+        if (! $pdf || ! str_starts_with($pdf->pdf_path, 'firmaperu/generados/')
+            || ! Storage::disk('local')->exists($pdf->pdf_path)) {
+            return false;
+        }
+
+        return $pdf->contenido_sha256 !== null
+            && hash_equals($pdf->contenido_sha256, $this->huella($tipo, $dependenciaId, $usuario))
+            && hash_equals($pdf->pdf_sha256, hash('sha256', Storage::disk('local')->get($pdf->pdf_path)));
     }
 
     /** @param array<string, mixed> $datos */

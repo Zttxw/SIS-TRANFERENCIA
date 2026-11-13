@@ -10,8 +10,10 @@ use App\Support\Concerns\Auditable;
 use App\Support\Concerns\HasFuenteDato;
 use App\Support\Concerns\TieneEvidencias;
 use App\Support\Concerns\TieneObservaciones;
+use App\Support\Enums\FuenteDato;
 use App\Support\Models\BaseModel;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -36,6 +38,8 @@ class AcervoDocumental extends BaseModel
         'registrado_por_id',
         'tipo',
         'serie_documental',
+        'identificacion_archivador',
+        'total_folios',
         'anio',
         'desde_anio',
         'hasta_anio',
@@ -54,10 +58,21 @@ class AcervoDocumental extends BaseModel
     {
         return [
             'cantidad_unidades' => 'integer',
+            'total_folios' => 'integer',
             'anio' => 'integer',
             'desde_anio' => 'integer',
             'hasta_anio' => 'integer',
         ];
+    }
+
+    /** @return Attribute<string|null, never> */
+    protected function ubicacion(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $valor): ?string => blank($valor) && $this->fuente === FuenteDato::SGD
+                ? 'Sistema de Gestión Documental (SGD)'
+                : $valor,
+        );
     }
 
     /** @return BelongsTo<Dependencia, $this> */

@@ -28,7 +28,6 @@ import { Spinner } from '@/components/ui/spinner'
 import { construirArbol, filtrarArbol, type NodoArbol } from '@/features/entregas/arbol-utils'
 import { listarOrganigrama } from './dependencias.service'
 import { ancestrosVisibles } from './organigrama-utils'
-import { BotonFirmaPeru } from '@/features/firmaperu/BotonFirmaPeru'
 import { PrevisualizarAnexo } from '@/features/firmaperu/PrevisualizarAnexo'
 
 export function EstructuraOrganicaPage() {
@@ -159,7 +158,6 @@ export function EstructuraOrganicaPage() {
         </div>
 
         {dependenciaId != null && <PrevisualizarAnexo tipoDocumento="anexo01" dependenciaId={dependenciaId} />}
-        <BotonFirmaPeru tipoDocumento="anexo01" dependenciaId={dependenciaId} />
         {/* Aviso de homologación con SGD */}
         <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-warning-soft border border-warning-border text-warning-fg text-xs font-medium">
           <Sparkles className="h-3.5 w-3.5 text-warning-fg shrink-0" />

@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Modules\Auth\Models\AsignacionRol;
+use App\Modules\Documentos\Models\DocumentoPendiente;
 use App\Modules\Gestion\Services\InformeGestionPdf;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Organization\Models\Servidor;
@@ -46,12 +47,116 @@ class AnexosExperienciaTest extends TestCase
             ->assertJsonPath('data.id', $bien->id)
             ->assertJsonPath('data.ubicacion', 'Oficina de administración')
             ->assertJsonPath('data.verificacion.estado', 'confirmado')
+            ->assertJsonPath('data.verificacion.verificado_por.id', auth()->id())
             ->assertJsonPath('data.dependencia.id', $this->dep->id);
 
         $this->assertDatabaseHas('verificaciones_bien', [
             'bien_patrimonial_id' => $bien->id,
             'estado' => 'confirmado',
         ]);
+    }
+
+    public function test_ultima_verificacion_identifica_al_usuario_que_realizo_el_cotejo(): void
+    {
+        $bien = BienPatrimonial::create([
+            'proceso_transferencia_id' => $this->proceso->id, 'dependencia_id' => $this->dep->id,
+            'codigo_patrimonial' => 'VER-001', 'denominacion' => 'Monitor',
+        ]);
+        $this->postJson('/api/patrimonio/bienes/'.$bien->id.'/verificar', ['estado' => 'confirmado'])->assertOk();
+        $revisor = User::factory()->create(['name' => 'Servidor que coteja']);
+        AsignacionRol::factory()->rol(Rol::SERVIDOR)->create([
+            'user_id' => $revisor->id, 'dependencia_id' => $this->dep->id,
+            'proceso_transferencia_id' => $this->proceso->id,
+        ]);
+        Sanctum::actingAs($revisor);
+
+        $this->postJson('/api/patrimonio/bienes/'.$bien->id.'/verificar', ['estado' => 'confirmado'])
+            ->assertOk()->assertJsonPath('data.verificacion.verificado_por.name', 'Servidor que coteja');
+
+        $this->assertDatabaseHas('verificaciones_bien', ['bien_patrimonial_id' => $bien->id, 'verificado_por_id' => $revisor->id]);
+        $this->getJson('/api/patrimonio/bienes?dependencia_id='.$this->dep->id)->assertOk()
+            ->assertJsonPath('data.0.verificacion.verificado_por.id', $revisor->id);
+    }
+
+    public function test_acervo_muestra_al_registrador_original_tras_edicion_de_otro_usuario(): void
+    {
+        $autor = auth()->user();
+        $datos = [
+            'dependencia_id' => $this->dep->id, 'tipo' => 'fisico',
+            'serie_documental' => 'Informes', 'cantidad_unidades' => 2,
+            'unidad_conservacion' => 'Archivadores',
+        ];
+        $id = $this->postJson('/api/acervo', $datos)->assertCreated()->json('data.id');
+        $editor = User::factory()->create();
+        AsignacionRol::factory()->rol(Rol::SERVIDOR)->create([
+            'user_id' => $editor->id, 'dependencia_id' => $this->dep->id,
+            'proceso_transferencia_id' => $this->proceso->id,
+        ]);
+        Sanctum::actingAs($editor);
+
+        $this->putJson('/api/acervo/'.$id, [...$datos, 'cantidad_unidades' => 3])->assertOk();
+
+        $this->getJson('/api/acervo?dependencia_id='.$this->dep->id)->assertOk()
+            ->assertJsonPath('data.0.registrado_por.id', $autor->id);
+        $this->assertDatabaseHas('acervo_documental', ['id' => $id, 'registrado_por_id' => $autor->id, 'cantidad_unidades' => 3]);
+    }
+
+    public function test_bienes_no_patrimoniales_muestran_quien_los_registro(): void
+    {
+        $autor = auth()->user();
+        $this->postJson('/api/nopatrimonial', [
+            'dependencia_id' => $this->dep->id, 'denominacion' => 'Herramientas de soporte',
+            'cantidad' => 1, 'unidad_medida' => 'Kit',
+        ])->assertCreated();
+
+        $this->getJson('/api/nopatrimonial?dependencia_id='.$this->dep->id)->assertOk()
+            ->assertJsonPath('data.0.registrado_por.id', $autor->id);
+        $this->assertDatabaseHas('bienes_no_patrimoniales', ['denominacion' => 'Herramientas de soporte', 'registrado_por_id' => $autor->id]);
+    }
+
+    public function test_informe_muestra_al_usuario_del_ultimo_guardado(): void
+    {
+        $autor = auth()->user();
+        $this->postJson('/api/gestion/informe', [
+            'dependencia_id' => $this->dep->id,
+            'funciones' => [['descripcion' => 'Coordinar los servicios']],
+            'logros_items' => [['actividad' => 'Mejorar los servicios']],
+        ])->assertOk();
+
+        $this->getJson('/api/gestion/informe?dependencia_id='.$this->dep->id)->assertOk()
+            ->assertJsonPath('data.elaborado_por.id', $autor->id);
+        $this->assertDatabaseHas('informes_gestion', ['dependencia_id' => $this->dep->id, 'elaborado_por_id' => $autor->id]);
+    }
+
+    public function test_personal_muestra_usuario_del_ultimo_guardado(): void
+    {
+        $autor = auth()->user();
+        $this->postJson('/api/personal', [
+            'dependencia_id' => $this->dep->id, 'dni' => '12345678',
+            'nombres' => 'Persona', 'apellidos' => 'Registrada',
+            'cargo' => 'Soporte', 'regimen_laboral' => 'CAS',
+        ])->assertCreated();
+
+        $this->getJson('/api/personal?dependencia_id='.$this->dep->id)->assertOk()
+            ->assertJsonPath('data.0.validado_por.id', $autor->id)
+            ->assertJsonPath('data.0.validado_por.name', $autor->name);
+        $this->assertDatabaseHas('personal', ['dni' => '12345678', 'validado_por_id' => $autor->id]);
+    }
+
+    public function test_documentos_identifica_al_creador_desde_auditoria_sin_exponer_valores_ni_ip(): void
+    {
+        $autor = auth()->user();
+        $doc = DocumentoPendiente::create([
+            'proceso_transferencia_id' => $this->proceso->id, 'dependencia_id' => $this->dep->id,
+            'asunto' => 'Solicitud registrada', 'fuente' => 'manual',
+        ]);
+
+        $respuesta = $this->getJson('/api/documentos-pendientes?dependencia_id='.$this->dep->id)
+            ->assertOk()->assertJsonPath('data.0.registro_auditoria.usuario.id', $autor->id);
+
+        $this->assertArrayNotHasKey('ip', $respuesta->json('data.0.registro_auditoria'));
+        $this->assertArrayNotHasKey('valores_nuevos', $respuesta->json('data.0.registro_auditoria'));
+        $this->assertDatabaseHas('movimientos_auditoria', ['auditable_id' => $doc->id, 'auditable_type' => $doc->getMorphClass(), 'user_id' => $autor->id, 'evento' => 'creado']);
     }
 
     public function test_verificar_patrimonio_de_otra_dependencia_devuelve_403(): void
@@ -114,11 +219,62 @@ class AnexosExperienciaTest extends TestCase
             'logros_items' => [['actividad' => 'Mejorar los servicios']],
         ])->assertOk()->assertJsonPath('data.servidor_responsable_id', $responsable->id)
             ->assertJsonPath('data.cargo_periodo', 'Jefe de oficina · 2025–2026')
-            ->assertJsonPath('data.nivel_organizacional', 'tercer_nivel');
+            ->assertJsonPath('data.nivel_organizacional', 'primer_nivel');
 
         $vista = app(InformeGestionPdf::class)->datos($this->dep->id);
         $this->assertSame('Responsable Institucional', $vista['informe']['responsable']);
         $this->assertSame('Jefe de oficina · 2025–2026', $vista['informe']['cargo_periodo']);
+    }
+
+    public function test_correcciones_de_identificacion_se_conservan_y_salen_en_pdf_sin_modificar_padron(): void
+    {
+        $responsable = $this->servidor();
+        $this->dep->update(['encargado_servidor_id' => $responsable->id]);
+        $datos = [
+            'dependencia_id' => $this->dep->id,
+            'responsable_nombre' => 'Nombre Corregido',
+            'cargo_responsable' => 'Jefe encargado de OTI',
+            'nivel_organizacional' => 'segundo_nivel',
+            'periodo_gestion' => '2025–2026',
+            'funciones' => [['descripcion' => 'Coordinar servicios institucionales']],
+            'logros_items' => [['actividad' => 'Mejorar los servicios']],
+        ];
+        $this->postJson('/api/gestion/informe', $datos)->assertOk();
+        $this->getJson('/api/gestion/informe?dependencia_id='.$this->dep->id)->assertOk()
+            ->assertJsonPath('data.responsable_nombre', 'Nombre Corregido')
+            ->assertJsonPath('data.cargo_responsable', 'Jefe encargado de OTI')
+            ->assertJsonPath('data.nivel_organizacional', 'segundo_nivel')
+            ->assertJsonPath('data.periodo_gestion', '2025–2026');
+
+        unset($datos['responsable_nombre'], $datos['cargo_responsable'], $datos['nivel_organizacional'], $datos['periodo_gestion']);
+        $this->postJson('/api/gestion/informe', $datos)->assertOk()
+            ->assertJsonPath('data.responsable_nombre', 'Nombre Corregido')
+            ->assertJsonPath('data.cargo_periodo', 'Jefe encargado de OTI · 2025–2026')
+            ->assertJsonPath('data.nivel_organizacional', 'segundo_nivel');
+
+        $vista = app(InformeGestionPdf::class)->datos($this->dep->id);
+        $this->assertSame('Nombre Corregido', $vista['informe']['responsable']);
+        $this->assertSame('Jefe encargado de OTI · 2025–2026', $vista['informe']['cargo_periodo']);
+        $this->assertSame('segundo_nivel', $vista['informe']['nivel_organizacional']);
+        $this->assertSame('Responsable', $responsable->fresh()->nombres);
+        $this->assertSame('Jefe de oficina', $responsable->fresh()->cargo);
+        $this->assertSame(3, $this->dep->fresh()->nivel);
+    }
+
+    public function test_identificacion_editable_sigue_bloqueada_despues_de_remitir(): void
+    {
+        Entrega::create([
+            'proceso_transferencia_id' => $this->proceso->id,
+            'dependencia_id' => $this->dep->id,
+            'estado' => 'remitida',
+        ]);
+        $this->postJson('/api/gestion/informe', [
+            'dependencia_id' => $this->dep->id,
+            'responsable_nombre' => 'Cambio bloqueado',
+            'funciones' => [['descripcion' => 'Coordinar servicios institucionales']],
+            'logros_items' => [['actividad' => 'Mejorar los servicios']],
+        ])->assertStatus(409);
+        $this->assertDatabaseCount('informes_gestion', 0);
     }
 
     public function test_no_inventa_responsable_ni_cargo_si_faltan_en_el_padron(): void

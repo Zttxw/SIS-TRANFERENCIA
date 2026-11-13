@@ -1,10 +1,16 @@
 import type { Dependencia, Usuario } from './auth'
 
+export interface IdentidadInterviniente {
+  nombre: string
+  dni: string
+  cargo: string
+}
+
 export interface IntervinientesActa {
-  titular_saliente?: string | null
-  titular_entrante?: string | null
-  coordinador_ette?: string | null
-  responsable_superior?: string | null
+  titular_saliente?: string | IdentidadInterviniente | null
+  titular_entrante?: string | IdentidadInterviniente | null
+  coordinador_ette?: string | IdentidadInterviniente | null
+  responsable_superior?: string | IdentidadInterviniente | null
 }
 
 export interface AnexosEntregadosMap {
@@ -51,7 +57,7 @@ export interface ActaTransferencia {
   ruta_pdf: string | null
   ruta_pdf_suscrito: string | null
   generada_por_id: number | null
-  generada_por?: Usuario
+  generada_por?: { id: number; name: string } | null
   dependencia?: Dependencia
   evidencias?: EvidenciaItem[]
   created_at: string

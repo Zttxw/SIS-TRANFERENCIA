@@ -72,6 +72,9 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
 
     private function preparar(string $tipo = 'anexo07', ?string $previo = null): array
     {
+        if (! $previo) {
+            $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => $tipo, 'dependencia_id' => $this->dep->id])->assertCreated();
+        }
         $preparacion = $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => $tipo,
             'dependencia_id' => $this->dep->id, 'documento_previo_id' => $previo])->assertCreated()->json('data');
         $r = $this->post('/api/firmaperu/param', ['param_token' => $preparacion['param_token']])->assertOk();
@@ -89,6 +92,15 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
 
     private function remitir(): TestResponse
     {
+        if (FirmaSesion::where('tipo_documento', 'anexo07')->where('dependencia_id', $this->dep->id)->where('estado', 'firmada')->exists()) {
+            foreach (['anexo02', 'anexo03', 'anexo04', 'anexo05', 'anexo06'] as $tipo) {
+                $sesion = FirmaSesion::where('tipo_documento', $tipo)->where('dependencia_id', $this->dep->id)->where('estado', 'firmada')->latest()->first();
+                if (! $sesion || ! app(FirmaperuRegistroService::class)->vigente($sesion)) {
+                    $this->recibir($this->preparar($tipo));
+                }
+            }
+        }
+
         return $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->dep->id]);
     }
 

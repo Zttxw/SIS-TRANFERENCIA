@@ -14,6 +14,7 @@ import { useDependenciaActiva } from '@/auth/hooks'
 import { Can } from '@/auth/Can'
 import { AlertaBloqueoEntrega } from '@/components/anexos/AlertaBloqueoEntrega'
 import { AnexoHeader } from '@/components/anexos/AnexoHeader'
+import { UsuarioRegistro } from '@/components/anexos/UsuarioRegistro'
 import { ObservacionesAnexoPanel } from '@/components/anexos/ObservacionesAnexoPanel'
 import { Button } from '@/components/ui/button'
 import {
@@ -33,6 +34,7 @@ import {
   useResumenDocumentosPendientes,
 } from './use-documentos'
 import { DocumentoModal } from './DocumentoModal'
+import { nombreEstadoDocumento } from './estados-documentos'
 import type { DocumentoPendiente, GuardarDocumentoPayload } from '@/types/documentos'
 
 export function DocumentosPage() {
@@ -63,9 +65,9 @@ export function DocumentosPage() {
     !estadoEntrega || estadoEntrega === 'borrador' || estadoEntrega === 'observada'
   const dependencia = estadoData?.dependencia
 
-  const handleGuardar = (payload: GuardarDocumentoPayload) => {
+  const handleGuardar = async (payload: GuardarDocumentoPayload) => {
     if (docAEditar) {
-      actualizarMut.mutate(
+      await actualizarMut.mutateAsync(
         { id: docAEditar.id, payload },
         {
           onSuccess: () => {
@@ -75,7 +77,7 @@ export function DocumentosPage() {
         },
       )
     } else {
-      crearMut.mutate(payload, {
+      await crearMut.mutateAsync(payload, {
         onSuccess: () => {
           setModalAbierto(false)
         },
@@ -84,7 +86,7 @@ export function DocumentosPage() {
   }
 
   const handleEliminar = (doc: DocumentoPendiente) => {
-    if (confirm(`¿Confirma eliminar el registro "${doc.asunto}" del Anexo 01?`)) {
+    if (confirm(`¿Confirma eliminar el pendiente manual "${doc.asunto}"?`)) {
       eliminarMut.mutate(doc.id)
     }
   }
@@ -94,7 +96,7 @@ export function DocumentosPage() {
       <div className="mx-auto max-w-5xl space-y-6">
         <AnexoHeader
           numeroAnexo="SGD"
-          titulo="Reporte de Asuntos y Documentos Pendientes"
+          titulo="Documentos pendientes de la oficina"
           subtitulo="Seleccione un centro de costo en la barra superior para visualizar los documentos pendientes."
         />
         <Card className="border-dashed p-10 text-center">
@@ -115,8 +117,8 @@ export function DocumentosPage() {
     <div className="mx-auto max-w-6xl space-y-6">
       <AnexoHeader
         numeroAnexo="SGD"
-        titulo="Reporte de Asuntos y Documentos Pendientes"
-        subtitulo="Relación de expedientes, solicitudes y trámites en curso que requieren atención de la gestión entrante (Directiva N.° 001-2026-MDSJ/A §7.7)"
+        titulo="Documentos pendientes de la oficina"
+        subtitulo="Trámites por continuar en la siguiente gestión."
         dependenciaCodigo={dependencia?.codigo}
         dependenciaNombre={dependencia?.nombre}
         acciones={
@@ -131,7 +133,7 @@ export function DocumentosPage() {
               }}
             >
               <FilePlus className="h-4 w-4" />
-              Nuevo Documento Pendiente
+              Agregar pendiente manual
             </Button>
           </Can>
         }
@@ -139,30 +141,40 @@ export function DocumentosPage() {
 
       <AlertaBloqueoEntrega estadoEntrega={estadoEntrega} />
 
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <FileText className="h-4 w-4 text-info-fg" />
+          SGD: última importación
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Pencil className="h-4 w-4" />
+          Manual: agregado por la oficina
+        </span>
+      </div>
+
       {/* KPI Resumen */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card className="bg-muted/20">
           <CardHeader className="p-4 pb-1">
-            <span className="text-xs font-medium text-muted-foreground">Total Pendientes</span>
+            <span className="text-xs font-medium text-muted-foreground">Total de registros</span>
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <div className="text-2xl font-bold text-foreground">
               {resumen?.total_pendientes ?? 0}
             </div>
-            <p className="text-nota text-muted-foreground">Expedientes registrados</p>
+            <p className="text-nota text-muted-foreground">SGD + manuales</p>
           </CardContent>
         </Card>
 
-        {Object.entries(resumen?.por_estado ?? {}).slice(0, 3).map(([estado, cantidad]) => (
+        {Object.entries(resumen?.por_estado ?? {}).map(([estado, cantidad]) => (
           <Card key={estado} className="bg-muted/20">
             <CardHeader className="p-4 pb-1">
-              <span className="text-xs font-medium text-muted-foreground truncate uppercase">
-                {estado}
+              <span className="text-xs font-medium text-muted-foreground">
+                {nombreEstadoDocumento(estado)}
               </span>
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <div className="text-2xl font-bold text-foreground">{cantidad}</div>
-              <p className="text-nota text-muted-foreground">En este estado</p>
             </CardContent>
           </Card>
         ))}
@@ -197,6 +209,9 @@ export function DocumentosPage() {
                 }}
               >
                 <option value="">Todos los estados</option>
+                <option value="0">No leído (SGD)</option>
+                <option value="1">Recibido sin atender (SGD)</option>
+                <option value="SIN ESTADO">Sin estado informado</option>
                 <option value="PENDIENTE">PENDIENTE</option>
                 <option value="EN TRÁMITE">EN TRÁMITE</option>
                 <option value="CON OBSERVACIONES">CON OBSERVACIONES</option>
@@ -221,20 +236,21 @@ export function DocumentosPage() {
                 <th className="p-3">Estado</th>
                 <th className="p-3">Acción Pendiente</th>
                 <th className="p-3">Origen</th>
+                <th className="p-3">Registrado por</th>
                 <th className="p-3 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-muted-foreground">
+                  <td colSpan={9} className="py-12 text-center text-muted-foreground">
                     <Spinner className="mx-auto h-6 w-6 text-primary" />
                     <p className="mt-2">Cargando documentos pendientes...</p>
                   </td>
                 </tr>
               ) : documentos.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center text-muted-foreground">
+                  <td colSpan={9} className="py-10 text-center text-muted-foreground">
                     <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
                     No se encontraron documentos pendientes registrados para esta dependencia.
                   </td>
@@ -265,7 +281,7 @@ export function DocumentosPage() {
                       </td>
                       <td className="p-3 whitespace-nowrap">
                         <span className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-mini font-semibold text-secondary-foreground uppercase">
-                          {doc.estado_atencion ?? 'PENDIENTE'}
+                          {nombreEstadoDocumento(doc.estado_atencion)}
                         </span>
                       </td>
                       <td className="p-3 max-w-xs text-muted-foreground">
@@ -274,13 +290,20 @@ export function DocumentosPage() {
                       <td className="p-3 whitespace-nowrap">
                         {esSgd ? (
                           <span className="inline-flex rounded border border-info-border bg-info-soft px-1.5 py-0.5 text-mini font-medium text-info-fg">
-                            SGD Oficial
+                            SGD
                           </span>
                         ) : (
                           <span className="inline-flex rounded border border-muted bg-muted px-1.5 py-0.5 text-mini font-medium text-muted-foreground">
                             Manual
                           </span>
                         )}
+                      </td>
+                      <td className="p-3">
+                        <UsuarioRegistro
+                          usuario={doc.registro_auditoria?.usuario}
+                          fecha={doc.registro_auditoria?.created_at ?? doc.created_at}
+                          fuente={doc.fuente}
+                        />
                       </td>
                       <td className="p-3 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">

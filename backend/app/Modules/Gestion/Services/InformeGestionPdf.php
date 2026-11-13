@@ -66,7 +66,7 @@ class InformeGestionPdf
             'organo' => $informe?->dependencia?->nombre ?? '',
             'denominacion' => $informe?->dependencia?->nombre ?? '',
             'nivel_organizacional' => $informe?->nivel_organizacional ?? '',
-            'responsable' => $responsable ? trim("{$responsable->nombres} {$responsable->apellidos}") : '',
+            'responsable' => $informe?->responsable_nombre ?? ($responsable ? trim("{$responsable->nombres} {$responsable->apellidos}") : ''),
             'responsable_dni' => $responsable?->dni ?? '',
             'cargo_periodo' => $informe?->cargo_periodo ?? '',
             'funciones' => $informe?->funciones ?? [],
