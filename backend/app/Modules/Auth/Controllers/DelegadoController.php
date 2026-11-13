@@ -7,9 +7,11 @@ namespace App\Modules\Auth\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Auth\Services\DelegadoService;
+use App\Modules\Auth\Services\GestionUsuariosService;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Gestión de delegados ETTE por el comité (RF-008, D2). Todas las acciones
@@ -57,6 +59,29 @@ class DelegadoController extends Controller
         return ApiResponse::success(
             $asignacion->load(['usuario:id,dni,name', 'dependencia:id,codigo,nombre']),
             'Delegado ETTE designado para la dependencia.',
+            201,
+        );
+    }
+
+    public function crearExterno(Request $request, GestionUsuariosService $usuarios): JsonResponse
+    {
+        $datos = $request->validate([
+            'dni' => ['required', 'string', 'regex:/^[0-9]{8,15}$/'],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'password' => ['required', 'string', 'min:8'],
+            'dependencia_id' => ['required', 'integer', 'exists:dependencias,id'],
+        ]);
+
+        $asignacion = DB::transaction(function () use ($usuarios, $datos) {
+            $cuenta = $usuarios->crearExterno($datos);
+
+            return $this->delegados->designar($cuenta->id, (int) $datos['dependencia_id']);
+        });
+
+        return ApiResponse::success(
+            $asignacion->load(['usuario:id,dni,name', 'dependencia:id,codigo,nombre']),
+            'Cuenta externa creada y designada como delegado ETTE.',
             201,
         );
     }

@@ -29,6 +29,9 @@ export const delegadosService = {
   async designar(payload: { user_id: number; dependencia_id: number }) {
     await api.post('/delegados', payload)
   },
+  async crearExterno(payload: { dni: string; name: string; email?: string; password: string; dependencia_id: number }) {
+    await api.post('/delegados/externos', payload)
+  },
   async revocar(id: number) {
     await api.delete(`/delegados/${id}`)
   },

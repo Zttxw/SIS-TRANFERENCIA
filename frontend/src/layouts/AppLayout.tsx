@@ -16,6 +16,24 @@ function getInfoEstructura(esSubmenu = false) {
   }
 }
 
+function getRolEtiqueta(usuario: {
+  servidor?: { cargo?: string | null } | null
+  roles?: Array<{ rol: string }>
+  es_global?: boolean
+} | null): string {
+  if (!usuario) return ''
+  if (usuario.servidor?.cargo) return usuario.servidor.cargo
+  const rolCodes = new Set(usuario.roles?.map((r) => r.rol) ?? [])
+  if (rolCodes.has('administrador')) return 'Administrador'
+  if (rolCodes.has('ette')) return 'Comité ETTE'
+  if (rolCodes.has('etts')) return 'Equipo ETTS'
+  if (rolCodes.has('responsable_centro_costo')) return 'Responsable Centro de Costo'
+  if (rolCodes.has('responsable_equipo')) return 'Responsable de Equipo'
+  if (rolCodes.has('coordinador')) return 'Coordinador'
+  if (rolCodes.has('delegado_ette')) return 'Delegado ETTE'
+  return usuario.es_global ? 'Administrador' : 'Servidor Público'
+}
+
 /**
  * Layout base autenticado: barra lateral de navegación (sidebar) con identidad
  * institucional (token --sidebar), submenú colapsable para anexos y topbar con selector de dependencia + usuario + logout.
@@ -41,16 +59,23 @@ export function AppLayout() {
 
   const infoEstructura = getInfoEstructura(false)
   const infoEstructuraSubmenu = getInfoEstructura(true)
+  const roles = new Set(usuario?.roles.map(({ rol }) => rol) ?? [])
+  const soloEtte = roles.has('ette') && !roles.has('etts') && !roles.has('administrador')
+  const soloEtts = roles.has('etts') && !roles.has('ette') && !roles.has('administrador')
+  const rutasEtte = new Set(['/', '/organigrama', '/reportes', '/observaciones', '/delegados'])
+  const rutasEtts = new Set(['/', '/organigrama', '/entregas', '/observaciones', '/reportes', '/cronograma', '/acta'])
   const items = ITEMS_NAV.filter(
     (item) =>
-      permisos.has(item.permiso) ||
-      item.permisosAlternativos?.some((permiso) => permisos.has(permiso)),
+      (!soloEtte || (item.ruta !== undefined && rutasEtte.has(item.ruta))) &&
+      (!soloEtts || (item.ruta !== undefined && rutasEtts.has(item.ruta))) &&
+      (permisos.has(item.permiso) ||
+      item.permisosAlternativos?.some((permiso) => permisos.has(permiso))),
   )
 
   const nav = (
     <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2 text-xs">
       <div className="px-3 pt-2 pb-1.5 text-mini font-bold uppercase tracking-wider text-white/50">
-        {usuario?.es_global ? 'Administración' : 'Servidor Público'}
+        {roles.has('ette') ? 'Comité ETTE' : roles.has('etts') ? 'Equipo ETTS' : usuario?.es_global ? 'Administración' : 'Servidor Público'}
       </div>
       {items.map((item) => {
         const Icono = item.ruta === '/organigrama' ? infoEstructura.icono : item.icono
@@ -252,7 +277,7 @@ export function AppLayout() {
                 <span className="font-mono">DNI {usuario?.dni}</span>
                 <span>·</span>
                 <span className="font-medium text-primary">
-                  {usuario?.servidor?.cargo || (usuario?.es_global ? 'Administrador' : 'Servidor Público')}
+                  {getRolEtiqueta(usuario)}
                 </span>
               </p>
             </div>

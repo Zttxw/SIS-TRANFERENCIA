@@ -83,6 +83,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // revocación limitadas al equipo (delegados.gestionar), no es administrar
     // usuarios/roles institucionales.
     Route::prefix('delegados')->middleware('permiso:delegados.gestionar')->group(function () {
+        Route::post('/externos', [DelegadoController::class, 'crearExterno']);
         Route::get('/', [DelegadoController::class, 'index']);
         Route::get('/candidatos', [DelegadoController::class, 'candidatos']);
         Route::post('/', [DelegadoController::class, 'store']);

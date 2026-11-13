@@ -2,7 +2,7 @@ import { useDeferredValue, useState } from 'react'
 import { ShieldPlus, UserPlus, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Combobox } from '@/components/ui/combobox'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { Dialog } from '@/components/ui/dialog'

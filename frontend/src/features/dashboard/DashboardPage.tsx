@@ -43,6 +43,7 @@ import { ResumenAnexos } from './ResumenAnexos'
 import { RevisarModal } from './RevisarModal'
 import { TablaAnexos } from './TablaAnexos'
 import { TableroOperativoView } from './TableroOperativoView'
+import { EquipoDashboard } from './EquipoDashboard'
 import { useEstadoEntrega, useResumenDocumentos } from './use-dashboard'
 import { DocumentosIndicadorModal } from '@/features/documentos/DocumentosIndicadorModal'
 import { nombreEstadoDocumento } from '@/features/documentos/estados-documentos'
@@ -115,6 +116,10 @@ export function DashboardPage() {
         </div>
       )
     }
+    const roles = new Set(usuario?.roles.map(({ rol }) => rol) ?? [])
+    const perfil = roles.has('ette') && !roles.has('etts') && !roles.has('administrador')
+      ? 'ette' : roles.has('etts') && !roles.has('administrador') ? 'etts' : 'general'
+    if (perfil !== 'general') return <EquipoDashboard perfil={perfil} />
     return <TableroOperativoView onSeleccionarDependencia={(id) => setDependenciaId(id)} />
   }
 
