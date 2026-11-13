@@ -1,8 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 import { notificarError } from '@/lib/api-errors'
-import type { FiltrosAcervo, GuardarAcervoPayload } from '@/types/acervo'
+import type {
+  FiltrosAcervo,
+  FiltrosDocumentosSgd,
+  GuardarAcervoPayload,
+} from '@/types/acervo'
 import { acervoService } from './acervo.service'
 
 const CONFLICTO_ACERVO =
@@ -14,6 +18,25 @@ export function useAcervo(filtros: FiltrosAcervo = {}) {
     queryFn: ({ signal }) => acervoService.listar(filtros, signal),
     enabled: Boolean(filtros.dependencia_id),
     staleTime: 1000 * 30,
+  })
+}
+
+/**
+ * Documentos individuales del SGD de una fila-resumen de acervo digital.
+ * Solo se dispara cuando `habilitado` (la serie está expandida). Mantiene la
+ * página previa mientras pagina/busca para que la tabla no parpadee.
+ */
+export function useDocumentosSgd(
+  acervoId: number | null,
+  filtros: FiltrosDocumentosSgd = {},
+  habilitado = false,
+) {
+  return useQuery({
+    queryKey: ['acervo-documentos-sgd', acervoId, filtros],
+    queryFn: ({ signal }) => acervoService.documentosSgd(acervoId as number, filtros, signal),
+    enabled: habilitado && Boolean(acervoId),
+    placeholderData: keepPreviousData,
+    staleTime: 1000 * 60,
   })
 }
 

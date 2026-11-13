@@ -49,3 +49,30 @@ export interface FiltrosAcervo {
   page?: number
 }
 
+/** Documento individual del SGD que respalda una fila-resumen de acervo digital. */
+export interface DocumentoSgd {
+  emi: string
+  numero_documento: string | null
+  asunto: string
+  fecha: string | null
+  folios: number | null
+  tiene_pdf: boolean
+  bytes_pdf: number
+}
+
+export interface DocumentosSgdResultado {
+  data: DocumentoSgd[]
+  meta: {
+    total: number
+    per_page: number
+    current_page: number
+    last_page: number
+  }
+}
+
+export interface FiltrosDocumentosSgd {
+  search?: string
+  page?: number
+  per_page?: number
+}
+

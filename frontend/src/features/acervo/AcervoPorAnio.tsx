@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import {
   CalendarRange,
   ChevronDown,
   ChevronRight,
+  FileSearch,
   FolderArchive,
   HardDrive,
   Pencil,
@@ -14,8 +15,15 @@ import { AsyncBoundary } from '@/components/ui/async-boundary'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
+import { cn } from '@/lib/utils'
 import { agruparAcervoPorAnio } from './agrupar-por-anio'
+import { DocumentosSgdPanel } from './DocumentosSgdPanel'
 import type { AcervoDocumental } from '@/types/acervo'
+
+/** Una fila digital de origen SGD puede desplegar sus documentos individuales. */
+function esExplorableSgd(item: AcervoDocumental): boolean {
+  return item.tipo === 'digital' && item.fuente === 'sgd'
+}
 
 interface AcervoPorAnioProps {
   series: AcervoDocumental[] | undefined
@@ -52,6 +60,7 @@ export function AcervoPorAnio({
 }: AcervoPorAnioProps) {
   const grupos = useMemo(() => agruparAcervoPorAnio(series ?? []), [series])
   const [colapsados, setColapsados] = useState<Set<string>>(new Set())
+  const [serieAbierta, setSerieAbierta] = useState<number | null>(null)
 
   const alternar = (etiqueta: string) =>
     setColapsados((prev) => {
@@ -60,6 +69,9 @@ export function AcervoPorAnio({
       else next.add(etiqueta)
       return next
     })
+
+  const alternarSerie = (id: number) =>
+    setSerieAbierta((prev) => (prev === id ? null : id))
 
   return (
     <AsyncBoundary
@@ -117,63 +129,114 @@ export function AcervoPorAnio({
                         </tr>
                       </thead>
                       <tbody>
-                        {grupo.series.map((item) => (
-                          <tr key={item.id} className="border-b border-border/50 last:border-0">
-                            <td className="px-4 py-2.5">
-                              {item.tipo === 'digital' ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-info-soft px-2 py-0.5 text-mini font-semibold text-info-fg">
-                                  <HardDrive className="h-3 w-3" />
-                                  Digital
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-mini font-semibold text-muted-foreground">
-                                  <FolderArchive className="h-3 w-3" />
-                                  Físico
-                                </span>
+                        {grupo.series.map((item) => {
+                          const explorable = esExplorableSgd(item)
+                          const abierta = serieAbierta === item.id
+                          return (
+                            <Fragment key={item.id}>
+                              <tr
+                                className={cn(
+                                  'border-b border-border/50 last:border-0',
+                                  explorable && 'cursor-pointer hover:bg-muted/40',
+                                  abierta && 'bg-muted/40',
+                                )}
+                                onClick={explorable ? () => alternarSerie(item.id) : undefined}
+                              >
+                                <td className="px-4 py-2.5">
+                                  {item.tipo === 'digital' ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-info-soft px-2 py-0.5 text-mini font-semibold text-info-fg">
+                                      <HardDrive className="h-3 w-3" />
+                                      Digital
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-mini font-semibold text-muted-foreground">
+                                      <FolderArchive className="h-3 w-3" />
+                                      Físico
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="max-w-xs px-4 py-2.5">
+                                  <div className="flex items-center gap-1.5">
+                                    {explorable &&
+                                      (abierta ? (
+                                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                      ) : (
+                                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                      ))}
+                                    <p className="truncate font-semibold text-foreground">
+                                      {item.serie_documental}
+                                    </p>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-2.5 text-muted-foreground">
+                                  {item.periodo ?? '-'}
+                                </td>
+                                <td className="px-4 py-2.5 font-medium text-foreground">
+                                  {item.cantidad_unidades} {item.unidad_conservacion}
+                                </td>
+                                <td className="hidden max-w-xs px-4 py-2.5 text-muted-foreground sm:table-cell">
+                                  <p className="truncate">{item.ubicacion ?? '-'}</p>
+                                </td>
+                                <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                                  <div className="flex items-center justify-end gap-1">
+                                    {explorable && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 gap-1 text-muted-foreground hover:text-foreground"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          alternarSerie(item.id)
+                                        }}
+                                      >
+                                        <FileSearch className="h-3.5 w-3.5" />
+                                        {abierta ? 'Ocultar' : 'Ver documentos'}
+                                      </Button>
+                                    )}
+                                    <Can permiso="anexos.registrar">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                        disabled={!esModificable}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          onEditar(item)
+                                        }}
+                                        aria-label="Editar serie"
+                                      >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                        disabled={!esModificable || eliminando}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          onEliminar(item)
+                                        }}
+                                        aria-label="Eliminar serie"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </Can>
+                                  </div>
+                                </td>
+                              </tr>
+                              {explorable && abierta && (
+                                <tr>
+                                  <td colSpan={6} className="p-0">
+                                    <DocumentosSgdPanel
+                                      acervoId={item.id}
+                                      serie={item.serie_documental}
+                                    />
+                                  </td>
+                                </tr>
                               )}
-                            </td>
-                            <td className="max-w-xs px-4 py-2.5">
-                              <p className="truncate font-semibold text-foreground">
-                                {item.serie_documental}
-                              </p>
-                            </td>
-                            <td className="px-4 py-2.5 text-muted-foreground">
-                              {item.periodo ?? '-'}
-                            </td>
-                            <td className="px-4 py-2.5 font-medium text-foreground">
-                              {item.cantidad_unidades} {item.unidad_conservacion}
-                            </td>
-                            <td className="hidden max-w-xs px-4 py-2.5 text-muted-foreground sm:table-cell">
-                              <p className="truncate">{item.ubicacion ?? '-'}</p>
-                            </td>
-                            <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                              <Can permiso="anexos.registrar">
-                                <div className="flex items-center justify-end gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                    disabled={!esModificable}
-                                    onClick={() => onEditar(item)}
-                                    aria-label="Editar serie"
-                                  >
-                                    <Pencil className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                    disabled={!esModificable || eliminando}
-                                    onClick={() => onEliminar(item)}
-                                    aria-label="Eliminar serie"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
-                              </Can>
-                            </td>
-                          </tr>
-                        ))}
+                            </Fragment>
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>

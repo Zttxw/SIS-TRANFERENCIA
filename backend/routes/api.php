@@ -96,6 +96,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('acervo')->group(function () {
         Route::get('/', [AcervoController::class, 'index'])->middleware('permiso:anexos.ver');
         Route::get('/pdf', [AcervoController::class, 'pdf'])->middleware('permiso:anexos.ver');
+        // Exploración en vivo de los documentos del SGD de una fila-resumen digital.
+        Route::get('/{id}/documentos', [AcervoController::class, 'documentosSgd'])
+            ->whereNumber('id')->middleware('permiso:anexos.ver');
+        Route::get('/{id}/documentos/{emi}/pdf', [AcervoController::class, 'documentoSgdPdf'])
+            ->whereNumber('id')->where('emi', '[0-9]+')->middleware('permiso:anexos.ver');
         Route::post('/', [AcervoController::class, 'store'])->middleware('permiso:anexos.registrar');
         Route::put('/{id}', [AcervoController::class, 'update'])->middleware('permiso:anexos.registrar');
         Route::delete('/{id}', [AcervoController::class, 'destroy'])->middleware('permiso:anexos.registrar');
