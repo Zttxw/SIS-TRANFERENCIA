@@ -29,11 +29,12 @@ import { DocumentosIndicadorModal } from '@/features/documentos/DocumentosIndica
 
 interface TableroOperativoViewProps {
   onSeleccionarDependencia: (id: number) => void
+  perfil?: 'ette' | 'etts' | 'general'
 }
 
 type FiltroEstado = 'todos' | 'consolidada' | 'remitida' | 'observada' | 'borrador'
 
-export function TableroOperativoView({ onSeleccionarDependencia }: TableroOperativoViewProps) {
+export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'general' }: TableroOperativoViewProps) {
   const { permisos } = useAuth()
   const { data: tablero, isLoading, error, refetch, isFetching } = useTableroOperativo()
 
@@ -127,7 +128,7 @@ export function TableroOperativoView({ onSeleccionarDependencia }: TableroOperat
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs border-b border-border pb-3">
         <div className="flex items-center gap-2 flex-wrap text-muted-foreground">
           <span className="font-semibold text-foreground uppercase tracking-tight">
-            Administración Institucional · ETTS
+            {perfil === 'ette' ? 'Comité ETTE · Monitoreo' : perfil === 'etts' ? 'Equipo ETTS · Revisión' : 'Administración institucional'}
           </span>
           <span className="text-muted-foreground">·</span>
           <span className="text-primary font-semibold">
@@ -160,10 +161,10 @@ export function TableroOperativoView({ onSeleccionarDependencia }: TableroOperat
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-            Monitoreo Institucional de Transferencia
+            {perfil === 'ette' ? 'Monitoreo de la transferencia' : perfil === 'etts' ? 'Revisión y consolidación de entregas' : 'Monitoreo Institucional de Transferencia'}
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Supervisión en tiempo real de los 107 centros de costo, verificación de anexos normativos y consolidación del pliego.
+            {perfil === 'ette' ? 'Avance de las oficinas, entregas pendientes y observaciones del proceso.' : perfil === 'etts' ? 'Priorice las entregas remitidas y observadas para su revisión.' : `Supervisión de ${metricas.total_dependencias} centros de costo y consolidación del pliego.`}
           </p>
         </div>
 
@@ -179,7 +180,9 @@ export function TableroOperativoView({ onSeleccionarDependencia }: TableroOperat
             <span>Actualizar</span>
           </Button>
 
-          <Link to="/organigrama">
+          {perfil === 'ette' && <Link to="/delegados"><Button size="sm" variant="outline">Gestionar equipo ETTE</Button></Link>}
+          {perfil === 'etts' && <Link to="/entregas"><Button size="sm" variant="outline">Bandeja de entregas</Button></Link>}
+          {perfil === 'general' && <Link to="/organigrama">
             <Button
               size="sm"
               className="h-8 text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white cursor-pointer"
@@ -187,7 +190,7 @@ export function TableroOperativoView({ onSeleccionarDependencia }: TableroOperat
               <FolderTree className="h-3.5 w-3.5" />
               <span>Ver Organigrama</span>
             </Button>
-          </Link>
+          </Link>}
         </div>
       </div>
 

@@ -9,6 +9,7 @@ import { useConfirm } from '@/components/ui/confirm-dialog'
 import { DataTable } from '@/components/ui/data-table'
 import { Dialog } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { notificarError } from '@/lib/api-errors'
 import { listarDependencias } from '@/features/organization/dependencias.service'
 import { delegadosService, type CuentaDelegado } from './delegados.service'
@@ -18,6 +19,12 @@ export function DelegadosPage() {
   const confirmar = useConfirm()
   const cliente = useQueryClient()
   const [abierto, setAbierto] = useState(false)
+  const [altaAbierta, setAltaAbierta] = useState(false)
+  const [dniNuevo, setDniNuevo] = useState('')
+  const [nombreNuevo, setNombreNuevo] = useState('')
+  const [correoNuevo, setCorreoNuevo] = useState('')
+  const [claveNueva, setClaveNueva] = useState('')
+  const [dependenciaNueva, setDependenciaNueva] = useState<number | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const buscar = useDeferredValue(busqueda)
   const [cuenta, setCuenta] = useState<CuentaDelegado | null>(null)
@@ -30,7 +37,7 @@ export function DelegadosPage() {
   const catalogo = useQuery({
     queryKey: ['dependencias', 'catalogo'],
     queryFn: () => listarDependencias(),
-    enabled: permitido && abierto,
+    enabled: permitido && (abierto || altaAbierta),
   })
   const candidatos = useQuery({
     queryKey: ['delegados', 'candidatos', buscar],
@@ -56,6 +63,19 @@ export function DelegadosPage() {
     },
     onError: (error) => notificarError(error),
   })
+  const crearExterno = useMutation({
+    mutationFn: () => delegadosService.crearExterno({
+      dni: dniNuevo, name: nombreNuevo.trim(), email: correoNuevo.trim() || undefined,
+      password: claveNueva, dependencia_id: dependenciaNueva!,
+    }),
+    onSuccess: async () => {
+      await cliente.invalidateQueries({ queryKey: ['delegados'] })
+      setAltaAbierta(false)
+      setDniNuevo(''); setNombreNuevo(''); setCorreoNuevo(''); setClaveNueva(''); setDependenciaNueva(null)
+      toast.success('Cuenta externa creada y designada.')
+    },
+    onError: (error) => notificarError(error),
+  })
   const revocar = useMutation({
     mutationFn: delegadosService.revocar,
     onSuccess: async () => {
@@ -76,6 +96,8 @@ export function DelegadosPage() {
     <div className="mx-auto max-w-6xl space-y-5">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Delegados ETTE</h1>
+        <div className="flex flex-wrap gap-2">
+        <Button variant="outline" onClick={() => setAltaAbierta(true)}>Crear cuenta externa</Button>
         <Button
           onClick={() => {
             setCuenta(null)
@@ -87,6 +109,7 @@ export function DelegadosPage() {
         >
           Designar delegado
         </Button>
+        </div>
       </div>
       <DataTable
         filas={consulta.data}
@@ -213,6 +236,22 @@ export function DelegadosPage() {
               Designar
             </Button>
           </div>
+        </form>
+      </Dialog>
+      <Dialog open={altaAbierta} onClose={() => { if (!crearExterno.isPending) setAltaAbierta(false) }} title="Crear delegado externo">
+        <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); if (dependenciaNueva) crearExterno.mutate() }}>
+          <p className="text-sm text-muted-foreground">La cuenta se designará como delegado ETTE solo para la oficina seleccionada.</p>
+          <Label htmlFor="externo-dni">DNI</Label>
+          <Input id="externo-dni" value={dniNuevo} onChange={(event) => setDniNuevo(event.target.value.replace(/\D/g, ''))} maxLength={15} required />
+          <Label htmlFor="externo-nombre">Nombre completo</Label>
+          <Input id="externo-nombre" value={nombreNuevo} onChange={(event) => setNombreNuevo(event.target.value)} required />
+          <Label htmlFor="externo-correo">Correo (opcional)</Label>
+          <Input id="externo-correo" type="email" value={correoNuevo} onChange={(event) => setCorreoNuevo(event.target.value)} />
+          <Label htmlFor="externo-clave">Contraseña inicial</Label>
+          <Input id="externo-clave" type="password" value={claveNueva} onChange={(event) => setClaveNueva(event.target.value)} minLength={8} required />
+          <Label htmlFor="externo-dependencia">Oficina</Label>
+          <Combobox id="externo-dependencia" value={dependenciaNueva} onChange={setDependenciaNueva} loading={catalogo.isLoading} options={(catalogo.data ?? []).map((d) => ({ value: d.id, label: d.nombre, descripcion: d.codigo }))} />
+          <div className="flex justify-end gap-2 pt-2"><Button type="button" variant="outline" onClick={() => setAltaAbierta(false)}>Cancelar</Button><Button type="submit" loading={crearExterno.isPending} disabled={!/^[0-9]{8,15}$/.test(dniNuevo) || !nombreNuevo.trim() || claveNueva.length < 8 || !dependenciaNueva}>Crear y designar</Button></div>
         </form>
       </Dialog>
     </div>
