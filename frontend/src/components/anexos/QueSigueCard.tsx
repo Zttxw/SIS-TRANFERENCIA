@@ -9,6 +9,8 @@ import type { EstadoEntrega } from '@/types/transferencia'
 import { firmaperuService } from '@/features/firmaperu/firmaperu.service'
 import type { TipoDocumentoFirma } from '@/features/firmaperu/firmaperu.types'
 import { useAuth } from '@/auth/hooks'
+import { puedeConsultarActa } from '@/auth/sesion-runtime'
+import { useRequisitosRemision } from '@/features/firmaperu/use-requisitos-remision'
 
 /** Un anexo pendiente candidato a sugerencia (subconjunto de lo que ya calcula el dashboard). */
 export interface AnexoPendiente {
@@ -49,11 +51,12 @@ export function QueSigueCard({
   className,
   dependenciaId,
 }: QueSigueCardProps) {
-  const { tiene } = useAuth()
+  const { tiene, permisos } = useAuth()
+  const { data: requisitos } = useRequisitosRemision(dependenciaId, tiene('entregas.remitir'))
   const puedeFirmar = tiene('anexos.registrar') || tiene('actas.generar') || tiene('firmas.firmar')
   const [oculto, setOculto] = useState(false)
   const tipos: TipoDocumentoFirma[] = ['anexo02', 'anexo03', 'anexo04', 'anexo05', 'anexo06']
-  if (estadoEntrega === 'consolidada') tipos.push('anexo07')
+  if (puedeConsultarActa(permisos)) tipos.push('anexo07')
   const firmas = useQueries({
     queries: tipos.map((tipo) => ({
       queryKey: ['firmaperu', tipo, dependenciaId],
@@ -62,9 +65,13 @@ export function QueSigueCard({
       retry: false,
     })),
   })
-  const hayFirmaPendiente = puedeFirmar && firmas.some(({ data }) => data?.borrador_generado && (!data.firmado || data.vigente === false))
+  const informacionCompleta = anexos.every((anexo) => anexo.completado)
+  const hayFirmaPendiente = puedeFirmar && (
+    (informacionCompleta && tiene('entregas.remitir') && !requisitos?.puede_remitir)
+    || firmas.some(({ data }) => data && (informacionCompleta || data.borrador_generado) && (!data.firmado || data.vigente === false))
+  )
 
-  const sugerencia = resolverSugerencia(estadoEntrega, esEditable, anexos, rutaActa, hayFirmaPendiente)
+  const sugerencia = resolverSugerencia(estadoEntrega, esEditable, anexos, rutaActa, hayFirmaPendiente, tiene('actas.generar'), tiene('entregas.remitir'))
   if (!sugerencia || oculto) return null
 
   return (
@@ -114,6 +121,8 @@ function resolverSugerencia(
   anexos: AnexoPendiente[],
   rutaActa: string,
   hayFirmaPendiente: boolean,
+  puedeEmitirActa: boolean,
+  puedeRemitir: boolean,
 ): Sugerencia | null {
   // Entrega devuelta con observaciones: lo urgente es subsanar.
   if (estado === 'observada') {
@@ -134,14 +143,14 @@ function resolverSugerencia(
   if (hayFirmaPendiente) {
     return {
       titulo: 'Firme los documentos de la entrega',
-      descripcion: 'Tiene PDF generados pendientes de firma. Abra el detalle de cada documento en «Mi entrega».',
-      ruta: '/#anexos-entrega',
-      cta: 'Ir a los documentos',
+      descripcion: 'Visualice, genere y firme los anexos en «PDF y firma» antes de remitir.',
+      ruta: '/pdf-firma',
+      cta: 'Ir a PDF y firma',
     }
   }
 
   // Consolidada: emitir el acta de cierre.
-  if (estado === 'consolidada') {
+  if (estado === 'consolidada' && puedeEmitirActa) {
     return {
       titulo: 'Emita el Acta de Transferencia',
       descripcion:
@@ -162,6 +171,7 @@ function resolverSugerencia(
         cta: `Ir a ${pendiente.nombre}`,
       }
     }
+    if (!puedeRemitir) return null
     return {
       titulo: 'Remita su entrega',
       descripcion:

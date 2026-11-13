@@ -12,6 +12,7 @@ export interface Personal {
   situacion_laboral: string | null
   observaciones: string | null
   validado: boolean
+  validado_por?: { id: number; name: string } | null
   fuente: string
   created_at: string
   updated_at: string

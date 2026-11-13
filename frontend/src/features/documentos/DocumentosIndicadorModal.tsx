@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Dialog } from '@/components/ui/dialog'
 import { DataTable } from '@/components/ui/data-table'
 import { documentosService } from './documentos.service'
+import { nombreEstadoDocumento } from './estados-documentos'
 
 interface Props {
   dependenciaId: number
@@ -32,7 +33,7 @@ export function DocumentosIndicadorModal({
     <Dialog
       open
       onClose={onClose}
-      title={estado ? `Documentos · ${estado}` : 'Documentos del indicador'}
+      title={estado ? `Documentos · ${nombreEstadoDocumento(estado)}` : 'Documentos pendientes de la oficina'}
       description={
         consulta.data
           ? `${consulta.data.total} documentos de la dependencia seleccionada.`
@@ -72,7 +73,7 @@ export function DocumentosIndicadorModal({
             {
               id: 'estado',
               header: 'Estado',
-              cell: (doc) => doc.estado_atencion ?? 'Sin estado',
+              cell: (doc) => nombreEstadoDocumento(doc.estado_atencion),
             },
             {
               id: 'original',

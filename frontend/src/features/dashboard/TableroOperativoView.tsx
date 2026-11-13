@@ -18,6 +18,8 @@ import {
 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
+import { useAuth } from '@/auth/hooks'
+import { puedeConsultarActa } from '@/auth/sesion-runtime'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -32,6 +34,7 @@ interface TableroOperativoViewProps {
 type FiltroEstado = 'todos' | 'consolidada' | 'remitida' | 'observada' | 'borrador'
 
 export function TableroOperativoView({ onSeleccionarDependencia }: TableroOperativoViewProps) {
+  const { permisos } = useAuth()
   const { data: tablero, isLoading, error, refetch, isFetching } = useTableroOperativo()
 
   const [busqueda, setBusqueda] = useState('')
@@ -636,7 +639,7 @@ export function TableroOperativoView({ onSeleccionarDependencia }: TableroOperat
                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
               </Link>
 
-              <Link
+              {puedeConsultarActa(permisos) && <Link
                 to="/acta"
                 className="flex items-center justify-between p-2 rounded-lg hover:bg-muted transition-colors text-foreground hover:text-primary font-medium"
               >
@@ -645,7 +648,7 @@ export function TableroOperativoView({ onSeleccionarDependencia }: TableroOperat
                   <span>Actas de Transferencia y Cierre</span>
                 </span>
                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
-              </Link>
+              </Link>}
             </CardContent>
           </Card>
         </div>

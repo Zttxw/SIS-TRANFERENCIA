@@ -9,6 +9,7 @@ use App\Modules\Auth\Models\AsignacionRol;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Modules\Transferencia\Services\FirmaperuRegistroService;
 use App\Support\Enums\EstadoEntrega;
 use App\Support\Enums\Rol;
 use Database\Seeders\RolesPermisosSeeder;
@@ -33,6 +34,9 @@ class CierreHaciaEttsTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesPermisosSeeder::class);
+        $this->partialMock(FirmaperuRegistroService::class, function ($mock): void {
+            $mock->shouldReceive('requisitosRemision')->andReturn(['puede_remitir' => true, 'firmados' => 6, 'pendientes' => []]);
+        });
         $this->proceso = ProcesoTransferencia::factory()->create();
         // Dependencia de primer nivel: sin padre.
         $this->primerNivel = Dependencia::factory()->create([

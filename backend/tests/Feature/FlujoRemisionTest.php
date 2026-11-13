@@ -9,6 +9,7 @@ use App\Modules\Auth\Models\AsignacionRol;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Modules\Transferencia\Services\FirmaperuRegistroService;
 use App\Support\Enums\EstadoEntrega;
 use App\Support\Enums\Rol;
 use Database\Seeders\RolesPermisosSeeder;
@@ -35,6 +36,9 @@ class FlujoRemisionTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesPermisosSeeder::class);
+        $this->partialMock(FirmaperuRegistroService::class, function ($mock): void {
+            $mock->shouldReceive('requisitosRemision')->andReturn(['puede_remitir' => true, 'firmados' => 6, 'pendientes' => []]);
+        });
         $this->proceso = ProcesoTransferencia::factory()->create();
         $this->padre = Dependencia::factory()->create([
             'proceso_transferencia_id' => $this->proceso->id,
@@ -54,6 +58,17 @@ class FlujoRemisionTest extends TestCase
         Sanctum::actingAs($usuario);
 
         return $usuario;
+    }
+
+    public function test_servidor_sin_rol_de_responsable_no_puede_remitir_su_oficina(): void
+    {
+        $this->actuarComo(Rol::SERVIDOR, $this->hija);
+
+        $this->postJson('/api/transferencia/remitir', [
+            'dependencia_id' => $this->hija->id,
+        ])->assertForbidden();
+
+        $this->assertDatabaseMissing('entregas', ['dependencia_id' => $this->hija->id]);
     }
 
     public function test_encargado_remite_su_entrega_al_padre(): void

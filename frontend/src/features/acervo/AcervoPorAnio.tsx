@@ -3,18 +3,13 @@ import {
   CalendarRange,
   ChevronDown,
   ChevronRight,
-  FolderArchive,
-  HardDrive,
-  Pencil,
-  Trash2,
 } from 'lucide-react'
 
-import { Can } from '@/auth/Can'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
-import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { agruparAcervoPorAnio } from './agrupar-por-anio'
+import { AcervoCabecera, AcervoRegistro } from './AcervoRegistro'
 import type { AcervoDocumental } from '@/types/acervo'
 
 interface AcervoPorAnioProps {
@@ -86,7 +81,7 @@ export function AcervoPorAnio({
                 <button
                   type="button"
                   onClick={() => alternar(grupo.etiqueta)}
-                  className="flex w-full items-center justify-between gap-2 bg-muted/30 px-4 py-2.5 text-left transition-colors hover:bg-muted/50"
+                  className="flex w-full items-center justify-between gap-2 border-b bg-muted/30 px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
                   aria-expanded={abierto}
                 >
                   <span className="flex items-center gap-2 font-semibold text-foreground">
@@ -104,79 +99,21 @@ export function AcervoPorAnio({
                 </button>
 
                 {abierto && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse text-sm">
-                      <thead>
-                        <tr className="border-b text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          <th className="px-4 py-2 font-medium">Formato</th>
-                          <th className="px-4 py-2 font-medium">Serie / Tipología</th>
-                          <th className="px-4 py-2 font-medium">Periodo</th>
-                          <th className="px-4 py-2 font-medium">Cantidad</th>
-                          <th className="hidden px-4 py-2 font-medium sm:table-cell">Ubicación</th>
-                          <th className="px-4 py-2 text-right font-medium">Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {grupo.series.map((item) => (
-                          <tr key={item.id} className="border-b border-border/50 last:border-0">
-                            <td className="px-4 py-2.5">
-                              {item.tipo === 'digital' ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-info-soft px-2 py-0.5 text-mini font-semibold text-info-fg">
-                                  <HardDrive className="h-3 w-3" />
-                                  Digital
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-mini font-semibold text-muted-foreground">
-                                  <FolderArchive className="h-3 w-3" />
-                                  Físico
-                                </span>
-                              )}
-                            </td>
-                            <td className="max-w-xs px-4 py-2.5">
-                              <p className="truncate font-semibold text-foreground">
-                                {item.serie_documental}
-                              </p>
-                            </td>
-                            <td className="px-4 py-2.5 text-muted-foreground">
-                              {item.periodo ?? '-'}
-                            </td>
-                            <td className="px-4 py-2.5 font-medium text-foreground">
-                              {item.cantidad_unidades} {item.unidad_conservacion}
-                            </td>
-                            <td className="hidden max-w-xs px-4 py-2.5 text-muted-foreground sm:table-cell">
-                              <p className="truncate">{item.ubicacion ?? '-'}</p>
-                            </td>
-                            <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                              <Can permiso="anexos.registrar">
-                                <div className="flex items-center justify-end gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                    disabled={!esModificable}
-                                    onClick={() => onEditar(item)}
-                                    aria-label="Editar serie"
-                                  >
-                                    <Pencil className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                    disabled={!esModificable || eliminando}
-                                    onClick={() => onEliminar(item)}
-                                    aria-label="Eliminar serie"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
-                              </Can>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <table className="w-full table-fixed border-collapse text-left text-xs">
+                    <AcervoCabecera />
+                    <tbody className="divide-y">
+                    {grupo.series.map((registro) => (
+                      <AcervoRegistro
+                        key={registro.id}
+                        registro={registro}
+                        esModificable={esModificable}
+                        eliminando={eliminando}
+                        onEditar={onEditar}
+                        onEliminar={onEliminar}
+                      />
+                    ))}
+                    </tbody>
+                  </table>
                 )}
               </Card>
             )

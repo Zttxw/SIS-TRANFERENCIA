@@ -11,7 +11,9 @@ use App\Support\Concerns\HasFuenteDato;
 use App\Support\Concerns\TieneObservaciones;
 use App\Support\Enums\FuenteDato;
 use App\Support\Models\BaseModel;
+use App\Support\Models\MovimientoAuditoria;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -50,6 +52,14 @@ class DocumentoPendiente extends BaseModel
         return [
             'fecha_documento' => 'date',
         ];
+    }
+
+    /** @return MorphOne<MovimientoAuditoria, $this> */
+    public function registroAuditoria(): MorphOne
+    {
+        return $this->morphOne(MovimientoAuditoria::class, 'auditable')
+            ->where('evento', 'creado')
+            ->select(['id', 'auditable_id', 'auditable_type', 'user_id', 'created_at']);
     }
 
     /** @return BelongsTo<Dependencia, $this> */

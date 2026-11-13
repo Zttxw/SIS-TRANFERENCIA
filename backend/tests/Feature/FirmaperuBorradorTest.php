@@ -121,7 +121,7 @@ class FirmaperuBorradorTest extends TestCase
             ->assertCreated();
         $this->get('/api/firmaperu/previsualizar?tipo_documento=anexo03&dependencia_id='.$dep->id)
             ->assertOk()->assertHeader('Content-Type', 'application/pdf')
-            ->assertHeader('Content-Disposition', 'inline; filename="Borrador-anexo03.pdf"');
+            ->assertHeader('Content-Disposition', 'inline; filename="Generado-anexo03.pdf"');
     }
 
     public function test_firma_el_mismo_pdf_del_borrador_revisado(): void

@@ -36,10 +36,11 @@ Route::prefix('firmaperu')->middleware('throttle:60,1')->group(function () {
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('firmaperu')->group(function () {
-        Route::post('/preparar', [FirmaperuController::class, 'preparar'])->middleware('permiso:anexos.registrar,firmas.firmar,actas.generar')->middleware('throttle:10,1');
-        Route::post('/generar-borrador', [FirmaperuController::class, 'generarBorrador'])->middleware('permiso:anexos.registrar,actas.generar')->middleware('throttle:20,1');
+        Route::post('/preparar', [FirmaperuController::class, 'preparar'])->middleware('permiso:anexos.registrar,firmas.firmar,actas.generar')->middleware('throttle:10,1,firma-preparar');
+        Route::post('/generar-borrador', [FirmaperuController::class, 'generarBorrador'])->middleware('permiso:anexos.registrar,actas.generar')->middleware('throttle:20,1,firma-generar');
         Route::middleware('permiso:anexos.ver')->group(function () {
-            Route::get('/previsualizar', [FirmaperuController::class, 'previsualizar'])->middleware('throttle:20,1');
+            Route::get('/previsualizar', [FirmaperuController::class, 'previsualizar'])->middleware('throttle:20,1,firma-visualizar');
+            Route::get('/requisitos-remision/{dependenciaId}', [FirmaperuController::class, 'requisitosRemision'])->whereNumber('dependenciaId');
             Route::get('/sesiones/{id}', [FirmaperuController::class, 'sesion'])->whereUuid('id');
             Route::get('/estado/{tipo}/{dependenciaId}', [FirmaperuController::class, 'estado'])->whereNumber('dependenciaId');
             Route::get('/documentos/{id}/descargar', [FirmaperuController::class, 'descargar'])->whereUuid('id');

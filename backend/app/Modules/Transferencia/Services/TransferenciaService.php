@@ -313,14 +313,18 @@ class TransferenciaService
             CronogramaService::OPERACION_REMISION,
         );
 
-        // B3b (D-02): gate de remisión. Si el proceso lo exige, el acta (Anexo
-        // 07) debe tener su firma OBLIGATORIA del responsable del centro de costo
-        // antes de remitir. Configurable por proceso y APAGADO por defecto: el
-        // flujo actual sigue vigente mientras no haya proveedor real de firma.
         $this->asegurarVersionCorreccion($procesoId, $dep->id);
-        $this->exigirActaFirmada($procesoId, $dep->id, $usuario);
 
         return DB::transaction(function () use ($dep, $procesoId, $usuario, $comentario) {
+            Dependencia::whereKey($dep->id)->lockForUpdate()->firstOrFail();
+            $requisitos = app(FirmaperuRegistroService::class)->requisitosRemision($dep->id, $usuario);
+            if (! $requisitos['puede_remitir']) {
+                throw new HttpResponseException(ApiResponse::error(
+                    'Genere los PDF y obtenga la firma vigente del jefe en los anexos 02 al 07 antes de remitir. Pendientes: '
+                        .implode(', ', array_map(fn (string $tipo): string => str_replace('anexo', 'Anexo ', $tipo), $requisitos['pendientes'])),
+                    409,
+                ));
+            }
             $entrega = Entrega::where('proceso_transferencia_id', $procesoId)
                 ->where('dependencia_id', $dep->id)
                 ->first();
@@ -471,13 +475,20 @@ class TransferenciaService
             $acta->refresh();
         }
 
+        $intervinientes = $acta->intervinientes ?? [];
+        $intervinientes['titular_saliente'] = $this->completarInterviniente(
+            $intervinientes['titular_saliente'] ?? null, $this->responsableActa($dep),
+        );
+        if ($dep->padre) {
+            $intervinientes['responsable_superior'] = $this->completarInterviniente(
+                $intervinientes['responsable_superior'] ?? null, $this->responsableActa($dep->padre),
+            );
+        }
+
         $acta->fill([
             'numero_acta' => $acta->numero_acta ?? 'ACTA-'.Carbon::now()->year.'-'.str_replace('.', '', (string) $dep->codigo),
             'fecha_acta' => $acta->fecha_acta ?? Carbon::now()->toDateString(),
-            'intervinientes' => $acta->intervinientes ?? [
-                'titular_saliente' => null,
-                'titular_entrante' => null,
-            ],
+            'intervinientes' => $intervinientes,
             'anexos_entregados' => $anexos,
             'estado' => $acta->estado === 'suscrita' ? 'suscrita' : 'generada',
             'declara' => $declara,
@@ -487,7 +498,42 @@ class TransferenciaService
         $acta->save();
         $this->asegurarVersionCorreccion($procesoId, $dep->id);
 
-        return $acta->refresh()->load(['evidencias.subidoPor', 'generadaPor', 'dependencia']);
+        return $acta->refresh()->load(['evidencias.subidoPor', 'generadaPor', 'dependencia.padre:id,codigo,nombre']);
+    }
+
+    /** @return array{nombre: string, dni: string, cargo: string} */
+    private function responsableActa(Dependencia $dependencia): array
+    {
+        $cuenta = User::where('activo', true)->whereHas('asignacionesRol', fn ($q) => $q
+            ->where('rol', Rol::RESPONSABLE_CENTRO_COSTO->value)
+            ->where('proceso_transferencia_id', $dependencia->proceso_transferencia_id)
+            ->where('dependencia_id', $dependencia->id))->orderBy('id')->first();
+        $servidor = $cuenta
+            ? $dependencia->servidores()->where('proceso_transferencia_id', $dependencia->proceso_transferencia_id)->where('dni', $cuenta->dni)->first()
+            : $dependencia->encargado;
+
+        return [
+            'nombre' => $cuenta?->name ?: ($servidor?->nombreCompleto() ?? ''),
+            'dni' => $cuenta?->dni ?: ($servidor?->dni ?? ''),
+            'cargo' => $servidor?->cargo ?? '',
+        ];
+    }
+
+    /** @param array{nombre: string, dni: string, cargo: string} $automatico
+     * @return array{nombre: string, dni: string, cargo: string}
+     */
+    private function completarInterviniente(mixed $existente, array $automatico): array
+    {
+        if (is_string($existente)) {
+            $existente = ['nombre' => $existente];
+        }
+        foreach (['nombre', 'dni', 'cargo'] as $campo) {
+            if (is_array($existente) && trim((string) ($existente[$campo] ?? '')) !== '') {
+                $automatico[$campo] = (string) $existente[$campo];
+            }
+        }
+
+        return $automatico;
     }
 
     /** La corrección obtiene versión antes de firmar, incluso para entregas observadas anteriores a esta integración. */
@@ -548,53 +594,6 @@ class TransferenciaService
             'estado' => 'generada',
             'ruta_pdf_suscrito' => null,
         ])->save();
-    }
-
-    /**
-     * B3b (D-02): gate de remisión. Cuando el proceso tiene encendido
-     * `exige_firma_acta`, remitir exige que el acta (Anexo 07) de la dependencia
-     * exista y tenga al menos una firma OBLIGATORIA en estado FIRMADA sobre su
-     * versión vigente (la del responsable del centro de costo). Si falta, 409.
-     *
-     * Por defecto el gate está APAGADO: no bloquea el flujo actual ni presupone
-     * un proveedor de firma. No impone orden entre firmantes (un solo obligatorio).
-     */
-    private function exigirActaFirmada(int $procesoId, int $dependenciaId, User $usuario): void
-    {
-        $proceso = ProcesoTransferencia::find($procesoId);
-        if ($proceso === null || ! $proceso->exige_firma_acta) {
-            return;
-        }
-
-        $acta = ActaTransferencia::where('proceso_transferencia_id', $procesoId)
-            ->where('dependencia_id', $dependenciaId)
-            ->first();
-
-        if ($acta !== null) {
-            app(FirmaperuRegistroService::class)->documento($usuario, 'anexo07', $dependenciaId);
-            $acta->refresh();
-        }
-
-        $firmada = $acta !== null && FirmaAnexo::query()
-            ->where('firmable_type', $acta->getMorphClass())
-            ->where('firmable_id', $acta->id)
-            ->where('version', $acta->version ?? 1)
-            ->whereHas('firmante', fn ($q) => $q->where('activo', true)->whereHas('asignacionesRol', fn ($roles) => $roles
-                ->where('rol', Rol::RESPONSABLE_CENTRO_COSTO->value)
-                ->where('proceso_transferencia_id', $procesoId)->where('dependencia_id', $dependenciaId)))
-            ->obligatorias()
-            ->validas()
-            ->get()->contains(fn (FirmaAnexo $firma): bool => $firma->firma_sesion_id === null
-                || ($firma->sesion?->estado === 'firmada' && app(FirmaperuRegistroService::class)->vigente($firma->sesion)));
-
-        if (! $firmada) {
-            throw new HttpResponseException(
-                ApiResponse::error(
-                    'El acta (Anexo 07) debe estar firmada por el responsable antes de remitir.',
-                    409,
-                )
-            );
-        }
     }
 
     /**

@@ -1,5 +1,12 @@
 import type { AcervoDocumental } from '@/types/acervo'
 
+export function rangoAniosAcervo(serie: AcervoDocumental): { desde: number | null; hasta: number | null } {
+  const anios = serie.periodo?.match(/\b(?:19|20)\d{2}\b/g) ?? []
+  const desde = serie.desde_anio ?? serie.anio ?? (anios[0] ? Number(anios[0]) : null)
+  const hasta = serie.hasta_anio ?? (anios[1] ? Number(anios[1]) : desde)
+  return { desde, hasta }
+}
+
 export interface GrupoAnio {
   /** Año de agrupación, o null para «sin año declarado». */
   anio: number | null

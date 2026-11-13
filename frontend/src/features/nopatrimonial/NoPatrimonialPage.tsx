@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 
 import { useDependenciaActiva } from '@/auth/hooks'
 import { AnexoCrudPage } from '@/components/anexos/AnexoCrudPage'
+import { UsuarioRegistro } from '@/components/anexos/UsuarioRegistro'
 import type { ColumnaTabla } from '@/components/ui/data-table'
 import { aplicarErroresAFormulario } from '@/lib/api-errors'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
@@ -33,6 +34,11 @@ function EstadoBadge({ estado }: { estado: string | null }) {
 }
 
 const columnas: ColumnaTabla<BienNoPatrimonial>[] = [
+  {
+    id: 'registrado_por',
+    header: 'Registrado por',
+    cell: (bien) => <UsuarioRegistro usuario={bien.registrado_por} fecha={bien.created_at} fuente={bien.fuente} />,
+  },
   {
     id: 'denominacion',
     header: 'Denominación del Activo',

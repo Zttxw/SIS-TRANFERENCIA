@@ -22,13 +22,7 @@ class PdfService
      */
     public function descargar(string $vista, array $datos, string $nombreArchivo, string $tamano = 'a4', string $orientacion = 'portrait'): StreamedResponse
     {
-        $pdf = Pdf::loadView($vista, $datos)
-            ->setPaper($tamano, $orientacion)
-            ->setOption('isRemoteEnabled', false)
-            ->setOption('isHtml5ParserEnabled', true)
-            ->setOption('defaultFont', 'DejaVu Sans');
-
-        $contenido = $pdf->output();
+        $contenido = $this->binario($vista, $datos, $tamano, $orientacion);
 
         return response()->streamDownload(
             function () use ($contenido): void {
@@ -50,11 +44,17 @@ class PdfService
      */
     public function binario(string $vista, array $datos, string $tamano = 'a4', string $orientacion = 'portrait'): string
     {
-        return Pdf::loadView($vista, $datos)
+        $pdf = Pdf::loadView($vista, $datos)
             ->setPaper($tamano, $orientacion)
             ->setOption('isRemoteEnabled', false)
             ->setOption('isHtml5ParserEnabled', true)
-            ->setOption('defaultFont', 'DejaVu Sans')
-            ->output();
+            ->setOption('defaultFont', 'DejaVu Sans');
+        $pdf->render();
+        $canvas = $pdf->getDomPDF()->getCanvas();
+        $fuente = $pdf->getDomPDF()->getFontMetrics()->getFont('DejaVu Sans', 'normal');
+        $canvas->page_text($canvas->get_width() - 100, $canvas->get_height() - 30,
+            'Pág. {PAGE_NUM} / {PAGE_COUNT}', $fuente, 6, [0.42, 0.45, 0.5]);
+
+        return $pdf->output();
     }
 }

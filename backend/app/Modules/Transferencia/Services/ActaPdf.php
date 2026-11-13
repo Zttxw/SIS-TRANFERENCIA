@@ -71,13 +71,13 @@ class ActaPdf
                 'dependencia' => $acta->dependencia?->nombre ?? '',
                 'nivel' => $acta->dependencia?->nivel ?? '',
                 'unidad_superior' => $acta->dependencia?->parent_id
-                    ? 'Unidad orgánica inmediata superior'
+                    ? ($acta->dependencia?->padre?->nombre ?? 'Unidad orgánica inmediata superior')
                     : 'Alcaldía / ETTS institucional',
                 'dia' => $fecha->day,
                 'mes' => self::MESES[$fecha->month] ?? '',
                 'anio' => $fecha->year,
                 'entrega' => $this->interviniente($intervinientes, 'titular_saliente'),
-                'recepcion' => $this->interviniente($intervinientes, 'titular_entrante', 'coordinador_ette'),
+                'recepcion' => $this->interviniente($intervinientes, 'titular_entrante', 'coordinador_ette', 'responsable_superior'),
                 'anexos' => $this->anexos($acta->anexos_entregados ?? []),
                 'observaciones' => $acta->observaciones,
             ],

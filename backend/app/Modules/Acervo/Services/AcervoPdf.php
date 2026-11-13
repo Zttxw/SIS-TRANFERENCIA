@@ -13,8 +13,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * PDF oficial del Anexo 03 (Acervo Documentario), agrupado por año como el
- * formato de la directiva. Deriva el año de cada serie sin tocar backend
- * (`anio` → `desde_anio` → «Sin año»), igual que la vista «Por año» del frontend.
+ * formato de la directiva. Recupera también los años de los periodos de texto
+ * anteriores, igual que la vista «Por año» del frontend.
  */
 class AcervoPdf
 {
@@ -65,13 +65,17 @@ class AcervoPdf
         $grupos = [];
 
         foreach ($series as $serie) {
-            $anio = $serie->anio ?? $serie->desde_anio;
+            preg_match_all('/\b(?:19|20)\d{2}\b/', $serie->periodo ?? '', $coincidencias);
+            $anios = $coincidencias[0];
+            $desde = $serie->desde_anio ?? $serie->anio ?? (isset($anios[0]) ? (int) $anios[0] : null);
+            $hasta = $serie->hasta_anio ?? (isset($anios[1]) ? (int) $anios[1] : $desde);
+            $anio = $serie->anio ?? $desde;
             $clave = $anio ? (string) $anio : 'Sin año';
 
             $grupos[$clave][] = [
                 'serie_documental' => $serie->serie_documental,
-                'desde_anio' => $serie->desde_anio,
-                'hasta_anio' => $serie->hasta_anio,
+                'desde_anio' => $desde,
+                'hasta_anio' => $hasta,
                 'cantidad_unidades' => $serie->cantidad_unidades,
                 'unidad_conservacion' => $serie->unidad_conservacion,
                 'ubicacion' => $serie->ubicacion,

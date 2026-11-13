@@ -4,9 +4,12 @@ export interface AcervoDocumental {
   id: number
   proceso_transferencia_id: number
   dependencia_id: number
-  registrado_por_id: number
+  registrado_por_id: number | null
+  registrado_por?: { id: number; name: string } | null
   tipo: TipoAcervo
   serie_documental: string
+  identificacion_archivador: string | null
+  total_folios: number | null
   anio: number | null
   desde_anio: number | null
   hasta_anio: number | null
@@ -27,6 +30,8 @@ export interface AcervoDocumental {
 }
 
 export interface GuardarAcervoPayload {
+  identificacion_archivador?: string | null
+  total_folios?: number | null
   dependencia_id: number
   tipo: TipoAcervo
   serie_documental: string

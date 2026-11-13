@@ -27,6 +27,7 @@ export const router = createBrowserRouter([
           { index: true, lazy: () => import('@/features/dashboard/DashboardPage').then(({ DashboardPage }) => ({ Component: DashboardPage })) },
           { path: 'organigrama', lazy: () => import('@/features/organization/EstructuraOrganicaPage').then(({ EstructuraOrganicaPage }) => ({ Component: EstructuraOrganicaPage })) },
           { path: 'documentos', lazy: () => import('@/features/documentos/DocumentosPage').then(({ DocumentosPage }) => ({ Component: DocumentosPage })) },
+          { path: 'pdf-firma', lazy: () => import('@/features/firmaperu/PdfFirmaPage').then(({ PdfFirmaPage }) => ({ Component: PdfFirmaPage })) },
           { path: 'gestion', lazy: () => import('@/features/gestion/InformeGestionPage').then(({ InformeGestionPage }) => ({ Component: InformeGestionPage })) },
           { path: 'acervo', lazy: () => import('@/features/acervo/AcervoPage').then(({ AcervoPage }) => ({ Component: AcervoPage })) },
           { path: 'personal', lazy: () => import('@/features/personal/PersonalPage').then(({ PersonalPage }) => ({ Component: PersonalPage })) },

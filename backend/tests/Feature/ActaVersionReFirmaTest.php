@@ -10,6 +10,7 @@ use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Models\ActaTransferencia;
 use App\Modules\Transferencia\Models\FirmaAnexo;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Modules\Transferencia\Services\FirmaperuRegistroService;
 use App\Support\Enums\CaracterFirma;
 use App\Support\Enums\EstadoFirma;
 use App\Support\Enums\Rol;
@@ -38,6 +39,9 @@ class ActaVersionReFirmaTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesPermisosSeeder::class);
+        $this->partialMock(FirmaperuRegistroService::class, function ($mock): void {
+            $mock->shouldReceive('requisitosRemision')->andReturn(['puede_remitir' => true, 'firmados' => 6, 'pendientes' => []]);
+        });
         $this->proceso = ProcesoTransferencia::factory()->create();
         $this->padre = Dependencia::factory()->create([
             'proceso_transferencia_id' => $this->proceso->id,

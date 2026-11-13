@@ -22,7 +22,7 @@ class PersonalService
     {
         $query = Personal::query()
             ->where('proceso_transferencia_id', $this->resolverProcesoActivoId())
-            ->with(['dependencia', 'servidor', 'observaciones'])
+            ->with(['dependencia', 'servidor', 'observaciones', 'validadoPor:id,name'])
             ->orderBy('apellidos');
 
         if (! empty($filtros['dependencia_id'])) {

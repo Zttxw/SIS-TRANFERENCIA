@@ -46,7 +46,7 @@ export function SeccionFilas<T extends FilaEditable>({
   titulo,
   descripcion,
   hint,
-  colorNumero = 'bg-primary/10 text-primary',
+  colorNumero = 'bg-primary text-primary-foreground',
   columnas,
   filas,
   filaVacia,

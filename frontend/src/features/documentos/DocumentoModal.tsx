@@ -128,10 +128,10 @@ export function DocumentoModal({
       onClose={onClose}
       title={
         isEditing
-          ? 'Editar Asunto Pendiente'
-          : 'Registrar Nuevo Asunto Pendiente'
+          ? 'Editar pendiente manual'
+          : 'Agregar pendiente manual'
       }
-      description="Asuntos y expedientes pendientes de atención formal."
+      description="Agregue un pendiente que no figure en la lista."
     >
       <form
         onSubmit={handleSubmit(onSubmit)}

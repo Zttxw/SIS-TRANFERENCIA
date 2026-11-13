@@ -40,7 +40,8 @@ export function BotonGenerarPdf({ tipoDocumento, dependenciaId, size = 'sm', com
     try {
       await firmaperuService.generarBorrador(tipoDocumento, dependenciaId)
       await cliente.invalidateQueries({ queryKey: ['firmaperu', tipoDocumento, dependenciaId] })
-      toast.success('Borrador generado. Ya puede firmarlo desde «Mi entrega».')
+      await cliente.invalidateQueries({ queryKey: ['requisitos-remision', dependenciaId] })
+      toast.success('PDF definitivo guardado. Revíselo y fírmelo en «PDF y firma».')
     } catch (error) {
       notificarError(error, { porDefecto: 'No se pudo generar el PDF borrador.' })
     } finally {

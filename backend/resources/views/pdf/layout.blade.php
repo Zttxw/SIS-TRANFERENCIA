@@ -16,6 +16,7 @@
 
         body {
             font-size: 9px;
+            line-height: 1.3;
             color: #111827;
             margin: 0;
         }
@@ -67,12 +68,8 @@
             padding-top: 4px;
         }
 
-        footer .izq { float: left; }
-        footer .der { float: right; }
-
-        footer .pagina:after {
-            content: counter(page) " / " counter(pages);
-        }
+        footer .izq { position: absolute; left: 0; width: 65%; }
+        footer .der { position: absolute; right: 0; width: 35%; text-align: right; }
 
         /* Marca de agua para borradores (entrega no consolidada) */
         .watermark {
@@ -100,7 +97,12 @@
             padding: 3px 4px;
             vertical-align: top;
             text-align: left;
+            line-height: 1.3;
+            word-wrap: break-word;
         }
+
+        thead { display: table-header-group; }
+        tr { page-break-inside: avoid; }
 
         th {
             background-color: #eef2f5;
@@ -109,6 +111,7 @@
         }
 
         .seccion-titulo {
+            page-break-after: avoid;
             background-color: #3484A5;
             color: #ffffff;
             font-weight: bold;
@@ -130,6 +133,7 @@
         .nowrap { white-space: nowrap; }
 
         .firma-bloque {
+            page-break-inside: avoid;
             margin-top: 28px;
             width: 100%;
         }
@@ -174,8 +178,7 @@
             {{ $contexto['dependencia']['nombre'] ?? '' }}
         </span>
         <span class="der">
-            Emitido el {{ $contexto['emitido_en'] ?? '' }} &middot;
-            Pág. <span class="pagina"></span>
+            Emitido el {{ $contexto['emitido_en'] ?? '' }}
         </span>
     </footer>
 

@@ -70,7 +70,7 @@ function ControlFirma({ tipoDocumento, dependenciaId, compacto = false }: PropsF
         title: previoId ? 'Agregar firma al PDF conservado' : 'Firmar el PDF guardado',
         description: previoId
           ? 'Se abrirá el PDF firmado conservado para agregar su firma. Sus firmas anteriores se mantienen.'
-          : 'Se generará una copia de los datos guardados. Guarde primero cualquier cambio pendiente. Use el certificado correspondiente a su DNI de acceso.',
+          : 'Se firmará el PDF generado y guardado que acaba de revisar. Use el certificado correspondiente a su DNI de acceso.',
         confirmText: 'Abrir Firma Perú',
       })
       if (!aceptar || scope.signal.aborted) return
@@ -82,6 +82,7 @@ function ControlFirma({ tipoDocumento, dependenciaId, compacto = false }: PropsF
       })
       if (!scope.signal.aborted) {
         await cliente.invalidateQueries({ queryKey: clave })
+        await cliente.invalidateQueries({ queryKey: ['requisitos-remision', dependenciaId] })
         await cliente.invalidateQueries({ queryKey: ['acta'] })
         await cliente.invalidateQueries({ queryKey: ['transferencia-estado', dependenciaId] })
         if (resultado.estado === 'pendiente_validacion') {
@@ -118,6 +119,7 @@ function ControlFirma({ tipoDocumento, dependenciaId, compacto = false }: PropsF
   // puede firmar, la acción primaria es «Firmar»; si ya firmó vigente, pasa a
   // ser «Descargar». El resto se agrupa detrás del menú de acciones.
   const primarioEsFirmar = puedeFirmar && Boolean(estado) && (!estado?.firmado || estado.vigente === false)
+  const requiereGenerar = estado?.pdf_generado_vigente !== true
   const puedeAgregar = puedeFirmar && Boolean(estado?.firmado) && estado?.vigente !== false
   // Ítems secundarios realmente disponibles (para no pintar un menú vacío).
   const hayMenu =
@@ -129,7 +131,7 @@ function ControlFirma({ tipoDocumento, dependenciaId, compacto = false }: PropsF
   // Acción primaria en modo compacto: icono-solo con tooltip.
   const primarioCompacto = primarioEsFirmar ? (
     <Tooltip content={mensaje ? 'Firmando…' : 'Firmar con Firma Perú'}>
-      <Button size="icon" onClick={() => void firmar()} disabled={Boolean(mensaje)} aria-label="Firmar con Firma Perú"
+      <Button size="icon" onClick={() => void firmar()} disabled={Boolean(mensaje) || requiereGenerar} aria-label="Firmar con Firma Perú"
         className="h-8 w-8 border border-indigo-700 bg-indigo-700 text-white shadow-sm hover:bg-indigo-800 focus-visible:ring-indigo-500">
         {mensaje ? <Loader2 className="h-4 w-4 animate-spin" /> : <PenLine className="h-4 w-4" />}
       </Button>
@@ -147,7 +149,7 @@ function ControlFirma({ tipoDocumento, dependenciaId, compacto = false }: PropsF
     <div className={compacto ? 'flex items-center gap-1' : 'flex flex-wrap items-center gap-2'}>
       {/* Acción primaria: un único botón según el estado (texto o icono). */}
       {compacto ? primarioCompacto : primarioEsFirmar ? (
-        <Button size="sm" onClick={() => void firmar()} disabled={Boolean(mensaje)} className="gap-2 border border-indigo-700 bg-indigo-700 text-white shadow-sm hover:bg-indigo-800 focus-visible:ring-indigo-500">
+        <Button size="sm" onClick={() => void firmar()} disabled={Boolean(mensaje) || requiereGenerar} title={requiereGenerar ? 'Primero genere y revise el PDF actualizado' : undefined} className="gap-2 bg-primary text-primary-foreground hover:bg-primary-hover">
           {mensaje ? <Loader2 className="h-4 w-4 animate-spin" /> : <PenLine className="h-4 w-4" />}
           {mensaje ? 'Firmando…' : 'Firmar con Firma Perú'}
         </Button>

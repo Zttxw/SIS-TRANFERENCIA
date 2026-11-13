@@ -9,6 +9,7 @@ use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Models\ActaTransferencia;
 use App\Modules\Transferencia\Models\DocumentoFirma;
 use App\Modules\Transferencia\Models\FirmaAnexo;
+use App\Modules\Transferencia\Models\FirmaBorrador;
 use App\Modules\Transferencia\Models\FirmaSesion;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Enums\CaracterFirma;
@@ -16,10 +17,63 @@ use App\Support\Enums\EstadoFirma;
 use App\Support\Enums\Permiso;
 use App\Support\Enums\Rol;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class FirmaperuRegistroService
 {
     public function __construct(private readonly FirmaperuPdfService $pdf) {}
+
+    /** @return array{puede_remitir: bool, firmados: int, pendientes: list<string>} */
+    public function requisitosRemision(int $dependenciaId, User $usuario): array
+    {
+        $procesoId = Dependencia::findOrFail($dependenciaId)->proceso_transferencia_id;
+        $pendientes = [];
+        foreach (['anexo02', 'anexo03', 'anexo04', 'anexo05', 'anexo06', 'anexo07'] as $tipo) {
+            $generado = FirmaBorrador::where('proceso_transferencia_id', $procesoId)
+                ->where('dependencia_id', $dependenciaId)->where('tipo_documento', $tipo)->first();
+            $firmado = false;
+            if ($this->pdf->generadoVigente($generado, $tipo, $dependenciaId, $usuario)) {
+                $firmas = FirmaAnexo::where('proceso_transferencia_id', $procesoId)
+                    ->where('dependencia_id', $dependenciaId)->obligatorias()->validas()
+                    ->whereHas('sesion', fn ($q) => $q->where('tipo_documento', $tipo)->where('estado', 'firmada'))
+                    ->whereHas('firmante', fn ($q) => $q->where('activo', true)->whereHas('asignacionesRol', fn ($roles) => $roles
+                        ->where('rol', Rol::RESPONSABLE_CENTRO_COSTO->value)
+                        ->where('proceso_transferencia_id', $procesoId)->where('dependencia_id', $dependenciaId)))
+                    ->with('sesion')->get();
+                $firmado = $firmas->contains(fn (FirmaAnexo $firma): bool => $this->vigente($firma->sesion)
+                    && $this->provieneDelGenerado($firma->sesion, $generado)
+                    && Storage::disk('local')->exists($firma->sesion->firmado_path)
+                    && hash_equals($firma->sesion->firmado_sha256, hash('sha256', Storage::disk('local')->get($firma->sesion->firmado_path))));
+            }
+            if (! $firmado) {
+                $pendientes[] = $tipo;
+            }
+        }
+
+        return ['puede_remitir' => $pendientes === [], 'firmados' => 6 - count($pendientes), 'pendientes' => $pendientes];
+    }
+
+    public function provieneDelGenerado(FirmaSesion $sesion, ?FirmaBorrador $generado): bool
+    {
+        if (! $generado) {
+            return false;
+        }
+        $visitadas = [];
+        while ($sesion->documento_previo_id) {
+            if (isset($visitadas[$sesion->id])) {
+                return false;
+            }
+            $visitadas[$sesion->id] = true;
+            $previa = FirmaSesion::whereKey($sesion->documento_previo_id)
+                ->where('documento_firma_id', $sesion->documento_firma_id)->where('estado', 'firmada')->first();
+            if (! $previa) {
+                return false;
+            }
+            $sesion = $previa;
+        }
+
+        return hash_equals($generado->pdf_sha256, $sesion->original_sha256);
+    }
 
     public function caracter(User $usuario, string $tipo, int $dependenciaId): CaracterFirma
     {
@@ -102,7 +156,12 @@ class FirmaperuRegistroService
             return false;
         }
 
-        return hash_equals($documento->contenido_sha256, $this->pdf->huella($sesion->tipo_documento, $sesion->dependencia_id, $usuario));
+        $generado = FirmaBorrador::where('proceso_transferencia_id', $sesion->proceso_transferencia_id)
+            ->where('dependencia_id', $sesion->dependencia_id)->where('tipo_documento', $sesion->tipo_documento)->first();
+
+        return $generado !== null && str_starts_with($generado->pdf_path, 'firmaperu/generados/')
+            && $this->provieneDelGenerado($sesion, $generado)
+            && hash_equals($documento->contenido_sha256, $this->pdf->huella($sesion->tipo_documento, $sesion->dependencia_id, $usuario));
     }
 
     /** Una sesión verificada produce un único hecho de firma; no se infieren firmantes de PDFs antiguos. */

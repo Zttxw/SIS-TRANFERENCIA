@@ -6,6 +6,7 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { z } from 'zod'
 
 import { useAuth } from '@/auth/hooks'
+import { destinoPermitidoSesion } from '@/auth/sesion-runtime'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -22,7 +23,7 @@ const esquema = z.object({
 type Campos = z.infer<typeof esquema>
 
 export function LoginPage() {
-  const { estado, iniciarSesion } = useAuth()
+  const { estado, permisos, iniciarSesion } = useAuth()
   const location = useLocation()
   const [mostrarPassword, setMostrarPassword] = useState(false)
 
@@ -37,7 +38,10 @@ export function LoginPage() {
   })
 
   if (estado === 'autenticado') {
-    const destino = (location.state as { from?: string } | null)?.from ?? '/'
+    const destino = destinoPermitidoSesion(
+      (location.state as { from?: unknown } | null)?.from,
+      permisos,
+    )
     return <Navigate to={destino} replace />
   }
 

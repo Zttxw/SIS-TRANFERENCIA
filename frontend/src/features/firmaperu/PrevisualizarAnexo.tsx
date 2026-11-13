@@ -9,21 +9,24 @@ import type { TipoDocumentoFirma } from './firmaperu.types'
 interface Props {
   tipoDocumento: TipoDocumentoFirma
   dependenciaId: number
+  etiqueta?: string
+  soloGenerado?: boolean
 }
 
 export function PrevisualizarAnexo(props: Props) {
   const [abierto, setAbierto] = useState(false)
   return <>
     <Tooltip content="Previsualización">
-      <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground" aria-label="Previsualización" onClick={() => setAbierto(true)}>
+      <Button size={props.etiqueta ? 'sm' : 'icon'} variant={props.etiqueta ? 'outline' : 'ghost'} className={props.etiqueta ? 'gap-2' : 'h-8 w-8 text-muted-foreground hover:text-foreground'} aria-label={props.etiqueta ?? 'Previsualización'} onClick={() => setAbierto(true)}>
         <Eye className="h-4 w-4" />
+        {props.etiqueta}
       </Button>
     </Tooltip>
     {abierto && <VisorAnexo {...props} onCerrar={() => setAbierto(false)} />}
   </>
 }
 
-function VisorAnexo({ tipoDocumento, dependenciaId, onCerrar }: Props & { onCerrar: () => void }) {
+function VisorAnexo({ tipoDocumento, dependenciaId, soloGenerado = false, onCerrar }: Props & { onCerrar: () => void }) {
   const dialogo = useRef<HTMLDialogElement>(null)
   const [url, setUrl] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -32,7 +35,7 @@ function VisorAnexo({ tipoDocumento, dependenciaId, onCerrar }: Props & { onCerr
     dialogo.current?.showModal()
     const controller = new AbortController()
     let archivoUrl: string | undefined
-    void firmaperuService.previsualizar(tipoDocumento, dependenciaId, controller.signal)
+    void firmaperuService.previsualizar(tipoDocumento, dependenciaId, controller.signal, soloGenerado)
       .then((blob) => {
         if (controller.signal.aborted) return
         archivoUrl = URL.createObjectURL(blob)
@@ -45,7 +48,7 @@ function VisorAnexo({ tipoDocumento, dependenciaId, onCerrar }: Props & { onCerr
       controller.abort()
       if (archivoUrl) URL.revokeObjectURL(archivoUrl)
     }
-  }, [tipoDocumento, dependenciaId])
+  }, [tipoDocumento, dependenciaId, soloGenerado])
 
   return <dialog ref={dialogo} onCancel={onCerrar} aria-labelledby="titulo-previsualizacion"
     className="fixed inset-0 m-auto h-[92dvh] max-h-none w-[96vw] max-w-6xl flex-col overflow-hidden rounded-xl border bg-card p-0 text-foreground shadow-2xl backdrop:bg-black/60 open:flex">

@@ -4,13 +4,14 @@ import { CheckCircle2, Clock3, FileText, Loader2, Lock } from 'lucide-react'
 import { BotonFirmaPeru } from './BotonFirmaPeru'
 import { BotonGenerarPdf } from './BotonGenerarPdf'
 import { PrevisualizarAnexo } from './PrevisualizarAnexo'
+import { BotonDescargarPdf } from '@/components/anexos/BotonDescargarPdf'
 import { firmaperuService } from './firmaperu.service'
 import type { EstadoFirma, TipoDocumentoFirma } from './firmaperu.types'
 
 interface Props {
   tipoDocumento: TipoDocumentoFirma
   dependenciaId: number
-  /** El acta 07 solo se firma con la entrega consolidada. */
+  /** Restricción explícita para contextos que no permiten acciones. */
   bloqueado?: boolean
   notaBloqueo?: string
   soloLectura?: boolean
@@ -50,17 +51,22 @@ export function DocumentoFirmaDetalle({ tipoDocumento, dependenciaId, bloqueado 
       </div>
 
       {/* Acciones secundarias */}
-      {!bloqueado && !soloLectura && !isError && (
-        <div className="flex items-center gap-1.5">
-          <PrevisualizarAnexo tipoDocumento={tipoDocumento} dependenciaId={dependenciaId} />
+      {!bloqueado && !isError && (!soloLectura || estado?.pdf_generado_vigente) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <PrevisualizarAnexo tipoDocumento={tipoDocumento} dependenciaId={dependenciaId} etiqueta={soloLectura ? 'Ver PDF generado' : 'Visualizar PDF'} soloGenerado={soloLectura} />
+          {soloLectura && estado?.firmado && estado.vigente && estado.documento_id && <BotonDescargarPdf
+            etiqueta="Descargar firmado"
+            descargar={() => firmaperuService.descargar(estado.documento_id!)}
+          />}
+          {!soloLectura && <>
           <BotonGenerarPdf
             tipoDocumento={tipoDocumento}
             dependenciaId={dependenciaId}
-            compacto
             etiqueta={tieneBorrador ? 'Regenerar PDF' : 'Generar PDF'}
           />
           <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
-          <BotonFirmaPeru tipoDocumento={tipoDocumento} dependenciaId={dependenciaId} compacto />
+          <BotonFirmaPeru tipoDocumento={tipoDocumento} dependenciaId={dependenciaId} />
+          </>}
         </div>
       )}
     </div>
@@ -96,6 +102,9 @@ function EstadoDocumento({ estado, bloqueado, notaBloqueo }: { estado?: EstadoFi
         <Clock3 className="h-3.5 w-3.5" /> PDF recibido · verificación pendiente
       </span>
     )
+  }
+  if (estado?.borrador_generado && estado.pdf_generado_vigente === false) {
+    return <span className="text-warning-fg">Los datos cambiaron · regenere el PDF</span>
   }
   if (estado?.borrador_generado) {
     return (

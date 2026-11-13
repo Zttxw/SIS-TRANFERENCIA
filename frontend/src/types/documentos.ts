@@ -1,6 +1,7 @@
 import type { Observacion } from './observaciones'
 
 export interface DocumentoPendiente {
+  registro_auditoria?: { usuario?: { id: number; name: string } | null; created_at: string } | null
   id: number
   proceso_transferencia_id: number
   dependencia_id: number

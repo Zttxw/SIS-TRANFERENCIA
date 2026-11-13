@@ -53,13 +53,14 @@ class FirmaperuController extends Controller
         $datos = $request->validate([
             'tipo_documento' => 'required|string|in:'.self::TIPOS,
             'dependencia_id' => 'required|integer|exists:dependencias,id',
+            'solo_generado' => 'sometimes|boolean',
         ]);
         $dependenciaId = (int) $datos['dependencia_id'];
         $this->autorizarDependencia($request->user(), $dependenciaId);
         $procesoId = app(ContextoTransferencia::class)->procesoActivoId();
         abort_unless(Dependencia::whereKey($dependenciaId)->where('proceso_transferencia_id', $procesoId)->exists(), 409);
         $tipo = $datos['tipo_documento'] === 'acta' ? 'anexo07' : $datos['tipo_documento'];
-        if (in_array($datos['tipo_documento'], ['acta', 'anexo07'], true)) {
+        if (! $request->boolean('solo_generado') && in_array($datos['tipo_documento'], ['acta', 'anexo07'], true)) {
             $this->registro->caracter($request->user(), 'anexo07', $dependenciaId);
         }
 
@@ -67,16 +68,18 @@ class FirmaperuController extends Controller
         // ese archivo exacto. Si no, se genera al vuelo con los datos actuales.
         $borrador = FirmaBorrador::where('tipo_documento', $tipo)
             ->where('dependencia_id', $dependenciaId)->where('proceso_transferencia_id', $procesoId)->first();
-        if ($borrador && Storage::disk('local')->exists($borrador->pdf_path)) {
+        if ($borrador && $pdf->generadoVigente($borrador, $tipo, $dependenciaId, $request->user())) {
             $contenido = Storage::disk('local')->get($borrador->pdf_path);
             if (hash_equals($borrador->pdf_sha256, hash('sha256', $contenido))) {
                 return response($contenido, 200, [
                     'Content-Type' => 'application/pdf',
-                    'Content-Disposition' => 'inline; filename="Borrador-'.$tipo.'.pdf"',
+                    'Content-Disposition' => 'inline; filename="Generado-'.$tipo.'.pdf"',
                     'Cache-Control' => 'private, no-store',
                 ]);
             }
         }
+
+        abort_if($request->boolean('solo_generado'), 404, 'Esta dependencia todavía no tiene un PDF generado vigente para este anexo.');
 
         return response($pdf->generar($datos['tipo_documento'], $dependenciaId, $request->user()), 200, [
             'Content-Type' => 'application/pdf',
@@ -101,12 +104,24 @@ class FirmaperuController extends Controller
         abort_unless(Dependencia::whereKey($dependenciaId)->where('proceso_transferencia_id', $procesoId)->exists(),
             409, 'La dependencia no pertenece al proceso activo.');
 
+        if ($tipo === 'anexo07') {
+            $this->registro->documento($usuario, $tipo, $dependenciaId);
+        }
         $borrador = $pdf->generarBorrador($tipo, $dependenciaId, $usuario);
 
         return ApiResponse::success([
             'borrador_generado' => true,
             'borrador_generado_en' => $borrador->generado_en->toIso8601String(),
-        ], 'Borrador generado.', 201);
+        ], 'PDF definitivo generado y guardado.', 201);
+    }
+
+    public function requisitosRemision(Request $request, int $dependenciaId): JsonResponse
+    {
+        $this->autorizarDependencia($request->user(), $dependenciaId);
+        abort_unless(Dependencia::whereKey($dependenciaId)
+            ->where('proceso_transferencia_id', app(ContextoTransferencia::class)->procesoActivoId())->exists(), 409);
+
+        return ApiResponse::success($this->registro->requisitosRemision($dependenciaId, $request->user()));
     }
 
     public function param(Request $request): Response
@@ -173,10 +188,11 @@ class FirmaperuController extends Controller
 
         return ApiResponse::success(['firmado' => $sesion !== null, 'documento_id' => $sesion?->id,
             'version' => $sesion?->documento?->version,
-            'vigente' => $sesion !== null && $this->registro->vigente($sesion),
+            'vigente' => $sesion !== null && $this->registro->vigente($sesion) && $this->registro->provieneDelGenerado($sesion, $borrador),
             'firmado_en' => $sesion?->firmado_en?->toIso8601String(),
             'pendiente_validacion' => $pendiente !== null, 'sesion_pendiente_id' => $pendiente?->id,
             'borrador_generado' => $borrador !== null,
+            'pdf_generado_vigente' => app(FirmaperuPdfService::class)->generadoVigente($borrador, $tipo === 'acta' ? 'anexo07' : $tipo, $dependenciaId, $request->user()),
             'borrador_generado_en' => $borrador?->generado_en?->toIso8601String()]);
     }
 

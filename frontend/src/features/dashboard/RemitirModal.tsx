@@ -5,6 +5,7 @@ import { Dialog } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { useRemitirEntrega } from './use-dashboard'
 import { ApiError } from '@/types/api'
+import { useRequisitosRemision } from '@/features/firmaperu/use-requisitos-remision'
 
 interface RemitirModalProps {
   open: boolean
@@ -23,6 +24,7 @@ export function RemitirModal({
 }: RemitirModalProps) {
   const [comentario, setComentario] = useState('')
   const remitirMutation = useRemitirEntrega()
+  const { data: requisitos, isFetching: comprobando } = useRequisitosRemision(dependenciaId, open)
 
   const cerrar = () => {
     if (remitirMutation.isPending) return
@@ -33,6 +35,7 @@ export function RemitirModal({
 
   const handleRemitir = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (comprobando || !requisitos?.puede_remitir) return
     try {
       await remitirMutation.mutateAsync({
         dependencia_id: dependenciaId,
@@ -55,6 +58,9 @@ export function RemitirModal({
       }`}
     >
       <form onSubmit={handleRemitir} className="space-y-4">
+        {!requisitos?.puede_remitir && <p className="text-xs text-warning-fg">
+          {comprobando ? 'Comprobando firmas…' : 'Se requieren los PDF generados y las seis firmas vigentes del jefe (anexos 02 al 07).'}
+        </p>}
         {remitirMutation.error && (
           <div role="alert" className="rounded-lg border border-danger-border bg-danger-soft p-3 text-sm text-danger-fg">
             {remitirMutation.error instanceof ApiError && remitirMutation.error.errors?.cronograma
@@ -83,7 +89,7 @@ export function RemitirModal({
           <Button type="button" variant="outline" onClick={cerrar} disabled={remitirMutation.isPending}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={remitirMutation.isPending}>
+          <Button type="submit" disabled={remitirMutation.isPending || comprobando || !requisitos?.puede_remitir}>
             {remitirMutation.isPending ? 'Remitiendo...' : 'Confirmar y Remitir'}
           </Button>
         </div>

@@ -27,7 +27,14 @@ export interface EstadoFirma {
   pendiente_validacion: boolean
   sesion_pendiente_id: string | null
   borrador_generado: boolean
+  pdf_generado_vigente?: boolean
   borrador_generado_en: string | null
+}
+
+export interface RequisitosRemision {
+  puede_remitir: boolean
+  firmados: number
+  pendientes: TipoDocumentoFirma[]
 }
 
 declare global {

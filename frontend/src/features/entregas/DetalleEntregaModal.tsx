@@ -8,7 +8,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { useDependenciaActiva } from '@/auth/hooks'
+import { useAuth, useDependenciaActiva } from '@/auth/hooks'
+import { puedeConsultarActa } from '@/auth/sesion-runtime'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
@@ -29,6 +30,7 @@ export function DetalleEntregaModal({
   onClose,
 }: DetalleEntregaModalProps) {
   const { setDependenciaId } = useDependenciaActiva()
+  const { permisos } = useAuth()
   const { data: estado, isLoading, isError } = useEstadoEntrega(dependencia?.id)
 
   if (!dependencia) return null
@@ -136,8 +138,9 @@ export function DetalleEntregaModal({
             </div>
 
             <div className="space-y-3 border-t pt-3">
-              <h3 className="text-sm font-semibold">Firma de documentos</h3>
-              {(['anexo02', 'anexo03', 'anexo04', 'anexo05', 'anexo06', 'anexo07'] as TipoDocumentoFirma[]).map((tipo) => (
+              <h3 className="text-sm font-semibold">Documentos generados · consulta previa a la remisión</h3>
+              {(['anexo02', 'anexo03', 'anexo04', 'anexo05', 'anexo06', 'anexo07'] as TipoDocumentoFirma[])
+                .filter((tipo) => tipo !== 'anexo07' || puedeConsultarActa(permisos)).map((tipo) => (
                 <div key={tipo} className="space-y-1">
                   <p className="text-xs font-medium">{tipo === 'anexo07' ? 'Acta 07' : `Anexo ${tipo.slice(-2)}`}</p>
                   <DocumentoFirmaDetalle tipoDocumento={tipo} dependenciaId={dependencia.id} soloLectura />

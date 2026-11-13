@@ -21,7 +21,7 @@ class DocumentoPendienteService
     public function listar(array $filtros = []): LengthAwarePaginator
     {
         $query = DocumentoPendiente::query()
-            ->with(['dependencia', 'responsable', 'observaciones'])
+            ->with(['dependencia', 'responsable', 'observaciones', 'registroAuditoria.usuario:id,name'])
             ->orderByDesc('fecha_documento')
             ->orderByDesc('id');
 

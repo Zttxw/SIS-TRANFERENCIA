@@ -11,6 +11,8 @@ import {
   FileText,
   FolderArchive,
   Lock,
+  Loader2,
+  MoreHorizontal,
   Paperclip,
   Printer,
   ShieldAlert,
@@ -22,8 +24,9 @@ import axios from 'axios'
 import { useDependenciaActiva } from '@/auth/hooks'
 import { Can } from '@/auth/Can'
 import { AnexoHeader } from '@/components/anexos/AnexoHeader'
-import { BotonDescargarPdf } from '@/components/anexos/BotonDescargarPdf'
 import { Button, buttonVariants } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
+import { notificarError } from '@/lib/api-errors'
 import {
   Card,
   CardContent,
@@ -33,13 +36,13 @@ import {
 } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
-import { BotonGenerarPdf } from '@/features/firmaperu/BotonGenerarPdf'
 import { PrevisualizarAnexo } from '@/features/firmaperu/PrevisualizarAnexo'
 import { actaService } from './acta.service'
 import { ActaImprimible } from './ActaImprimible'
 import { FirmaDigitalSeamModal } from './FirmaDigitalSeamModal'
 import { SubirEvidenciaModal } from './SubirEvidenciaModal'
 import { useActa, useDescargarEvidencia } from './use-acta'
+import { UsuarioRegistro } from '@/components/anexos/UsuarioRegistro'
 import type { EvidenciaItem } from '@/types/acta'
 
 function formatearTamano(bytes: number): string {
@@ -56,6 +59,20 @@ export function ActaPage() {
   const [pestañaActiva, setPestañaActiva] = useState<'acta' | 'evidencias'>('acta')
   const [modalFirma, setModalFirma] = useState(false)
   const [modalEvidencia, setModalEvidencia] = useState(false)
+  const [descargando, setDescargando] = useState(false)
+
+  const descargarDocumento = async (expediente = false) => {
+    if (!dependenciaId || descargando) return
+    setDescargando(true)
+    try {
+      if (expediente) await actaService.descargarExpediente(dependenciaId)
+      else await actaService.descargarPdf(dependenciaId)
+    } catch (error) {
+      notificarError(error)
+    } finally {
+      setDescargando(false)
+    }
+  }
 
   const descargarMutation = useDescargarEvidencia()
 
@@ -240,54 +257,47 @@ export function ActaPage() {
         dependenciaNombre={depActual.nombre}
         acciones={
           <div className="flex flex-wrap items-center gap-2">
-            <PrevisualizarAnexo tipoDocumento="anexo07" dependenciaId={dependenciaId} />
-            <BotonGenerarPdf tipoDocumento="anexo07" dependenciaId={dependenciaId} />
-            <BotonDescargarPdf
-              descargar={() => actaService.descargarPdf(dependenciaId)}
-              etiqueta="Acta PDF"
-            />
-            <Can permiso="expediente.ver">
-              <BotonDescargarPdf
-                descargar={() => actaService.descargarExpediente(dependenciaId)}
-                etiqueta="Expediente completo"
-              />
-            </Can>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.print()}
-              className="gap-2 shadow-sm"
+            <PrevisualizarAnexo tipoDocumento="anexo07" dependenciaId={dependenciaId} etiqueta="Revisar PDF" />
+            <DropdownMenu
+              align="end"
+              trigger={
+                <Button variant="outline" size="sm" className="gap-2" disabled={descargando}>
+                  {descargando ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
+                  {descargando ? 'Descargando…' : 'Más opciones'}
+                </Button>
+              }
             >
-              <Printer className="h-4 w-4" />
-              Imprimir (vista)
-            </Button>
-
-            <Can permiso="actas.generar">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setModalFirma(true)}
-                className="gap-2 border shadow-sm"
-              >
-                <ShieldCheck className="h-4 w-4 text-success-fg" />
-                Adjuntar PDF suscrito
-              </Button>
-            </Can>
-
-            <Can permiso="anexos.registrar">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => setModalEvidencia(true)}
-                className="gap-2 shadow-sm"
-              >
-                <Paperclip className="h-4 w-4" />
-                Adjuntar Evidencia
-              </Button>
-            </Can>
+              <DropdownMenuItem icon={<Download />} onSelect={() => void descargarDocumento()}>
+                Descargar acta sin firma
+              </DropdownMenuItem>
+              <Can permiso="expediente.ver">
+                <DropdownMenuItem icon={<FolderArchive />} onSelect={() => void descargarDocumento(true)}>
+                  Descargar expediente completo
+                </DropdownMenuItem>
+              </Can>
+              <DropdownMenuItem icon={<Printer />} onSelect={() => window.print()}>
+                Imprimir vista
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <Can permiso="actas.generar">
+                <DropdownMenuItem icon={<ShieldCheck />} onSelect={() => setModalFirma(true)}>
+                  Subir acta ya firmada
+                </DropdownMenuItem>
+              </Can>
+              <Can permiso="anexos.registrar">
+                <DropdownMenuItem icon={<Paperclip />} onSelect={() => setModalEvidencia(true)}>
+                  Adjuntar evidencia
+                </DropdownMenuItem>
+              </Can>
+            </DropdownMenu>
           </div>
         }
       />
+
+      <div className="print:hidden">
+        <p className="mb-1 text-xs text-muted-foreground">Generada por</p>
+        <UsuarioRegistro usuario={acta.generada_por} fecha={acta.created_at} />
+      </div>
 
       {/* Resumen de Control del Acta */}
       <Card className="border-l-4 border-l-emerald-600 shadow-sm print:hidden">

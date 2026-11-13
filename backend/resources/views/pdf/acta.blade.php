@@ -96,12 +96,14 @@
                 <div class="firma-linea">Responsable que efectúa la entrega</div>
                 {{ $acta['entrega']['nombre'] ?: 'Nombres y apellidos' }}<br>
                 DNI: {{ $acta['entrega']['dni'] ?: '________________' }}<br>
+                {{ $acta['entrega']['cargo'] }}<br>
                 {{ $acta['dependencia'] }}
             </td>
             <td>
                 <div class="firma-linea">Responsable de la recepción / verificación</div>
                 {{ $acta['recepcion']['nombre'] ?: 'Coordinador ETTE / CC receptor' }}<br>
                 DNI: {{ $acta['recepcion']['dni'] ?: '________________' }}
+                <br>{{ $acta['recepcion']['cargo'] }}
             </td>
         </tr>
     </table>

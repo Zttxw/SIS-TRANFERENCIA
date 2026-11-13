@@ -14,6 +14,8 @@ class GuardarAcervoRequest extends AnexoFormRequest
             'dependencia_id' => ['required', 'integer', 'exists:dependencias,id'],
             'tipo' => ['required', 'string', 'in:fisico,digital'],
             'serie_documental' => ['required', 'string', 'max:255'],
+            'identificacion_archivador' => ['nullable', 'prohibited_unless:tipo,fisico', 'string', 'max:255'],
+            'total_folios' => ['nullable', 'prohibited_unless:tipo,fisico', 'integer', 'min:1', 'max:2147483647'],
             'anio' => ['nullable', 'integer', 'min:1990', 'max:2100'],
             'desde_anio' => ['nullable', 'integer', 'min:1990', 'max:2100'],
             'hasta_anio' => ['nullable', 'integer', 'min:1990', 'max:2100', 'gte:desde_anio'],

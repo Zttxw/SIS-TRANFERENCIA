@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 
 import { Can } from '@/auth/Can'
-import { useDependenciaActiva } from '@/auth/hooks'
+import { useAuth, useDependenciaActiva } from '@/auth/hooks'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -26,10 +26,12 @@ import { ArbolDependenciasView } from './ArbolDependenciasView'
 import { BandejaRevisorView } from './BandejaRevisorView'
 import { DetalleEntregaModal } from './DetalleEntregaModal'
 import { useEntregas, useEstadoEntrega } from './use-entregas'
+import { useRequisitosRemision } from '@/features/firmaperu/use-requisitos-remision'
 
 type PestañaActiva = 'bandeja' | 'arbol' | 'mi_entrega'
 
 export function EntregasPage() {
+  const { tiene } = useAuth()
   const { dependenciaId } = useDependenciaActiva()
   const [tab, setTab] = useState<PestañaActiva>('bandeja')
 
@@ -46,6 +48,7 @@ export function EntregasPage() {
 
   // Estado del centro de costo activo para la pestaña "Mi Entrega"
   const { data: estadoMiDep, isLoading: cargandoMiDep } = useEstadoEntrega(dependenciaId)
+  const { data: requisitosFirma, isFetching: comprobandoFirmas } = useRequisitosRemision(dependenciaId, tiene('entregas.remitir'))
 
   return (
     <div className="space-y-6">
@@ -202,7 +205,9 @@ export function EntregasPage() {
                       ? 'La entrega se encuentra en evaluación por el superior jerárquico.'
                       : estadoMiDep?.entrega?.estado === 'consolidada'
                       ? 'La entrega ha sido consolidada formalmente. Puede emitir el acta final.'
-                      : 'Una vez completados los anexos, remita la información para su revisión.'}
+                      : tiene('entregas.remitir')
+                        ? `Firmas del jefe: ${requisitosFirma?.firmados ?? 0}/6. Complete los documentos en «PDF y firma» antes de remitir.`
+                        : 'El responsable del centro de costo realiza la remisión al superior.'}
                   </span>
 
                   {(!estadoMiDep?.entrega ||
@@ -210,6 +215,7 @@ export function EntregasPage() {
                     estadoMiDep.entrega.estado === 'observada') && (
                     <Can permiso="entregas.remitir">
                       <Button
+                        disabled={comprobandoFirmas || !requisitosFirma?.puede_remitir}
                         onClick={() => setModalRemitirAbierto(true)}
                         className="gap-1.5 text-xs"
                       >

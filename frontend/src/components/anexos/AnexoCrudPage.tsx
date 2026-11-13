@@ -243,7 +243,7 @@ export function AnexoCrudPage<T>({
                 className="pl-9"
               />
             </div>
-            {filtrosExtra && <div className="flex items-center gap-2">{filtrosExtra}</div>}
+            {filtrosExtra && <div className="flex flex-wrap items-center gap-2">{filtrosExtra}</div>}
           </div>
         </CardContent>
       </Card>

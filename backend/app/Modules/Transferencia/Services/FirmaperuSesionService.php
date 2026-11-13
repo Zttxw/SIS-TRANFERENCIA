@@ -39,6 +39,11 @@ class FirmaperuSesionService
             ->where('proceso_transferencia_id', $procesoId)->where('estado', 'firmada')->firstOrFail() : null;
 
         if ($previo) {
+            $generado = FirmaBorrador::where('proceso_transferencia_id', $procesoId)
+                ->where('dependencia_id', $dependenciaId)->where('tipo_documento', $tipo)->first();
+            abort_unless($this->pdf->generadoVigente($generado, $tipo, $dependenciaId, $usuario)
+                && $this->registro->provieneDelGenerado($previo, $generado), 409,
+                'El PDF anterior no corresponde al PDF generado actual. Firme el documento generado.');
             abort_unless($previo->documento_firma_id === $documento->id && $this->registro->vigente($previo),
                 409, 'El PDF anterior corresponde a otra versión. Firme los datos actuales.');
             abort_unless(Storage::disk('local')->exists($previo->firmado_path), 409, 'El documento firmado anterior no está disponible.');
@@ -47,6 +52,8 @@ class FirmaperuSesionService
         } else {
             $borrador = FirmaBorrador::where('proceso_transferencia_id', $procesoId)
                 ->where('dependencia_id', $dependenciaId)->where('tipo_documento', $tipo)->first();
+            abort_unless($this->pdf->generadoVigente($borrador, $tipo, $dependenciaId, $usuario), 409,
+                'Genere y revise el PDF actualizado en «PDF y firma» antes de firmar.');
             if ($borrador) {
                 abort_unless($borrador->contenido_sha256 !== null
                     && hash_equals($documento->contenido_sha256, $borrador->contenido_sha256), 409,
@@ -55,11 +62,6 @@ class FirmaperuSesionService
                 $contenido = Storage::disk('local')->get($borrador->pdf_path);
                 abort_unless(hash_equals($borrador->pdf_sha256, hash('sha256', $contenido)), 409,
                     'El PDF borrador no coincide con su huella. Regenérelo antes de firmar.');
-            } else {
-                $captura = $this->pdf->capturar($tipo, $dependenciaId, $usuario);
-                abort_unless(hash_equals($documento->contenido_sha256, $captura['huella']), 409,
-                    'Los datos cambiaron mientras se preparaba el PDF. Guarde los cambios y vuelva a firmar.');
-                $contenido = $captura['pdf'];
             }
         }
 

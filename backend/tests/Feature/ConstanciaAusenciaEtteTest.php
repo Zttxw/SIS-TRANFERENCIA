@@ -10,6 +10,7 @@ use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\FirmaAnexo;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Modules\Transferencia\Services\FirmaperuRegistroService;
 use App\Support\Enums\CaracterFirma;
 use App\Support\Enums\EstadoEntrega;
 use App\Support\Enums\EstadoFirma;
@@ -90,6 +91,9 @@ class ConstanciaAusenciaEtteTest extends TestCase
 
     public function test_la_ausencia_ette_no_bloquea_la_remision(): void
     {
+        $this->partialMock(FirmaperuRegistroService::class, function ($mock): void {
+            $mock->shouldReceive('requisitosRemision')->andReturn(['puede_remitir' => true, 'firmados' => 6, 'pendientes' => []]);
+        });
         $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
         $this->postJson('/api/firmas/ausencia-ette', ['dependencia_id' => $this->hija->id])->assertCreated();
 

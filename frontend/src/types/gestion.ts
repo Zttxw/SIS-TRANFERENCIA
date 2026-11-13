@@ -53,6 +53,9 @@ export interface InformeGestion {
   elaborado_por_id: number
   nivel_organizacional: NivelOrganizacional | null
   cargo_periodo: string | null
+  responsable_nombre: string | null
+  cargo_responsable: string | null
+  periodo_gestion: string | null
   funciones: FilaFuncion[] | null
   logros_items: FilaLogro[] | null
   dificultades_items: FilaDificultad[] | null
@@ -81,6 +84,8 @@ export interface InformeGestion {
 }
 
 export interface GuardarInformeGestionPayload {
+  responsable_nombre?: string | null
+  cargo_responsable?: string | null
   periodo_gestion?: string | null
   dependencia_id: number
   servidor_responsable_id?: number | null
