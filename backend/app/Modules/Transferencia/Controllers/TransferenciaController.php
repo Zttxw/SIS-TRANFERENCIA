@@ -31,12 +31,30 @@ class TransferenciaController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $usuario = $request->user();
         $filtros = $this->acotarFiltrosAlAmbito(
-            $request->user(),
+            $usuario,
             $request->only(['dependencia_id', 'estado', 'per_page'])
         );
 
+        // Bandeja del revisor: excluye las entregas de las dependencias propias
+        // del usuario (uno no revisa su propia entrega). La lista queda con las de
+        // su subárbol subordinado. `excluir_propias=0` la desactiva (p. ej. para
+        // consultar el estado de la propia remisión).
+        if ($request->boolean('excluir_propias', true) && ! $usuario->tieneAmbitoGlobal()) {
+            $filtros['excluir_dependencia_ids'] = $usuario->idsDependenciasPropias();
+        }
+
         $entregas = $this->transferenciaService->listarEntregas($filtros);
+
+        // Marca en cada entrega si este usuario es el receptor que puede
+        // dictaminarla, para que la UI no ofrezca «Revisar» donde el backend
+        // responderá 403 (p. ej. entregas de nietos dirigidas al padre intermedio).
+        $entregas->getCollection()->transform(function ($entrega) use ($usuario) {
+            $entrega->setAttribute('puede_revisar', $this->transferenciaService->esReceptorDelDestino($usuario, $entrega));
+
+            return $entrega;
+        });
 
         return ApiResponse::paginated($entregas, 'Entregas recuperadas.');
     }

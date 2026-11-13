@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
   Building2,
-  FolderTree,
   Inbox,
   Send,
 } from 'lucide-react'
@@ -18,17 +17,12 @@ import {
 } from '@/components/ui/card'
 import { RemitirModal } from '@/features/dashboard/RemitirModal'
 import { RevisarModal } from '@/features/dashboard/RevisarModal'
-import type {
-  DependenciaResumen,
-  EntregaItem,
-} from '@/types/transferencia'
-import { ArbolDependenciasView } from './ArbolDependenciasView'
+import type { EntregaItem } from '@/types/transferencia'
 import { BandejaRevisorView } from './BandejaRevisorView'
-import { DetalleEntregaModal } from './DetalleEntregaModal'
 import { useEntregas, useEstadoEntrega } from './use-entregas'
 import { useRequisitosRemision } from '@/features/firmaperu/use-requisitos-remision'
 
-type PestañaActiva = 'bandeja' | 'arbol' | 'mi_entrega'
+type PestañaActiva = 'bandeja' | 'mi_entrega'
 
 export function EntregasPage() {
   const { tiene } = useAuth()
@@ -38,7 +32,6 @@ export function EntregasPage() {
   // Modales
   const [modalRevisarEntrega, setModalRevisarEntrega] = useState<EntregaItem | null>(null)
   const [modalRemitirAbierto, setModalRemitirAbierto] = useState(false)
-  const [dependenciaExaminar, setDependenciaExaminar] = useState<DependenciaResumen | null>(null)
 
   // Consultar entregas para badge de pendientes
   const { data: entregasResp } = useEntregas({ per_page: 50 })
@@ -95,19 +88,6 @@ export function EntregasPage() {
 
         <button
           type="button"
-          onClick={() => setTab('arbol')}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-medium transition-colors ${
-            tab === 'arbol'
-              ? 'border-primary text-primary font-semibold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <FolderTree className="h-4 w-4" />
-          <span>Árbol Municipal (107 Dependencias)</span>
-        </button>
-
-        <button
-          type="button"
           onClick={() => setTab('mi_entrega')}
           className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-medium transition-colors ${
             tab === 'mi_entrega'
@@ -122,14 +102,7 @@ export function EntregasPage() {
 
       {/* Contenido de la pestaña activa */}
       {tab === 'bandeja' && (
-        <BandejaRevisorView
-          onRevisar={(entrega) => setModalRevisarEntrega(entrega)}
-          onVerDetalle={(dep) => setDependenciaExaminar(dep)}
-        />
-      )}
-
-      {tab === 'arbol' && (
-        <ArbolDependenciasView onVerDetalle={(dep) => setDependenciaExaminar(dep)} />
+        <BandejaRevisorView onRevisar={(entrega) => setModalRevisarEntrega(entrega)} />
       )}
 
       {tab === 'mi_entrega' && (
@@ -253,13 +226,6 @@ export function EntregasPage() {
           }
         />
       )}
-
-      {/* Modal Examinar Estado */}
-      <DetalleEntregaModal
-        dependencia={dependenciaExaminar}
-        open={Boolean(dependenciaExaminar)}
-        onClose={() => setDependenciaExaminar(null)}
-      />
     </div>
   )
 }

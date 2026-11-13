@@ -22,6 +22,8 @@ export interface EstadoFirma {
   version?: number | null
   vigente?: boolean
   firmado: boolean
+  /** El usuario autenticado ya suscribió este documento (según el DNI del certificado). */
+  firme_yo?: boolean
   documento_id: string | null
   firmado_en: string | null
   pendiente_validacion: boolean

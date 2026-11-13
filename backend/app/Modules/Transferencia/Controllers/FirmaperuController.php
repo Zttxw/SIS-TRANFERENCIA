@@ -186,7 +186,16 @@ class FirmaperuController extends Controller
             ->where('dependencia_id', $dependenciaId)
             ->where('proceso_transferencia_id', app(ContextoTransferencia::class)->procesoActivoId())->first();
 
+        // ¿El usuario autenticado ya suscribió este documento? Se compara contra el
+        // DNI del certificado verificado (firmante_dni), que es el hecho de firma real.
+        $dni = (string) $request->user()->dni;
+        $firmeYo = $dni !== '' && FirmaSesion::where('tipo_documento', $tipo === 'acta' ? 'anexo07' : $tipo)
+            ->where('dependencia_id', $dependenciaId)
+            ->where('proceso_transferencia_id', app(ContextoTransferencia::class)->procesoActivoId())
+            ->where('estado', 'firmada')->where('firmante_dni', $dni)->exists();
+
         return ApiResponse::success(['firmado' => $sesion !== null, 'documento_id' => $sesion?->id,
+            'firme_yo' => $firmeYo,
             'version' => $sesion?->documento?->version,
             'vigente' => $sesion !== null && $this->registro->vigente($sesion) && $this->registro->provieneDelGenerado($sesion, $borrador),
             'firmado_en' => $sesion?->firmado_en?->toIso8601String(),
@@ -206,15 +215,38 @@ class FirmaperuController extends Controller
         return $this->descargarEstado($request, $id, 'pendiente_validacion', 'recibido-sin-verificar');
     }
 
+    /** Sirve el PDF firmado embebido (inline) para visualizarlo en el visor, sin descargarlo. */
+    public function verFirmado(Request $request, string $id): Response
+    {
+        $sesion = FirmaSesion::whereKey($id)->where('estado', 'firmada')->firstOrFail();
+        $this->autorizarDependencia($request->user(), $sesion->dependencia_id);
+        $contenido = $this->contenidoFirmadoVerificado($sesion);
+
+        return response($contenido, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.strtoupper($sesion->tipo_documento).'-firmado.pdf"',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
     private function descargarEstado(Request $request, string $id, string $estado, string $sufijo): StreamedResponse
     {
         $sesion = FirmaSesion::whereKey($id)->where('estado', $estado)->firstOrFail();
         $this->autorizarDependencia($request->user(), $sesion->dependencia_id);
-        abort_unless(Storage::disk('local')->exists($sesion->firmado_path), 404);
-        abort_unless(hash_equals($sesion->firmado_sha256, hash('sha256', Storage::disk('local')->get($sesion->firmado_path))),
-            409, 'El PDF conservado no coincide con su huella de integridad.');
+        $this->contenidoFirmadoVerificado($sesion);
 
         return Storage::disk('local')->download($sesion->firmado_path, strtoupper($sesion->tipo_documento).'-'.$sufijo.'.pdf',
             ['Content-Type' => 'application/pdf', 'Cache-Control' => 'no-store']);
+    }
+
+    /** Lee el PDF conservado tras comprobar existencia e integridad de su huella. */
+    private function contenidoFirmadoVerificado(FirmaSesion $sesion): string
+    {
+        abort_unless(Storage::disk('local')->exists($sesion->firmado_path), 404);
+        $contenido = Storage::disk('local')->get($sesion->firmado_path);
+        abort_unless(hash_equals($sesion->firmado_sha256, hash('sha256', $contenido)),
+            409, 'El PDF conservado no coincide con su huella de integridad.');
+
+        return $contenido;
     }
 }

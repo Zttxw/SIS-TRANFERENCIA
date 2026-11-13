@@ -104,6 +104,8 @@ export interface EntregaItem {
     name: string
     dni: string
   } | null
+  /** El usuario autenticado es el receptor que puede dictaminar esta entrega. */
+  puede_revisar?: boolean
 }
 
 export interface FiltrosEntregas {
@@ -111,6 +113,8 @@ export interface FiltrosEntregas {
   estado?: EstadoEntrega
   per_page?: number
   page?: number
+  /** Excluye las entregas de las dependencias propias del usuario (bandeja del revisor). */
+  excluir_propias?: boolean
 }
 
 export interface DependenciaSemaforoItem {

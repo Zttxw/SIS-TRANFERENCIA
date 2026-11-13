@@ -16,6 +16,7 @@ export const entregasService = {
     if (filtros.estado) params.set('estado', filtros.estado)
     if (filtros.per_page) params.set('per_page', String(filtros.per_page))
     if (filtros.page) params.set('page', String(filtros.page))
+    if (filtros.excluir_propias === false) params.set('excluir_propias', '0')
 
     const res = await api.get<ApiPaginated<EntregaItem>>(`/transferencia/entregas?${params.toString()}`)
     return res.data

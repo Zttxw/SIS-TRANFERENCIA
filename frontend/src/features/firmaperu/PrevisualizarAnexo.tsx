@@ -11,12 +11,14 @@ interface Props {
   dependenciaId: number
   etiqueta?: string
   soloGenerado?: boolean
+  /** Si se indica, el visor carga el PDF firmado real (inline) en lugar del borrador. */
+  documentoFirmadoId?: string | null
 }
 
 export function PrevisualizarAnexo(props: Props) {
   const [abierto, setAbierto] = useState(false)
   return <>
-    <Tooltip content="Previsualización">
+    <Tooltip content={props.documentoFirmadoId ? 'Ver PDF firmado' : 'Previsualización'}>
       <Button size={props.etiqueta ? 'sm' : 'icon'} variant={props.etiqueta ? 'outline' : 'ghost'} className={props.etiqueta ? 'gap-2' : 'h-8 w-8 text-muted-foreground hover:text-foreground'} aria-label={props.etiqueta ?? 'Previsualización'} onClick={() => setAbierto(true)}>
         <Eye className="h-4 w-4" />
         {props.etiqueta}
@@ -26,7 +28,7 @@ export function PrevisualizarAnexo(props: Props) {
   </>
 }
 
-function VisorAnexo({ tipoDocumento, dependenciaId, soloGenerado = false, onCerrar }: Props & { onCerrar: () => void }) {
+function VisorAnexo({ tipoDocumento, dependenciaId, soloGenerado = false, documentoFirmadoId, onCerrar }: Props & { onCerrar: () => void }) {
   const dialogo = useRef<HTMLDialogElement>(null)
   const [url, setUrl] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -35,27 +37,34 @@ function VisorAnexo({ tipoDocumento, dependenciaId, soloGenerado = false, onCerr
     dialogo.current?.showModal()
     const controller = new AbortController()
     let archivoUrl: string | undefined
-    void firmaperuService.previsualizar(tipoDocumento, dependenciaId, controller.signal, soloGenerado)
+    const fuente = documentoFirmadoId
+      ? firmaperuService.verFirmado(documentoFirmadoId, controller.signal)
+      : firmaperuService.previsualizar(tipoDocumento, dependenciaId, controller.signal, soloGenerado)
+    void fuente
       .then((blob) => {
         if (controller.signal.aborted) return
         archivoUrl = URL.createObjectURL(blob)
         setUrl(archivoUrl)
       })
       .catch(() => {
-        if (!controller.signal.aborted) setError('No se pudo generar la previsualización. Revise sus permisos y vuelva a intentarlo.')
+        if (!controller.signal.aborted) setError(documentoFirmadoId
+          ? 'No se pudo cargar el PDF firmado. Revise sus permisos y vuelva a intentarlo.'
+          : 'No se pudo generar la previsualización. Revise sus permisos y vuelva a intentarlo.')
       })
     return () => {
       controller.abort()
       if (archivoUrl) URL.revokeObjectURL(archivoUrl)
     }
-  }, [tipoDocumento, dependenciaId, soloGenerado])
+  }, [tipoDocumento, dependenciaId, soloGenerado, documentoFirmadoId])
 
   return <dialog ref={dialogo} onCancel={onCerrar} aria-labelledby="titulo-previsualizacion"
     className="fixed inset-0 m-auto h-[92dvh] max-h-none w-[96vw] max-w-6xl flex-col overflow-hidden rounded-xl border bg-card p-0 text-foreground shadow-2xl backdrop:bg-black/60 open:flex">
     <div className="flex items-start justify-between gap-4 border-b bg-primary/5 p-4">
       <div>
-        <h2 id="titulo-previsualizacion" className="flex items-center gap-2 text-lg font-semibold"><Eye className="h-5 w-5 text-primary" /> Previsualización del {tipoDocumento.replace('anexo', 'Anexo ')}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">PDF con los datos guardados. Guarde primero sus cambios y vuelva a abrir esta vista antes de firmar.</p>
+        <h2 id="titulo-previsualizacion" className="flex items-center gap-2 text-lg font-semibold"><Eye className="h-5 w-5 text-primary" /> {documentoFirmadoId ? 'PDF firmado' : 'Previsualización'} del {tipoDocumento.replace('anexo', 'Anexo ')}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{documentoFirmadoId
+          ? 'PDF firmado y conservado. Este es el documento oficial con las firmas verificadas.'
+          : 'PDF con los datos guardados. Guarde primero sus cambios y vuelva a abrir esta vista antes de firmar.'}</p>
       </div>
       <Button variant="ghost" size="sm" onClick={onCerrar} aria-label="Cerrar previsualización"><X className="h-5 w-5" /></Button>
     </div>

@@ -60,6 +60,12 @@ class TransferenciaService
             $query->whereIn('dependencia_id', $filtros['dependencia_ids']);
         }
 
+        // Excluye las dependencias propias del usuario (bandeja del revisor: no se
+        // revisa la propia entrega). Solo aplica si no se pidió una dependencia_id puntual.
+        if (empty($filtros['dependencia_id']) && ! empty($filtros['excluir_dependencia_ids'])) {
+            $query->whereNotIn('dependencia_id', $filtros['excluir_dependencia_ids']);
+        }
+
         $perPage = min((int) ($filtros['per_page'] ?? 25), 100);
 
         return $query->paginate($perPage);
@@ -636,13 +642,21 @@ class TransferenciaService
      * pendiente de D-06; aquí se impide, al menos, que la emisora se revise a sí
      * misma o que un par en el mismo subárbol tome la revisión del destino.
      */
-    private function esReceptorDelDestino(User $usuario, Entrega $entrega): bool
+    /**
+     * ¿El usuario es el receptor del destino de la entrega? El destino es el
+     * padre jerárquico inmediato de la dependencia emisora (NULL = ETTS
+     * institucional). Receptor = responsable directo de ese destino, no
+     * cualquiera cuyo subárbol lo contenga: así una dependencia no se revisa a sí
+     * misma ni un abuelo dictamina lo que va dirigido al padre intermedio.
+     */
+    public function esReceptorDelDestino(User $usuario, Entrega $entrega): bool
     {
         if ($entrega->dependencia_destino_id === null) {
             return $usuario->tieneAmbitoGlobal();
         }
 
-        return $usuario->puedeAccederDependencia($entrega->dependencia_destino_id);
+        return $usuario->tieneAmbitoGlobal()
+            || in_array($entrega->dependencia_destino_id, $usuario->idsDependenciasPropias(), true);
     }
 
     private function resolverProcesoActivoId(): int

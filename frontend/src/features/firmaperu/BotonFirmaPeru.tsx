@@ -120,12 +120,13 @@ function ControlFirma({ tipoDocumento, dependenciaId, compacto = false }: PropsF
   // ser «Descargar». El resto se agrupa detrás del menú de acciones.
   const primarioEsFirmar = puedeFirmar && Boolean(estado) && (!estado?.firmado || estado.vigente === false)
   const requiereGenerar = estado?.pdf_generado_vigente !== true
-  const puedeAgregar = puedeFirmar && Boolean(estado?.firmado) && estado?.vigente !== false
-  // Ítems secundarios realmente disponibles (para no pintar un menú vacío).
+  // «Agregar firma» solo si hay firma vigente de otro y este usuario aún no suscribió.
+  const puedeAgregar = puedeFirmar && Boolean(estado?.firmado) && estado?.vigente !== false && !estado?.firme_yo
+  // Ítems secundarios realmente disponibles (para no pintar un menú vacío). No se
+  // repite «Descargar PDF firmado»: ya es la acción primaria cuando hay firma.
   const hayMenu =
     puedeFirmar || // «Opciones de firma»
     puedeAgregar ||
-    (Boolean(estado?.firmado) && !primarioEsFirmar) || // «Descargar» que no es primario
     Boolean(estado?.pendiente_validacion)
 
   // Acción primaria en modo compacto: icono-solo con tooltip.
@@ -177,12 +178,7 @@ function ControlFirma({ tipoDocumento, dependenciaId, compacto = false }: PropsF
           )}
           {puedeAgregar && (
             <DropdownMenuItem icon={<Plus className="h-4 w-4" />} disabled={Boolean(mensaje)} onSelect={() => void firmar(estado?.documento_id ?? undefined)}>
-              Agregar firma
-            </DropdownMenuItem>
-          )}
-          {estado?.firmado && !primarioEsFirmar && (
-            <DropdownMenuItem icon={<Download className="h-4 w-4" />} disabled={descargando} onSelect={() => void descargar()}>
-              Descargar PDF firmado
+              Agregar firma de otro firmante
             </DropdownMenuItem>
           )}
           {estado?.pendiente_validacion && (

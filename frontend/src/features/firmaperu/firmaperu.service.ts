@@ -42,6 +42,21 @@ export const firmaperuService = {
   descargar(id: string) {
     return descargarArchivo(`/firmaperu/documentos/${id}/descargar`, undefined, 'Anexo-firmado.pdf')
   },
+  descargarGenerado(tipo: TipoDocumentoFirma, dependenciaId: number) {
+    return descargarArchivo('/firmaperu/previsualizar',
+      { tipo_documento: tipo, dependencia_id: dependenciaId, solo_generado: 1 }, `Generado-${tipo}.pdf`)
+  },
+  /** Descarga el PDF disponible de un anexo: el firmado vigente si existe, o el generado. */
+  descargarDisponible(tipo: TipoDocumentoFirma, dependenciaId: number, estado: EstadoFirma) {
+    const firmadoVigente = estado.firmado && estado.vigente !== false
+    return firmadoVigente && estado.documento_id
+      ? this.descargar(estado.documento_id)
+      : this.descargarGenerado(tipo, dependenciaId)
+  },
+  async verFirmado(id: string, signal: AbortSignal) {
+    const res = await api.get<Blob>(`/firmaperu/documentos/${id}/ver`, { responseType: 'blob', signal, timeout: 60000 })
+    return res.data
+  },
   descargarRecibido(id: string) {
     return descargarArchivo(`/firmaperu/documentos/${id}/recibido`, undefined, 'Anexo-recibido-sin-verificar.pdf')
   },

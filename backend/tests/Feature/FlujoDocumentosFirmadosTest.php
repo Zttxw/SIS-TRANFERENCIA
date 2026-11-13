@@ -141,6 +141,25 @@ class FlujoDocumentosFirmadosTest extends TestCase
         $this->getJson('/api/firmaperu/requisitos-remision/'.$this->dep->id)->assertForbidden();
     }
 
+    public function test_estado_reporta_firme_yo_y_sirve_el_pdf_firmado_inline(): void
+    {
+        $sesion = $this->firmar('anexo03');
+
+        // El jefe que firmó ve firme_yo = true; otro firmante habilitado lo ve en false.
+        $this->getJson('/api/firmaperu/estado/anexo03/'.$this->dep->id)
+            ->assertOk()->assertJsonPath('data.firmado', true)->assertJsonPath('data.firme_yo', true);
+
+        // El PDF firmado se sirve embebido (inline), no como descarga.
+        $respuesta = $this->get('/api/firmaperu/documentos/'.$sesion->id.'/ver')->assertOk();
+        $this->assertSame('application/pdf', $respuesta->headers->get('Content-Type'));
+        $this->assertStringContainsString('inline', (string) $respuesta->headers->get('Content-Disposition'));
+        $this->assertStringContainsString('firmado', $respuesta->getContent());
+
+        $this->usuario(Rol::SERVIDOR, $this->dep);
+        $this->getJson('/api/firmaperu/estado/anexo03/'.$this->dep->id)
+            ->assertOk()->assertJsonPath('data.firmado', true)->assertJsonPath('data.firme_yo', false);
+    }
+
     public function test_firmas_del_delegado_ette_y_del_servidor_no_sustituyen_la_del_jefe(): void
     {
         $this->generar('anexo03');

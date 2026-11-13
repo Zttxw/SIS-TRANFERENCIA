@@ -33,6 +33,9 @@ export function DocumentoFirmaDetalle({ tipoDocumento, dependenciaId, bloqueado 
   })
 
   const tieneBorrador = Boolean(estado?.borrador_generado || estado?.firmado)
+  // Firmado y vigente: ya no se regenera el PDF y «Visualizar» muestra el firmado real.
+  const firmadoVigente = Boolean(estado?.firmado && estado.vigente !== false)
+  const verFirmadoId = firmadoVigente ? estado?.documento_id ?? null : null
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -53,18 +56,27 @@ export function DocumentoFirmaDetalle({ tipoDocumento, dependenciaId, bloqueado 
       {/* Acciones secundarias */}
       {!bloqueado && !isError && (!soloLectura || estado?.pdf_generado_vigente) && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <PrevisualizarAnexo tipoDocumento={tipoDocumento} dependenciaId={dependenciaId} etiqueta={soloLectura ? 'Ver PDF generado' : 'Visualizar PDF'} soloGenerado={soloLectura} />
+          <PrevisualizarAnexo
+            tipoDocumento={tipoDocumento}
+            dependenciaId={dependenciaId}
+            etiqueta={verFirmadoId ? 'Ver PDF firmado' : soloLectura ? 'Ver PDF generado' : 'Visualizar PDF'}
+            soloGenerado={soloLectura}
+            documentoFirmadoId={verFirmadoId}
+          />
           {soloLectura && estado?.firmado && estado.vigente && estado.documento_id && <BotonDescargarPdf
             etiqueta="Descargar firmado"
             descargar={() => firmaperuService.descargar(estado.documento_id!)}
           />}
           {!soloLectura && <>
-          <BotonGenerarPdf
-            tipoDocumento={tipoDocumento}
-            dependenciaId={dependenciaId}
-            etiqueta={tieneBorrador ? 'Regenerar PDF' : 'Generar PDF'}
-          />
-          <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
+          {/* Tras firmar (vigente) ya no se regenera el PDF. */}
+          {!firmadoVigente && <>
+            <BotonGenerarPdf
+              tipoDocumento={tipoDocumento}
+              dependenciaId={dependenciaId}
+              etiqueta={tieneBorrador ? 'Regenerar PDF' : 'Generar PDF'}
+            />
+            <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
+          </>}
           <BotonFirmaPeru tipoDocumento={tipoDocumento} dependenciaId={dependenciaId} />
           </>}
         </div>

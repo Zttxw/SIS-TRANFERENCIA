@@ -166,6 +166,30 @@ class User extends Authenticatable
     }
 
     /**
+     * IDs de las dependencias de las que el usuario es responsable directo (las
+     * asignadas a su rol), **sin expandir al subárbol**. Son los destinos a los
+     * que puede remitirse una entrega para que él la reciba: una entrega de una
+     * hija cuyo `dependencia_destino_id` esté aquí va dirigida a este usuario.
+     *
+     * A diferencia de `dependenciasEnAmbito()`, esto NO incluye a los
+     * descendientes; sirve para distinguir «lo mío» de «lo que está bajo mi
+     * ámbito» en la bandeja del revisor.
+     *
+     * @return list<int>
+     */
+    public function idsDependenciasPropias(): array
+    {
+        $ids = [];
+        foreach ($this->asignacionesRol as $asignacion) {
+            if ($asignacion->dependencia_id !== null) {
+                $ids[] = $asignacion->dependencia_id;
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
      * ¿El usuario puede operar sobre la dependencia dada (o su ámbito la
      * incluye)? Base de las comprobaciones de ámbito en servicios/controllers.
      */

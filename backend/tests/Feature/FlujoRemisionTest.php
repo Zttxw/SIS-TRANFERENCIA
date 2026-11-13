@@ -189,4 +189,47 @@ class FlujoRemisionTest extends TestCase
             'accion' => 'consolidar',
         ])->assertForbidden();
     }
+
+    public function test_bandeja_del_padre_no_muestra_su_propia_entrega_y_marca_puede_revisar(): void
+    {
+        // La hija remite al padre.
+        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
+        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->hija->id])->assertOk();
+
+        // El padre también remite su propia entrega (destino = ETTS).
+        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->padre);
+        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->padre->id])->assertOk();
+
+        // Bandeja del padre: ve la de la hija (puede_revisar) pero NO la suya propia.
+        $resp = $this->getJson('/api/transferencia/entregas')->assertOk();
+        $deps = collect($resp->json('data'))->pluck('dependencia_id')->all();
+        $this->assertContains($this->hija->id, $deps);
+        $this->assertNotContains($this->padre->id, $deps);
+
+        $entregaHija = collect($resp->json('data'))->firstWhere('dependencia_id', $this->hija->id);
+        $this->assertTrue($entregaHija['puede_revisar']);
+    }
+
+    public function test_abuelo_no_puede_dictaminar_entrega_dirigida_al_padre_intermedio(): void
+    {
+        $abuelo = Dependencia::factory()->create(['proceso_transferencia_id' => $this->proceso->id, 'nivel' => 1]);
+        $this->padre->update(['parent_id' => $abuelo->id]);
+
+        // La hija remite al padre intermedio.
+        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
+        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->hija->id])->assertOk();
+
+        // El abuelo ve la entrega de la hija en su subárbol, pero no es el receptor:
+        // no puede dictaminarla (va dirigida al padre intermedio).
+        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $abuelo);
+        $resp = $this->getJson('/api/transferencia/entregas')->assertOk();
+        $entregaHija = collect($resp->json('data'))->firstWhere('dependencia_id', $this->hija->id);
+        $this->assertNotNull($entregaHija);
+        $this->assertFalse($entregaHija['puede_revisar']);
+
+        $this->postJson('/api/transferencia/revisar', [
+            'dependencia_id' => $this->hija->id,
+            'accion' => 'consolidar',
+        ])->assertForbidden();
+    }
 }
