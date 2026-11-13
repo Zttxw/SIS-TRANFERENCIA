@@ -18,6 +18,9 @@ import { useAuth } from '@/auth/hooks'
 import { useTableroOperativo } from '@/features/dashboard/use-dashboard'
 import { RevisarModal } from '@/features/dashboard/RevisarModal'
 import { DocumentoFirmaDetalle } from '@/features/firmaperu/DocumentoFirmaDetalle'
+import { BotonFirmaPeru } from '@/features/firmaperu/BotonFirmaPeru'
+import { FirmaManualDelegado } from '@/features/delegado/FirmaManualDelegado'
+import { VistoBuenoDelegadoBar } from '@/features/delegado/VistoBuenoDelegadoBar'
 import type { DependenciaSemaforoItem } from '@/types/transferencia'
 
 import {
@@ -29,7 +32,7 @@ import {
 import { CarpetaSvg } from './CarpetaSvg'
 import { HojaAnexoSvg } from './HojaAnexoSvg'
 
-type Perfil = 'ette' | 'etts' | 'general'
+type Perfil = 'ette' | 'etts' | 'delegado' | 'general'
 
 const NOMBRE_NIVEL: Record<number, string> = {
   1: 'Nivel 1 · Alta Dirección',
@@ -39,6 +42,7 @@ const NOMBRE_NIVEL: Record<number, string> = {
 }
 
 function perfilDe(roles: Set<string>): Perfil {
+  if (roles.has('delegado_ette') && !roles.has('ette') && !roles.has('etts') && !roles.has('administrador')) return 'delegado'
   if (roles.has('ette') && !roles.has('etts') && !roles.has('administrador')) return 'ette'
   if (roles.has('etts') && !roles.has('administrador')) return 'etts'
   return 'general'
@@ -50,7 +54,7 @@ function perfilDe(roles: Set<string>): Perfil {
  * papel. El color comunica la remisión: verde = remitida, gris = sin remitir,
  * ámbar = observada. Reutiliza el tablero operativo (sin endpoints nuevos).
  */
-export function AnexosEntidadPage() {
+export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil } = {}) {
   const { usuario } = useAuth()
   const { data, isLoading, error, refetch, isFetching } = useTableroOperativo()
 
@@ -59,7 +63,8 @@ export function AnexosEntidadPage() {
   const [abierta, setAbierta] = useState<DependenciaSemaforoItem | null>(null)
 
   const roles = new Set(usuario?.roles.map(({ rol }) => rol) ?? [])
-  const perfil = perfilDe(roles)
+  const perfil = perfilForzado ?? perfilDe(roles)
+  const esDelegado = perfil === 'delegado'
 
   const { porNivel, totales } = useMemo(() => {
     const deps = data?.dependencias ?? []
@@ -142,10 +147,14 @@ export function AnexosEntidadPage() {
               ? 'Equipo de Transferencia Saliente (ETTS)'
               : perfil === 'ette'
                 ? 'Comité de Transferencia Entrante (ETTE)'
-                : 'Administración institucional'}
+                : perfil === 'delegado'
+                  ? 'Delegado del Comité Entrante (ETTE)'
+                  : 'Administración institucional'}
           </span>
           <span>·</span>
-          <span className="text-primary font-semibold">Archivo documental del pliego</span>
+          <span className="text-primary font-semibold">
+            {esDelegado ? 'Dependencias a mi cargo' : 'Archivo documental del pliego'}
+          </span>
         </div>
         <Button
           size="sm"
@@ -167,12 +176,24 @@ export function AnexosEntidadPage() {
               <span className="inline-block h-10 w-12 shrink-0">
                 <CarpetaSvg tono="verde" abierta />
               </span>
-              Anexos de la Entidad
+              {esDelegado ? 'Dependencias a mi cargo' : 'Anexos de la Entidad'}
             </h1>
             <p className="mt-1.5 max-w-2xl text-xs sm:text-sm text-muted-foreground">
-              Cada dependencia es una carpeta y cada anexo una hoja de su interior.
-              Las carpetas <strong className="text-success-fg">verdes ya remitieron</strong> su
-              entrega; las <strong className="text-muted-foreground">grises aún no</strong>.
+              {esDelegado ? (
+                <>
+                  Revise las dependencias que tiene asignadas: abra cada carpeta para
+                  previsualizar y descargar sus anexos, firmarlos (digital o a mano) y
+                  dar su visto bueno a lo remitido.
+                  Las <strong className="text-success-fg">verdes ya remitieron</strong>;
+                  las <strong className="text-muted-foreground">grises aún no</strong>.
+                </>
+              ) : (
+                <>
+                  Cada dependencia es una carpeta y cada anexo una hoja de su interior.
+                  Las carpetas <strong className="text-success-fg">verdes ya remitieron</strong> su
+                  entrega; las <strong className="text-muted-foreground">grises aún no</strong>.
+                </>
+              )}
             </p>
           </div>
 
@@ -268,7 +289,7 @@ export function AnexosEntidadPage() {
       </div>
 
       {abierta ? (
-        <CarpetaAbierta dependencia={abierta} onCerrar={() => setAbierta(null)} />
+        <CarpetaAbierta dependencia={abierta} onCerrar={() => setAbierta(null)} esDelegado={esDelegado} />
       ) : totales.visibles === 0 ? (
         <Card className="p-10 text-center text-sm text-muted-foreground">
           No se encontraron carpetas que coincidan con los filtros aplicados.
@@ -411,9 +432,11 @@ function TarjetaCarpeta({
 function CarpetaAbierta({
   dependencia,
   onCerrar,
+  esDelegado = false,
 }: {
   dependencia: DependenciaSemaforoItem
   onCerrar: () => void
+  esDelegado?: boolean
 }) {
   const { tiene } = useAuth()
   const tono = tonoDeCarpeta(dependencia.estado_entrega)
@@ -490,6 +513,15 @@ function CarpetaAbierta({
         </Button>
       </div>
 
+      {/* Visto bueno del delegado ETTE sobre lo remitido (GAP 2). */}
+      {esDelegado && (
+        <VistoBuenoDelegadoBar
+          dependenciaId={dependencia.id}
+          dependenciaNombre={dependencia.nombre}
+          remitida={remitida}
+        />
+      )}
+
       {/* Barra de dictamen: aceptar (consolidar) u observar lo remitido */}
       {puedeDictaminar && (
         <div className="flex flex-col gap-2 border-b border-border bg-info-soft/60 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -549,12 +581,24 @@ function CarpetaAbierta({
                 <p className="mt-1 text-microdato leading-snug text-muted-foreground">{anexo.detalle}</p>
 
                 {/* Previsualizar + descargar el PDF oficial (módulo de firma, solo lectura) */}
-                <div className="mt-auto pt-2">
+                <div className="mt-auto space-y-2 pt-2">
                   <DocumentoFirmaDetalle
                     tipoDocumento={anexo.tipoFirma}
                     dependenciaId={dependencia.id}
                     soloLectura
                   />
+
+                  {/* Acciones de firma del delegado: digital (Firma Perú) o manual.
+                      Excluye el Anexo 01, que el delegado no firma. */}
+                  {esDelegado && anexo.tipoFirma !== 'anexo01' && (
+                    <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-dashed border-border pt-2">
+                      <span className="mr-auto text-microdato font-semibold uppercase tracking-wide text-muted-foreground">
+                        Firma del delegado (opcional)
+                      </span>
+                      <BotonFirmaPeru tipoDocumento={anexo.tipoFirma} dependenciaId={dependencia.id} compacto />
+                      <FirmaManualDelegado tipoDocumento={anexo.tipoFirma} dependenciaId={dependencia.id} />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

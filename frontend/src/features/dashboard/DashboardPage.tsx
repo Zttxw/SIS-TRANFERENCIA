@@ -44,6 +44,7 @@ import { RevisarModal } from './RevisarModal'
 import { TablaAnexos } from './TablaAnexos'
 import { TableroOperativoView } from './TableroOperativoView'
 import { EquipoDashboard } from './EquipoDashboard'
+import { AnexosEntidadPage } from '@/features/anexos-entidad/AnexosEntidadPage'
 import { useEstadoEntrega, useResumenDocumentos } from './use-dashboard'
 import { DocumentosIndicadorModal } from '@/features/documentos/DocumentosIndicadorModal'
 import { nombreEstadoDocumento } from '@/features/documentos/estados-documentos'
@@ -99,6 +100,15 @@ export function DashboardPage() {
   const { dependenciaId, setDependenciaId } = useDependenciaActiva()
   const esGlobal = usuario?.es_global === true
 
+  // Delegado ETTE: su portal es el explorador de las dependencias a su cargo
+  // (reusa "Anexos de la Entidad" acotado por ámbito), no la vista "Mi entrega".
+  const rolesUsuario = new Set(usuario?.roles.map(({ rol }) => rol) ?? [])
+  const esDelegado =
+    rolesUsuario.has('delegado_ette') &&
+    !rolesUsuario.has('ette') &&
+    !rolesUsuario.has('etts') &&
+    !rolesUsuario.has('administrador')
+
   const { data: estadoData, isLoading, error } = useEstadoEntrega(dependenciaId)
   const { data: resumenDocs } = useResumenDocumentos(dependenciaId)
   const { data: requisitosFirma, isFetching: comprobandoFirmas } = useRequisitosRemision(dependenciaId, permisos.has('entregas.remitir'))
@@ -106,6 +116,10 @@ export function DashboardPage() {
   const [modalRemitir, setModalRemitir] = useState(false)
   const [modalRevisar, setModalRevisar] = useState(false)
   const [indicadorDocumental, setIndicadorDocumental] = useState<{ estado?: string } | null>(null)
+
+  // El portal del delegado no depende de la dependencia activa; se resuelve tras
+  // llamar a todos los hooks para no romper su orden.
+  if (esDelegado) return <AnexosEntidadPage perfil="delegado" />
 
   // Si no hay una dependencia concreta seleccionada (visión global de admin / ETTS)
   if (!dependenciaId) {

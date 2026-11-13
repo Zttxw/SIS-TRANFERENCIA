@@ -49,6 +49,12 @@ enum Permiso: string
     // usuarios ni de roles institucionales.
     case GestionarDelegados = 'delegados.gestionar';
 
+    // Visto bueno del delegado ETTE sobre lo remitido por una dependencia
+    // asignada. Es una constancia de conformidad acotada a su ámbito; NO
+    // consolida ni cambia el estado de la entrega (eso es atribución de
+    // responsable/ETTS vía entregas.revisar/consolidar).
+    case DarVistoBuenoDelegado = 'delegado.visto_bueno';
+
     // Observaciones y subsanaciones.
     case RegistrarObservaciones = 'observaciones.registrar';
     case SubsanarObservaciones = 'observaciones.subsanar';
@@ -77,6 +83,7 @@ enum Permiso: string
             self::FirmarAnexos => 'Firmar anexos (según designación)',
             self::RegistrarConstanciaAusencia => 'Registrar ausencia de firma ETTE y copia digital',
             self::GestionarDelegados => 'Gestionar delegados ETTE',
+            self::DarVistoBuenoDelegado => 'Dar visto bueno del delegado a lo remitido',
             self::RegistrarObservaciones => 'Registrar observaciones',
             self::SubsanarObservaciones => 'Atender y subsanar observaciones',
             self::GenerarActas => 'Generar actas de transferencia',
@@ -182,14 +189,16 @@ enum Permiso: string
                 self::VerReportes,
                 self::GestionarDelegados,
             ],
-            // Delegado ETTE: consulta y firma OPCIONAL acotadas a las
-            // dependencias designadas (ámbito por asignación, no global). No
-            // edita/elimina datos, no remite, no da visto bueno ni consolida.
+            // Delegado ETTE: consulta, firma OPCIONAL y visto bueno acotados a
+            // las dependencias designadas (ámbito por asignación, no global). No
+            // edita/elimina datos, no remite ni consolida; su visto bueno es una
+            // constancia de conformidad, no una consolidación.
             Rol::DELEGADO_ETTE => [
                 self::AccederPlataforma,
                 self::VerAnexos,
                 self::VerExpediente,
                 self::FirmarAnexos,
+                self::DarVistoBuenoDelegado,
             ],
         };
     }

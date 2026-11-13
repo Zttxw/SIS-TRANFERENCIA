@@ -151,6 +151,33 @@ class FirmaperuController extends Controller
             $sesion->estado === 'firmada' ? 'PDF firmado recibido y comprobado.' : 'PDF recibido. Verificación pendiente.');
     }
 
+    /**
+     * Subida manual del delegado ETTE (GAP 1 del portal del delegado): el
+     * delegado descarga el PDF del anexo, lo firma/sella a mano y sube el PDF
+     * escaneado. Se conserva como constancia de su firma OPCIONAL (C-08), sin
+     * token de applet ni verificación criptográfica. El ámbito y que la firma
+     * sea opcional los valida `recibirManual` vía `registro->caracter`.
+     */
+    public function subirManual(Request $request): JsonResponse
+    {
+        $datos = $request->validate([
+            'tipo_documento' => 'required|string|in:'.self::TIPOS,
+            'dependencia_id' => 'required|integer|exists:dependencias,id',
+            'signed_file' => ['required', 'file', 'mimes:pdf', 'max:'.(int) config('firmaperu.max_upload_kb', 20480)],
+        ]);
+        $dependenciaId = (int) $datos['dependencia_id'];
+        $this->autorizarDependencia($request->user(), $dependenciaId);
+        $tipo = $datos['tipo_documento'] === 'acta' ? 'anexo07' : $datos['tipo_documento'];
+        abort_unless(Dependencia::whereKey($dependenciaId)
+            ->where('proceso_transferencia_id', app(ContextoTransferencia::class)->procesoActivoId())->exists(),
+            409, 'La dependencia no pertenece al proceso activo.');
+
+        $sesion = $this->sesiones->recibirManual($request->user(), $tipo, $dependenciaId, $request->file('signed_file'));
+
+        return ApiResponse::success(['sesion_id' => $sesion->id, 'estado' => $sesion->estado],
+            'Firma manuscrita del delegado recibida como constancia.', 201);
+    }
+
     public function sesion(Request $request, string $id): JsonResponse
     {
         $sesion = FirmaSesion::findOrFail($id);

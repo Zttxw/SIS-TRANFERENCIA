@@ -62,12 +62,18 @@ export function AppLayout() {
   const roles = new Set(usuario?.roles.map(({ rol }) => rol) ?? [])
   const soloEtte = roles.has('ette') && !roles.has('etts') && !roles.has('administrador')
   const soloEtts = roles.has('etts') && !roles.has('ette') && !roles.has('administrador')
+  const soloDelegado =
+    roles.has('delegado_ette') && !roles.has('ette') && !roles.has('etts') && !roles.has('administrador')
   const rutasEtte = new Set(['/', '/organigrama', '/anexos-entidad', '/reportes', '/observaciones', '/delegados'])
   const rutasEtts = new Set(['/', '/organigrama', '/anexos-entidad', '/entregas', '/observaciones', '/reportes', '/cronograma', '/acta'])
+  // El portal del delegado («/») ya es el explorador de sus dependencias; su
+  // navegación se acota a él más documentos y observaciones.
+  const rutasDelegado = new Set(['/', '/documentos', '/observaciones'])
   const items = ITEMS_NAV.filter(
     (item) =>
       (!soloEtte || (item.ruta !== undefined && rutasEtte.has(item.ruta))) &&
       (!soloEtts || (item.ruta !== undefined && rutasEtts.has(item.ruta))) &&
+      (!soloDelegado || (item.ruta !== undefined && rutasDelegado.has(item.ruta))) &&
       (permisos.has(item.permiso) ||
       item.permisosAlternativos?.some((permiso) => permisos.has(permiso))),
   )
@@ -75,15 +81,17 @@ export function AppLayout() {
   const nav = (
     <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2 text-xs">
       <div className="px-3 pt-2 pb-1.5 text-mini font-bold uppercase tracking-wider text-white/50">
-        {roles.has('ette') ? 'Comité ETTE' : roles.has('etts') ? 'Equipo ETTS' : usuario?.es_global ? 'Administración' : 'Servidor Público'}
+        {roles.has('ette') ? 'Comité ETTE' : roles.has('etts') ? 'Equipo ETTS' : soloDelegado ? 'Delegado ETTE' : usuario?.es_global ? 'Administración' : 'Servidor Público'}
       </div>
       {items.map((item) => {
         const Icono = item.ruta === '/organigrama' ? infoEstructura.icono : item.icono
         const etiquetaEfectiva =
           item.ruta === '/'
-            ? usuario?.es_global
-              ? 'Dashboard'
-              : 'Mi entrega'
+            ? soloDelegado
+              ? 'Dependencias a mi cargo'
+              : usuario?.es_global
+                ? 'Dashboard'
+                : 'Mi entrega'
             : item.ruta === '/organigrama'
             ? infoEstructura.etiqueta
             : item.etiqueta

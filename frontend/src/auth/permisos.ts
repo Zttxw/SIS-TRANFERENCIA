@@ -33,6 +33,7 @@ export const PERMISOS = {
   FirmarAnexos: 'firmas.firmar',
   RegistrarConstanciaAusencia: 'firmas.constancia_ausencia',
   GestionarDelegados: 'delegados.gestionar',
+  DarVistoBuenoDelegado: 'delegado.visto_bueno',
   // Observaciones.
   RegistrarObservaciones: 'observaciones.registrar',
   SubsanarObservaciones: 'observaciones.subsanar',
@@ -144,6 +145,7 @@ const PERMISOS_POR_ROL: Record<RolCodigo, readonly Permiso[]> = {
     PERMISOS.VerAnexos,
     PERMISOS.VerExpediente,
     PERMISOS.FirmarAnexos,
+    PERMISOS.DarVistoBuenoDelegado,
   ],
 }
 

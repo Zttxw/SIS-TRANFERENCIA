@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\Transferencia\Models\FirmaBorrador;
 use App\Modules\Transferencia\Models\FirmaSesion;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Support\Enums\CaracterFirma;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -181,6 +182,75 @@ class FirmaperuSesionService
         }
 
         return $sesion;
+    }
+
+    /**
+     * Subida manual del delegado ETTE (GAP 1 del portal del delegado): el
+     * delegado descarga el PDF del anexo, lo firma/sella a mano y sube el PDF
+     * escaneado como constancia de su firma OPCIONAL. A diferencia del flujo
+     * Firma Perú, NO hay token de applet ni certificado digital que validar
+     * criptográficamente: la firma manuscrita se conserva como recepción
+     * (`pendiente_validacion`) y se registra como firma OPCIONAL del delegado,
+     * que no bloquea la entrega (C-08). El "original" conservado es el PDF
+     * generado vigente, para dejar trazabilidad de qué se firmó.
+     */
+    public function recibirManual(User $usuario, string $tipo, int $dependenciaId, UploadedFile $archivo): FirmaSesion
+    {
+        abort_unless(preg_match('/^\d{8}$/', (string) $usuario->dni), 422, 'La cuenta debe tener un DNI válido para firmar.');
+        $procesoId = ProcesoTransferencia::where('estado', 'abierto')->value('id');
+        abort_unless($procesoId, 409, 'No existe un proceso de transferencia abierto.');
+
+        // Solo el delegado (firma OPCIONAL): este flujo no reemplaza la firma
+        // digital obligatoria del personal/responsable.
+        $caracter = $this->registro->caracter($usuario, $tipo, $dependenciaId);
+        abort_unless($caracter === CaracterFirma::OPCIONAL, 403,
+            'La subida manual está reservada a la firma opcional del delegado.');
+
+        $documento = $this->registro->documento($usuario, $tipo, $dependenciaId);
+        $borrador = FirmaBorrador::where('proceso_transferencia_id', $procesoId)
+            ->where('dependencia_id', $dependenciaId)->where('tipo_documento', $tipo)->first();
+        abort_unless($this->pdf->generadoVigente($borrador, $tipo, $dependenciaId, $usuario), 409,
+            'El anexo no tiene un PDF generado vigente para firmar. Pida al responsable que lo genere.');
+        $original = Storage::disk('local')->get($borrador->pdf_path);
+        abort_unless(hash_equals($borrador->pdf_sha256, hash('sha256', $original)), 409,
+            'El PDF generado no coincide con su huella.');
+
+        $firmado = $archivo->getContent();
+        $id = (string) Str::uuid7();
+        $rutaOriginal = 'firmaperu/'.$id.'/original.pdf';
+        $rutaFirmado = 'firmaperu/'.$id.'/firmado.pdf';
+        abort_unless(Storage::disk('local')->put($rutaOriginal, $original), 503, 'No se pudo conservar el PDF original.');
+
+        try {
+            return DB::transaction(function () use ($id, $procesoId, $dependenciaId, $usuario, $tipo, $documento,
+                $caracter, $original, $firmado, $rutaOriginal, $rutaFirmado): FirmaSesion {
+                abort_unless(Storage::disk('local')->put($rutaFirmado, $firmado), 503, 'No se pudo conservar el PDF firmado.');
+
+                return FirmaSesion::create([
+                    'id' => $id,
+                    'proceso_transferencia_id' => $procesoId,
+                    'dependencia_id' => $dependenciaId,
+                    'usuario_id' => $usuario->id,
+                    'firmante_dni' => $usuario->dni,
+                    'tipo_documento' => $tipo,
+                    'documento_firma_id' => $documento->id,
+                    'caracter' => $caracter->value,
+                    'estado' => 'pendiente_validacion',
+                    'origen' => 'manual',
+                    'pdf_path' => $rutaOriginal,
+                    'firmado_path' => $rutaFirmado,
+                    'original_sha256' => hash('sha256', $original),
+                    'firmado_sha256' => hash('sha256', $firmado),
+                    'mensaje' => 'Firma manuscrita del delegado recibida como constancia; no requiere verificación criptográfica.',
+                    'detalles' => ['recibido_en' => now()->toIso8601String(), 'origen' => 'manual',
+                        'integridad_verificada' => false, 'cadena_verificada' => false],
+                    'expires_at' => now()->addMinutes(max(1, min(60, (int) config('firmaperu.session_minutes')))),
+                ]);
+            });
+        } catch (Throwable $exception) {
+            Storage::disk('local')->delete([$rutaOriginal, $rutaFirmado]);
+            throw $exception;
+        }
     }
 
     public function validarPendiente(string $id): FirmaSesion

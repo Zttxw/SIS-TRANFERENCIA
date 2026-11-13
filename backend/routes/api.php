@@ -19,6 +19,7 @@ use App\Modules\Transferencia\Controllers\FirmaperuClienteController;
 use App\Modules\Transferencia\Controllers\FirmaperuController;
 use App\Modules\Transferencia\Controllers\ObservacionController;
 use App\Modules\Transferencia\Controllers\TransferenciaController;
+use App\Modules\Transferencia\Controllers\VistoBuenoDelegadoController;
 use App\Support\Http\EvidenciaController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +40,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('firmaperu')->group(function () {
         Route::post('/preparar', [FirmaperuController::class, 'preparar'])->middleware('permiso:anexos.registrar,firmas.firmar,actas.generar')->middleware('throttle:10,1,firma-preparar');
         Route::post('/generar-borrador', [FirmaperuController::class, 'generarBorrador'])->middleware('permiso:anexos.registrar,actas.generar')->middleware('throttle:20,1,firma-generar');
+        // Subida manual del delegado ETTE (firma manuscrita como constancia opcional, GAP 1).
+        Route::post('/subir-manual', [FirmaperuController::class, 'subirManual'])->middleware('permiso:firmas.firmar')->middleware('throttle:10,1,firma-subir-manual');
         Route::middleware('permiso:anexos.ver')->group(function () {
             Route::get('/previsualizar', [FirmaperuController::class, 'previsualizar'])->middleware('throttle:20,1,firma-visualizar');
             Route::get('/requisitos-remision/{dependenciaId}', [FirmaperuController::class, 'requisitosRemision'])->whereNumber('dependenciaId');
@@ -157,6 +160,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/revisar', [TransferenciaController::class, 'revisar'])->middleware('permiso:entregas.revisar');
         Route::get('/acta', [TransferenciaController::class, 'acta'])->middleware('permiso:actas.generar,firmas.firmar');
         Route::get('/acta/pdf', [TransferenciaController::class, 'actaPdf'])->middleware('permiso:actas.generar,firmas.firmar');
+    });
+
+    // Visto bueno del delegado ETTE sobre lo remitido (GAP 2 del portal del
+    // delegado). Constancia de conformidad acotada al ámbito del delegado; NO
+    // consolida. La consulta usa anexos.ver; otorgar/retirar exige
+    // delegado.visto_bueno. El controller valida ámbito y rol delegado.
+    Route::prefix('delegado/visto-bueno')->group(function () {
+        Route::get('/{dependenciaId}', [VistoBuenoDelegadoController::class, 'estado'])
+            ->whereNumber('dependenciaId')->middleware('permiso:anexos.ver');
+        Route::post('/', [VistoBuenoDelegadoController::class, 'store'])->middleware('permiso:delegado.visto_bueno');
+        Route::delete('/{dependenciaId}', [VistoBuenoDelegadoController::class, 'destroy'])
+            ->whereNumber('dependenciaId')->middleware('permiso:delegado.visto_bueno');
     });
 
     // Constancia de ausencia de firma ETTE + copia digital (RF-004/005, D-12).
