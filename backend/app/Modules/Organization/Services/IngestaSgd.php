@@ -138,6 +138,15 @@ class IngestaSgd
             $padreCodigo = $this->texto($dep->padre);
             $padreId = $padreCodigo !== null ? ($idPorCodigo[$padreCodigo] ?? null) : null;
 
+            // El nodo '01' es el pliego general en SGD, no una unidad operativa.
+            // Las unidades operativas se rigen por centros de costo (00001 Alcaldía como raíz).
+            $esActiva = $this->texto($dep->baja) !== '1';
+            if ($codigo === '01') {
+                $esActiva = false;
+            } elseif (str_starts_with($codigo, '01.') && ! in_array($codigo, ['01.01', '01.03.12.04.02'], true)) {
+                $esActiva = false;
+            }
+
             $modelo = Dependencia::updateOrCreate(
                 ['proceso_transferencia_id' => $proceso->id, 'codigo' => $codigo],
                 [
@@ -145,7 +154,7 @@ class IngestaSgd
                     'codigo_sgd' => $codigo,
                     'nombre' => (string) ($this->texto($dep->nombre) ?? $codigo),
                     'nivel' => $this->nivel($dep->nivel),
-                    'activa' => $this->texto($dep->baja) !== '1',
+                    'activa' => $esActiva,
                     'codigo_encargado_sgd' => $this->texto($dep->encargado),
                     'tipo_encargatura' => $this->texto($dep->tipo_encargatura),
                     'codigo_titular_sgd' => $this->texto($dep->titular),
@@ -156,6 +165,18 @@ class IngestaSgd
             );
 
             $idPorCodigo[$codigo] = $modelo->id;
+        }
+
+        $alcaldiaId = Dependencia::query()
+            ->where('proceso_transferencia_id', $proceso->id)
+            ->where('codigo', '00001')
+            ->value('id');
+
+        if ($alcaldiaId !== null && isset($idPorCodigo['01.01'])) {
+            Dependencia::query()
+                ->where('proceso_transferencia_id', $proceso->id)
+                ->where('codigo', '01.01')
+                ->update(['parent_id' => $alcaldiaId]);
         }
     }
 

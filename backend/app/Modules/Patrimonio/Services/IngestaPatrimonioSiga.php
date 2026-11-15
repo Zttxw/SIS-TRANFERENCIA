@@ -16,6 +16,7 @@ use App\Support\Enums\EstadoVerificacionBien;
 use App\Support\Enums\FuenteDato;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 /**
  * Servicio de Ingesta Patrimonial desde el SIGA-MEF hacia PostgreSQL (Anexo 04).
@@ -47,51 +48,23 @@ class IngestaPatrimonioSiga
         // El SIGA y el SGD usan llaves de código distintas para la misma unidad
         // (SGD: ID interno "00025"; SIGA: jerárquico "01.03.07.04"). El empate se
         // materializa en `dependencias.codigo_siga` (MapeoDependenciasSigaSeeder).
-        // Por eso NO creamos una dependencia por centro de costo: buscamos la
-        // dependencia maestra (SGD) cuyo `codigo_siga` coincide y colgamos de ella
-        // los bienes. Solo si no hay empate creamos una dependencia propia marcada
-        // como SIGA (centro de costo sin equivalente en el SGD).
+        // Cada bien debe quedar vinculado a la dependencia maestra del SGD.
+        // Un centro de costo sin empate se revisa antes de publicar sus bienes.
         $centrosCosto = $this->sigaConnector->obtenerCentrosCosto();
         $mapaDependencias = [];
 
-        $dependenciasPorCodigoSiga = Dependencia::withTrashed()
+        $dependenciasPorCodigoSiga = Dependencia::query()
             ->where('proceso_transferencia_id', $proceso->id)
+            ->where('fuente', FuenteDato::SGD->value)
             ->whereNotNull('codigo_siga')
             ->pluck('id', 'codigo_siga');
 
-        DB::transaction(function () use ($proceso, $centrosCosto, $dependenciasPorCodigoSiga, &$mapaDependencias, $extraidoEn) {
-            foreach ($centrosCosto as $cc) {
-                $codigoSiga = $cc['codigo'];
-
-                // a) Empate con la dependencia maestra del SGD por codigo_siga.
-                if ($dependenciasPorCodigoSiga->has($codigoSiga)) {
-                    $mapaDependencias[$codigoSiga] = $dependenciasPorCodigoSiga->get($codigoSiga);
-
-                    continue;
-                }
-
-                // b) Sin equivalente en el SGD: crear/actualizar dependencia propia
-                //    SIGA (identificada por su código de centro de costo).
-                $dep = Dependencia::withTrashed()->updateOrCreate(
-                    [
-                        'proceso_transferencia_id' => $proceso->id,
-                        'codigo' => $codigoSiga,
-                    ],
-                    [
-                        'codigo_siga' => $codigoSiga,
-                        'nombre' => $cc['nombre'] ?: "Centro de Costo {$codigoSiga}",
-                        'nivel' => 2,
-                        'activa' => true,
-                        'fuente' => FuenteDato::SIGA->value,
-                        'extraido_en' => $extraidoEn,
-                    ]
-                );
-                if ($dep->trashed()) {
-                    $dep->restore();
-                }
-                $mapaDependencias[$codigoSiga] = $dep->id;
+        foreach ($centrosCosto as $cc) {
+            $codigoSiga = trim($cc['codigo']);
+            if ($dependenciasPorCodigoSiga->has($codigoSiga)) {
+                $mapaDependencias[$codigoSiga] = $dependenciasPorCodigoSiga->get($codigoSiga);
             }
-        });
+        }
 
         // 2. Obtener los bienes a ingestar
         $bienes = $codigoCentroCosto !== null
@@ -114,7 +87,11 @@ class IngestaPatrimonioSiga
         ) {
             foreach ($bienes as $item) {
                 /** @var SigaBienDTO $item */
-                $depId = $item->codigoCentroCosto ? ($mapaDependencias[$item->codigoCentroCosto] ?? null) : null;
+                $codigoCentroCosto = trim((string) $item->codigoCentroCosto);
+                $depId = $mapaDependencias[$codigoCentroCosto] ?? null;
+                if ($depId === null) {
+                    throw new RuntimeException("El bien {$item->codigoPatrimonial} no tiene un centro de costo SIGA vigente y mapeado.");
+                }
 
                 // Sincronizar servidor responsable si tiene DNI
                 $servidorId = null;
@@ -125,19 +102,21 @@ class IngestaPatrimonioSiga
                         $apellidos = count($partes) >= 2 ? $partes[0].' '.$partes[1] : ($partes[0] ?? null);
                         $nombres = count($partes) >= 3 ? implode(' ', array_slice($partes, 2)) : ($item->nombreResponsable ?? 'Servidor');
 
-                        $servidor = Servidor::withTrashed()->updateOrCreate(
-                            [
-                                'proceso_transferencia_id' => $proceso->id,
-                                'dni' => $dni,
-                            ],
-                            [
+                        $servidor = Servidor::withTrashed()->firstOrNew([
+                            'proceso_transferencia_id' => $proceso->id,
+                            'dni' => $dni,
+                        ]);
+
+                        if (! $servidor->exists || $servidor->fuente === FuenteDato::SIGA) {
+                            $servidor->fill([
                                 'nombres' => $nombres,
                                 'apellidos' => $apellidos,
-                                'dependencia_id' => $depId,
+                                'dependencia_id' => null,
                                 'fuente' => FuenteDato::SIGA->value,
                                 'extraido_en' => $extraidoEn,
-                            ]
-                        );
+                            ]);
+                            $servidor->save();
+                        }
                         if ($servidor->trashed()) {
                             $servidor->restore();
                         }
@@ -163,6 +142,7 @@ class IngestaPatrimonioSiga
                         'estado_siga' => $item->estadoConservacion,
                         'valor' => $item->valorAdquisicion,
                         'fuente' => FuenteDato::SIGA->value,
+                        'fuente_referencia' => "SIG_PATRIMONIO.CODIGO_ACTIVO={$item->codigoPatrimonial};CENTRO_COSTO={$codigoCentroCosto}",
                         'extraido_en' => $extraidoEn,
                     ]
                 );
