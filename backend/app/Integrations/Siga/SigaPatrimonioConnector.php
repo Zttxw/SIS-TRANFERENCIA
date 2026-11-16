@@ -76,7 +76,11 @@ class SigaPatrimonioConnector implements SigaConnectorInterface
             FROM {$tPatri} p
             LEFT JOIN {$tCc} cc ON p.CENTRO_COSTO = cc.CENTRO_COSTO
                 AND cc.ANO_EJE = (SELECT MAX(c2.ANO_EJE) FROM {$tCc} c2 WHERE c2.CENTRO_COSTO = p.CENTRO_COSTO)
-            LEFT JOIN {$tMarca} m ON p.MARCA = m.MARCA
+            LEFT JOIN (
+                SELECT MARCA, MAX(NOMBRE) AS NOMBRE
+                FROM {$tMarca}
+                GROUP BY MARCA
+            ) m ON p.MARCA = m.MARCA
             LEFT JOIN {$tPersonal} per ON p.EMPLEADO = per.empleado
             WHERE p.CENTRO_COSTO = ?
               AND (p.ESTADO_ACTUAL <> 'N' OR p.ESTADO_ACTUAL IS NULL)
@@ -116,7 +120,11 @@ class SigaPatrimonioConnector implements SigaConnectorInterface
             FROM {$tPatri} p
             LEFT JOIN {$tCc} cc ON p.CENTRO_COSTO = cc.CENTRO_COSTO
                 AND cc.ANO_EJE = (SELECT MAX(c2.ANO_EJE) FROM {$tCc} c2 WHERE c2.CENTRO_COSTO = p.CENTRO_COSTO)
-            LEFT JOIN {$tMarca} m ON p.MARCA = m.MARCA
+            LEFT JOIN (
+                SELECT MARCA, MAX(NOMBRE) AS NOMBRE
+                FROM {$tMarca}
+                GROUP BY MARCA
+            ) m ON p.MARCA = m.MARCA
             LEFT JOIN {$tPersonal} per ON p.EMPLEADO = per.empleado
             WHERE p.EMPLEADO = ?
               AND (p.ESTADO_ACTUAL <> 'N' OR p.ESTADO_ACTUAL IS NULL)

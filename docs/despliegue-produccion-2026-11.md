@@ -1,6 +1,15 @@
 # Preparación del despliegue de SIS Transferencia
 
-Fecha de revisión: 15 de noviembre de 2026. Estado: preparación local; servidor apagado y sin acceso SSH. **Este documento no certifica aún una salida a producción.**
+Fecha de revisión: 16 de noviembre de 2026. Estado: ensayo en el servidor sobre una copia aislada de la base; despliegue en servicio pendiente.
+
+## Ensayo del 16 de noviembre
+
+- La base de SIS Transferencia se respaldó y se restauró correctamente en una base temporal. No se modificaron las bases ni los contenedores de los otros tres sistemas.
+- Las 275 pruebas backend pasaron (1 250 aserciones), y el frontend compiló en el directorio de ensayo.
+- En la copia se aplicaron cuatro migraciones pendientes y se retiraron lógicamente 48 raíces SIGA vacías. Quedó una sola raíz activa: Alcaldía `00001`.
+- La ingesta SGD oficial devolvió 158 dependencias, 645 servidores y 6 420 documentos pendientes. La ingesta SIGA oficial devolvió 6 302 bienes para 59 centros mapeados.
+- El `JOIN` con la tabla `MARCA` duplicaba 224 filas por un código de marca con dos nombres. La consulta se corrigió para elegir un nombre de manera determinista; una nueva ingesta de ensayo devolvió 6 302 filas únicas. Los 6 302 bienes quedaron vinculados a un centro SIGA coincidente con su dependencia local.
+- Aún falta aplicar los cambios a la base en servicio y comprobar la ubicación física de los equipos con Patrimonio.
 
 ## Estado de las ramas
 
