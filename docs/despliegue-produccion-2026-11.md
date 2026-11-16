@@ -1,6 +1,17 @@
 # Preparación del despliegue de SIS Transferencia
 
-Fecha de revisión: 16 de noviembre de 2026. Estado: ensayo en el servidor sobre una copia aislada de la base; despliegue en servicio pendiente.
+Fecha de revisión: 16 de noviembre de 2026. Estado: código e ingestas aplicados a SIS Transferencia en el servidor; endurecimiento del stack y cotejo físico pendientes.
+
+## Aplicación en servicio, 16 de noviembre
+
+- Se desplegó `main` en el commit `fad5c4f`. La rama de firma quedó integrada. Se usó modo mantenimiento únicamente para SIS Transferencia; ningún contenedor de los otros tres proyectos se reinició.
+- Respaldo previo restaurado y comprobado: `/home/siracom/backups/sis-transferencia/db-20261116-141449.dump`. También se guardaron archivos y configuración en el mismo directorio. No se vació ninguna tabla ni se recreó la base en servicio.
+- Se aplicaron cuatro migraciones y se retiraron lógicamente los 48 nodos SIGA vacíos. La estructura tiene una raíz activa (`00001`, Alcaldía) y ninguna unidad activa con padre inactivo.
+- Se repitió la ingesta desde las fuentes oficiales para el proceso 1: SGD, 158 dependencias, 645 servidores, 82 tipos, 18 estados, 1 133 agregados de acervo y 6 413 pendientes al terminar; SIGA, 59 centros y 6 302 bienes. El total de pendientes cambia mientras opera el SGD.
+- Los 6 302 bienes quedaron con fecha de extracción de hoy. Hay 0 sin dependencia, 0 cuyo centro SIGA difiere del código de la dependencia y 0 vinculados a una unidad inactiva.
+- `GET /` respondió 200 y la API respondió 401 para una petición sin autenticación con `Accept: application/json`. Los contenedores de los otros tres proyectos continuaron en ejecución.
+- La ubicación física sigue sin verificarse: los 6 302 bienes tienen `ubicacion` sin completar. Patrimonio debe cotejar A/B durante la verificación; el centro de costo del SIGA no prueba dónde está el equipo.
+- El Compose actual todavía publica Vite de desarrollo y PostgreSQL en puertos del host. La aplicación funciona, pero esta configuración requiere endurecimiento antes de considerarla una operación productiva definitiva. Una petición API sin cabecera `Accept: application/json` devolvió 500 por ausencia de ruta `login`; el cliente React sí envía esa cabecera.
 
 ## Ensayo del 16 de noviembre
 
