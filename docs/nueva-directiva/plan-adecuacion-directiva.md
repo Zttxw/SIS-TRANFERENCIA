@@ -114,6 +114,13 @@ Complemento hasta la fecha de cese (RF-26 y RF-68, F-17): **fuera del alcance de
 3. Ejecutar la suite actual (`backend/tests/Feature`, unos 40 tests) y registrar la línea base.
 4. Respaldar la base antes de cada migración de datos (ya existe `respaldo-antes-asignaciones.dump`; generar uno nuevo).
 
+**Resultado (2026-11-17):**
+- Rama `feature/directiva-2026` creada desde `d606638`.
+- Laravel Boost v2.10.4 ya estaba instalado; se agregó Claude Code a `boost.json` y se regeneraron las guías y skills (`backend/AGENTS.md`, `backend/.claude/skills`, `backend/.agents/skills`). El `CLAUDE.md` y el `AGENTS.md` de la raíz apuntan ahora a esas guías y describen cómo ejecutar artisan en Docker.
+- Línea base de pruebas: **275 pasan (1254 aserciones), 0 fallan**, en 20,6 s (`docker exec sis_transferencia_backend php artisan test`, SQLite en memoria).
+- Respaldo de la base: `/home/siracom/sis-transferencia-respaldos/respaldo-fase0-2026-11-17.dump` (`pg_dump -Fc`, 37 tablas con datos), **fuera del repositorio**.
+- Se corrigieron los permisos `600` de varios archivos de código (backend y frontend) que el contenedor no podía leer.
+
 ### Fase 1 — Catálogo del Anexo 01, equivalencias y envío (D-01, D-02, D-03, D-11)
 
 Es la base de todas las demás fases.

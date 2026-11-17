@@ -1,7 +1,16 @@
 {
     "agents": [
-        "codex"
+        "codex",
+        "claude_code"
     ],
+    "cloud": true,
     "guidelines": true,
-    "mcp": false
+    "mcp": false,
+    "skills": [
+        "infer-conventions",
+        "deploying-to-cloud",
+        "laravel-best-practices",
+        "testing-best-practices",
+        "tailwindcss-development"
+    ]
 }
