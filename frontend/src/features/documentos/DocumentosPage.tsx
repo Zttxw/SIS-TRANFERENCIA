@@ -62,7 +62,7 @@ export function DocumentosPage() {
 
   const estadoEntrega = estadoData?.entrega?.estado ?? null
   const esModificable =
-    !estadoEntrega || estadoEntrega === 'borrador' || estadoEntrega === 'observada'
+    !estadoEntrega || estadoEntrega === 'borrador'
   const dependencia = estadoData?.dependencia
 
   const handleGuardar = async (payload: GuardarDocumentoPayload) => {
@@ -118,7 +118,7 @@ export function DocumentosPage() {
       <AnexoHeader
         numeroAnexo="SGD"
         titulo="Documentos pendientes de la oficina"
-        subtitulo="Trámites por continuar en la siguiente gestión."
+        subtitulo="Trámites por continuar en la siguiente gestión. Se incluyen en la sección IV del Anexo 02 (agenda pendiente)."
         dependenciaCodigo={dependencia?.codigo}
         dependenciaNombre={dependencia?.nombre}
         acciones={
@@ -374,12 +374,7 @@ export function DocumentosPage() {
       />
 
       {/* Bandeja de Observaciones del Anexo */}
-      <ObservacionesAnexoPanel
-        anexo="documento"
-        observableId={documentos[0]?.id}
-        dependenciaId={dependenciaId ?? undefined}
-        esModificable={esModificable}
-      />
+      <ObservacionesAnexoPanel anexo="documento" dependenciaId={dependenciaId ?? undefined} />
     </div>
   )
 }

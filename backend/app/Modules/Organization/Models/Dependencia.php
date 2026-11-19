@@ -10,6 +10,7 @@ use App\Support\Concerns\HasFuenteDato;
 use App\Support\Enums\FuenteDato;
 use App\Support\Models\BaseModel;
 use Database\Factories\DependenciaFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -48,6 +49,8 @@ class Dependencia extends BaseModel
         'tipo',
         'nivel',
         'activa',
+        'es_centro_costo',
+        'codigo_ceplan',
         'codigo_encargado_sgd',
         'tipo_encargatura',
         'codigo_titular_sgd',
@@ -62,7 +65,39 @@ class Dependencia extends BaseModel
         return [
             'nivel' => 'integer',
             'activa' => 'boolean',
+            'es_centro_costo' => 'boolean',
         ];
+    }
+
+    /**
+     * Solo los centros de costo del Anexo 01: son las unidades del flujo de
+     * transferencia (D-01). Las dependencias del SGD quedan para trazabilidad.
+     *
+     * @param  Builder<Dependencia>  $query
+     * @return Builder<Dependencia>
+     */
+    public function scopeCentrosCosto(Builder $query): Builder
+    {
+        return $query->where('es_centro_costo', true);
+    }
+
+    /**
+     * El CC cuyo padre en el Anexo 01 es él mismo se guarda sin padre y envía
+     * directo al ETTS (D-02).
+     */
+    public function enviaAEtts(): bool
+    {
+        return $this->es_centro_costo && $this->parent_id === null;
+    }
+
+    /**
+     * Dependencias del SGD y del SIGA vinculadas a este centro de costo.
+     *
+     * @return HasMany<EquivalenciaCentroCosto, $this>
+     */
+    public function equivalencias(): HasMany
+    {
+        return $this->hasMany(EquivalenciaCentroCosto::class, 'centro_costo_id');
     }
 
     /** @return BelongsTo<ProcesoTransferencia, $this> */

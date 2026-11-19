@@ -4,7 +4,6 @@ import type {
   FiltrosObservaciones,
   Observacion,
   RegistrarObservacionPayload,
-  SubsanarObservacionPayload,
 } from '@/types/observaciones'
 
 export const observacionesService = {
@@ -25,16 +24,9 @@ export const observacionesService = {
     return res.data.data
   },
 
-  async subsanar({ id, respuesta }: SubsanarObservacionPayload): Promise<Observacion> {
-    const res = await api.post<ApiSuccess<Observacion>>(`/observaciones/${id}/subsanar`, {
-      respuesta,
-    })
-    return res.data.data
-  },
-
-  async desestimar(id: number): Promise<Observacion> {
-    const res = await api.post<ApiSuccess<Observacion>>(`/observaciones/${id}/desestimar`)
+  /** El coordinador retira su observación antes de aceptar la entrega. */
+  async retirar(id: number): Promise<Observacion> {
+    const res = await api.post<ApiSuccess<Observacion>>(`/observaciones/${id}/retirar`)
     return res.data.data
   },
 }
-

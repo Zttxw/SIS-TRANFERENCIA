@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle, Info, Lock } from 'lucide-react'
+import { CheckCircle, Lock, Send } from 'lucide-react'
 
 import type { EstadoEntrega } from '@/types/transferencia'
 
@@ -7,74 +7,67 @@ interface AlertaBloqueoEntregaProps {
   className?: string
 }
 
+const AVISOS: Record<Exclude<EstadoEntrega, 'borrador'>, { titulo: string; texto: string; icono: typeof Lock; clases: string }> = {
+  en_revision: {
+    titulo: 'Entrega presentada al coordinador ETTE',
+    texto:
+      'Los anexos están bloqueados mientras el coordinador revisa la entrega. Si advierte algo lo registrará como observación en el acta; no hay devolución para corregir.',
+    icono: Lock,
+    clases: 'border-info-border bg-info-soft text-info-fg',
+  },
+  verificada: {
+    titulo: 'Entrega aceptada por el coordinador ETTE',
+    texto: 'Los anexos están bloqueados. Corresponde generar los anexos 02 al 07 y firmarlos el responsable y el coordinador ETTE; luego se remite la entrega.',
+    icono: CheckCircle,
+    clases: 'border-success-border bg-success-soft text-success-fg',
+  },
+  acta_suscrita: {
+    titulo: 'Acta suscrita por ambos lados',
+    texto: 'Los anexos 02 al 07 tienen la firma del responsable y del coordinador ETTE. Corresponde remitir la entrega.',
+    icono: CheckCircle,
+    clases: 'border-success-border bg-success-soft text-success-fg',
+  },
+  remitida: {
+    titulo: 'Entrega remitida (solo lectura)',
+    texto: 'La entrega de este centro de costo ya fue remitida. Los anexos no pueden editarse.',
+    icono: Send,
+    clases: 'border-info-border bg-info-soft text-info-fg',
+  },
+  recibida_etts: {
+    titulo: 'Entrega recibida por el ETTS (solo lectura)',
+    texto: 'El ETTS registró la recepción de la entrega. Los anexos no pueden editarse.',
+    icono: Send,
+    clases: 'border-info-border bg-info-soft text-info-fg',
+  },
+  remitida_ette: {
+    titulo: 'Entrega enviada al ETTE (solo lectura)',
+    texto: 'El ETTS envió la entrega al ETTE. Los anexos no pueden editarse.',
+    icono: Send,
+    clases: 'border-info-border bg-info-soft text-info-fg',
+  },
+  recibida_ette: {
+    titulo: 'Entrega recibida por el ETTE (solo lectura)',
+    texto: 'El ETTE registró la recepción: el flujo de la entrega concluyó.',
+    icono: CheckCircle,
+    clases: 'border-success-border bg-success-soft text-success-fg',
+  },
+}
+
+/** Aviso de por qué los anexos no se pueden editar (RN-13, D-07). */
 export function AlertaBloqueoEntrega({ estadoEntrega, className = '' }: AlertaBloqueoEntregaProps) {
   if (!estadoEntrega || estadoEntrega === 'borrador') {
     return null
   }
 
-  if (estadoEntrega === 'remitida') {
-    return (
-      <div
-        className={`flex items-start gap-3 rounded-lg border border-info-border bg-info-soft p-4 text-info-fg ${className}`}
-        role="alert"
-      >
-        <Lock className="h-5 w-5 shrink-0 text-info mt-0.5" />
-        <div className="text-sm space-y-1">
-          <p className="font-semibold">Entrega en modo Solo Lectura (Remitida)</p>
-          <p className="text-info-fg/90">
-            La entrega de este centro de costo ya fue remitida al nivel jerárquico superior para su revisión.
-            Los campos se encuentran bloqueados para edición. Solo podrán modificarse si la entrega es observada.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  if (estadoEntrega === 'observada') {
-    return (
-      <div
-        className={`flex items-start gap-3 rounded-lg border border-warning-border bg-warning-soft p-4 text-warning-fg ${className}`}
-        role="alert"
-      >
-        <AlertCircle className="h-5 w-5 shrink-0 text-warning mt-0.5" />
-        <div className="text-sm space-y-1">
-          <p className="font-semibold">Entrega con Observaciones Pendientes</p>
-          <p className="text-warning-fg/90">
-            La entrega ha sido devuelta con observaciones. La edición de este anexo se encuentra habilitada para
-            que proceda con las correcciones pertinentes y la posterior respuesta de subsanación.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  if (estadoEntrega === 'consolidada') {
-    return (
-      <div
-        className={`flex items-start gap-3 rounded-lg border border-success-border bg-success-soft p-4 text-success-fg ${className}`}
-        role="alert"
-      >
-        <CheckCircle className="h-5 w-5 shrink-0 text-success mt-0.5" />
-        <div className="text-sm space-y-1">
-          <p className="font-semibold">Entrega Consolidada y Aprobada</p>
-          <p className="text-success-fg/90">
-            La información de este anexo ha sido verificada y consolidada de manera definitiva en el proceso
-            institucional de transferencia. El registro es inmutable.
-          </p>
-        </div>
-      </div>
-    )
-  }
+  const { titulo, texto, icono: Icono, clases } = AVISOS[estadoEntrega]
 
   return (
-    <div
-      className={`flex items-start gap-3 rounded-lg border border-muted bg-muted/30 p-4 text-muted-foreground ${className}`}
-    >
-      <Info className="h-5 w-5 shrink-0 mt-0.5" />
-      <div className="text-sm">
-        <p className="font-medium text-foreground">Estado de la entrega: {estadoEntrega}</p>
+    <div className={`flex items-start gap-3 rounded-lg border p-4 ${clases} ${className}`} role="alert">
+      <Icono className="mt-0.5 h-5 w-5 shrink-0" />
+      <div className="space-y-1 text-sm">
+        <p className="font-semibold">{titulo}</p>
+        <p className="opacity-90">{texto}</p>
       </div>
     </div>
   )
 }
-

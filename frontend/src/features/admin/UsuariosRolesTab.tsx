@@ -25,12 +25,10 @@ import type { CuentaUsuario } from './usuarios.service'
 const ETIQUETA_ROL: Record<string, string> = {
   administrador: 'Administrador',
   servidor: 'Servidor público',
-  responsable_equipo: 'Responsable de equipo de trabajo',
   responsable_centro_costo: 'Responsable de centro de costo',
-  coordinador: 'Coordinador acreditado',
   etts: 'ETTS',
-  ette: 'ETTE',
-  delegado_ette: 'Delegado ETTE',
+  ette: 'Titular ETTE',
+  delegado_ette: 'Coordinador ETTE',
 }
 
 export function UsuariosRolesTab() {

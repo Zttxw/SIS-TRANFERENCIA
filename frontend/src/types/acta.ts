@@ -6,22 +6,45 @@ export interface IdentidadInterviniente {
   cargo: string
 }
 
-export interface IntervinientesActa {
-  titular_saliente?: string | IdentidadInterviniente | null
-  titular_entrante?: string | IdentidadInterviniente | null
-  coordinador_ette?: string | IdentidadInterviniente | null
-  responsable_superior?: string | IdentidadInterviniente | null
+/** Receptor de la sección II: coordinador ETTE o titular que lo suplió. */
+export interface ReceptorActa extends IdentidadInterviniente {
+  calidad: string
 }
 
-export interface AnexosEntregadosMap {
-  anexo_01: boolean
-  anexo_02: boolean
-  anexo_03: boolean
-  anexo_04: boolean
-  anexo_05: boolean
-  anexo_06: boolean
-  anexo_07: boolean
-  [key: string]: boolean
+export interface IntervinientesActa {
+  titular_saliente?: string | IdentidadInterviniente | null
+  coordinador_ette?: ReceptorActa | null
+}
+
+/** Ítems de la sección III del Acta 07. */
+export type ItemActa = 'anexo_02' | 'anexo_03' | 'anexo_04' | 'anexo_05' | 'anexo_06' | 'otros'
+
+export type CondicionAnexoActa = 'entregado' | 'no_entregado' | 'no_aplica'
+
+export interface CondicionItemActa {
+  condicion: CondicionAnexoActa
+  observacion: string | null
+  /** La fijaron las partes; si no, sale de la presencia de registros. */
+  manual: boolean
+}
+
+export type AnexosEntregadosMap = Record<ItemActa, CondicionItemActa>
+
+/** Observación del coordinador ETTE que figura en la sección IV. */
+export interface ObservacionActa {
+  n: number
+  descripcion: string
+  documentacion: string
+  autor: string
+}
+
+export interface GuardarActaPayload {
+  fecha_acta?: string
+  hora?: string | null
+  lugar?: string
+  otros_documentos?: string | null
+  observaciones?: string | null
+  condiciones?: Partial<Record<ItemActa, { condicion?: CondicionAnexoActa; observacion?: string | null }>>
 }
 
 export interface EvidenciaItem {
@@ -43,16 +66,22 @@ export interface EvidenciaItem {
 
 export interface ActaTransferencia {
   version: number
-  declara: 'suscripcion_hija' | 'recepcion_consolidacion'
   id: number
   proceso_transferencia_id: number
   dependencia_id: number
   expediente_id: number | null
   numero_acta: string
   fecha_acta: string
+  lugar: string | null
+  hora: string | null
   intervinientes: IntervinientesActa | null
   anexos_entregados: AnexosEntregadosMap | null
+  otros_documentos: string | null
+  /** Comentarios adicionales (sección IV). */
   observaciones: string | null
+  /** Las partes aún pueden completar el acta (sin firmas ni suscripción). */
+  editable: boolean
+  observaciones_registradas: ObservacionActa[]
   estado: 'borrador' | 'generada' | 'suscrita'
   ruta_pdf: string | null
   ruta_pdf_suscrito: string | null

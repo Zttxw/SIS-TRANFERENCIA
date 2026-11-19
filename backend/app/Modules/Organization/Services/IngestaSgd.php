@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Organization\Services;
 
 use App\Modules\Organization\Models\Dependencia;
+use App\Modules\Organization\Models\EquivalenciaCentroCosto;
 use App\Modules\Organization\Models\Servidor;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Enums\FuenteDato;
@@ -63,6 +64,7 @@ class IngestaSgd
 
             $servidores = $this->publicarServidores($proceso, $empleados, $encargadosSgd, $soloDependencia, $extraidoEn);
             $encargados = $this->resolverEncargados($proceso);
+            app(EquivalenciasCentroCosto::class)->sincronizarEncargados($proceso->id);
 
             return [
                 'dependencias' => count($dependencias),
@@ -147,8 +149,10 @@ class IngestaSgd
                 $esActiva = false;
             }
 
+            // El código del SGD puede coincidir con uno del Anexo 01 ("01"):
+            // la clave excluye a los centros de costo.
             $modelo = Dependencia::updateOrCreate(
-                ['proceso_transferencia_id' => $proceso->id, 'codigo' => $codigo],
+                ['proceso_transferencia_id' => $proceso->id, 'es_centro_costo' => false, 'codigo' => $codigo],
                 [
                     'parent_id' => $padreId,
                     'codigo_sgd' => $codigo,
@@ -165,16 +169,24 @@ class IngestaSgd
             );
 
             $idPorCodigo[$codigo] = $modelo->id;
+
+            // Una dependencia nueva aparece «sin asignar» en la pantalla de
+            // equivalencias hasta que el administrador la vincule a su CC.
+            app(EquivalenciasCentroCosto::class)->registrarOrigen(
+                $proceso->id, EquivalenciaCentroCosto::ORIGEN_SGD, $codigo, $modelo->nombre, $modelo->id,
+            );
         }
 
         $alcaldiaId = Dependencia::query()
             ->where('proceso_transferencia_id', $proceso->id)
+            ->where('es_centro_costo', false)
             ->where('codigo', '00001')
             ->value('id');
 
         if ($alcaldiaId !== null && isset($idPorCodigo['01.01'])) {
             Dependencia::query()
                 ->where('proceso_transferencia_id', $proceso->id)
+                ->where('es_centro_costo', false)
                 ->where('codigo', '01.01')
                 ->update(['parent_id' => $alcaldiaId]);
         }
@@ -195,10 +207,9 @@ class IngestaSgd
         ?string $soloDependencia,
         Carbon $extraidoEn,
     ): int {
-        // Mapa código de dependencia => id (del proceso) para resolver el FK.
-        $depPorCodigo = Dependencia::query()
-            ->where('proceso_transferencia_id', $proceso->id)
-            ->pluck('id', 'codigo');
+        // Código SGD de la dependencia => dónde se adscribe el servidor: su
+        // centro de costo, o la dependencia del SGD si aún no tiene equivalencia.
+        $depPorCodigo = app(EquivalenciasCentroCosto::class)->destinosSgd($proceso->id);
 
         $total = 0;
         foreach ($empleados as $emp) {
@@ -252,6 +263,7 @@ class IngestaSgd
         $resueltos = 0;
         $dependencias = Dependencia::query()
             ->where('proceso_transferencia_id', $proceso->id)
+            ->where('es_centro_costo', false)
             ->whereNotNull('codigo_encargado_sgd')
             ->get();
 

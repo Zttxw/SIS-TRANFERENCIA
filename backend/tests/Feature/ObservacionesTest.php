@@ -11,22 +11,25 @@ use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\Observacion;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Support\Enums\CalidadEtte;
 use App\Support\Enums\EstadoEntrega;
 use App\Support\Enums\EstadoObservacion;
 use App\Support\Enums\Rol;
 use Database\Seeders\RolesPermisosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\PreparaEntregas;
 use Tests\TestCase;
 
 /**
- * Módulo de observaciones y subsanaciones (plan §7.9): el coordinador formula
- * observaciones concretas sobre anexos; el responsable las subsana; al subsanar
- * la última observación abierta de una entrega OBSERVADA, ésta se re-remite.
+ * Observaciones del coordinador ETTE (D-07): constancia sin subsanación. Se
+ * registran sobre una fila o el anexo completo mientras la entrega está
+ * presentada y sin aceptar, y no cambian su estado.
  */
 class ObservacionesTest extends TestCase
 {
-    use RefreshDatabase;
+    use PreparaEntregas, RefreshDatabase;
 
     private ProcesoTransferencia $proceso;
 
@@ -70,154 +73,164 @@ class ObservacionesTest extends TestCase
         ]);
     }
 
-    private function crearEntrega(Dependencia $dep, EstadoEntrega $estado): Entrega
+    private function observacionDe(Dependencia $dep): Observacion
     {
-        return Entrega::create([
+        return Observacion::create([
             'proceso_transferencia_id' => $this->proceso->id,
             'dependencia_id' => $dep->id,
-            'dependencia_destino_id' => $dep->parent_id,
-            'estado' => $estado,
+            'anexo' => 'gestion',
+            'autor_id' => User::factory()->create()->id,
+            'descripcion' => 'El informe no detalla los pendientes.',
+            'estado' => EstadoObservacion::REGISTRADA,
         ]);
     }
 
-    public function test_coordinador_registra_observacion_sobre_anexo(): void
+    public function test_coordinador_observa_una_fila_sin_cambiar_el_estado_de_la_entrega(): void
     {
         $informe = $this->informeDe($this->hija);
-        // Coordinador con ámbito en el padre (incluye la hija).
-        $this->actuarComo(Rol::COORDINADOR, $this->padre);
+        $this->entregaEn($this->hija, EstadoEntrega::EN_REVISION);
+        $this->actuarComo(Rol::DELEGADO_ETTE, $this->hija);
 
         $this->postJson('/api/observaciones', [
             'anexo' => 'gestion',
             'observable_id' => $informe->id,
             'descripcion' => 'El informe no detalla los asuntos pendientes.',
-        ])->assertStatus(201)
-            ->assertJsonPath('data.estado', EstadoObservacion::ABIERTA->value);
+        ])->assertCreated()
+            ->assertJsonPath('data.estado', EstadoObservacion::REGISTRADA->value);
 
         $this->assertDatabaseHas('observaciones', [
             'observable_type' => InformeGestion::class,
             'observable_id' => $informe->id,
-            'estado' => EstadoObservacion::ABIERTA->value,
+            'dependencia_id' => $this->hija->id,
+            'anexo' => 'gestion',
+            'en_calidad_de' => CalidadEtte::COORDINADOR->value,
         ]);
+        $this->assertSame(EstadoEntrega::EN_REVISION, Entrega::where('dependencia_id', $this->hija->id)->value('estado'));
     }
 
-    public function test_coordinador_no_observa_fuera_de_su_ambito(): void
+    public function test_coordinador_observa_el_anexo_completo(): void
     {
-        $otraRama = Dependencia::factory()->create([
-            'proceso_transferencia_id' => $this->proceso->id,
-            'nivel' => 2,
-        ]);
-        $informe = $this->informeDe($otraRama);
+        $this->entregaEn($this->hija, EstadoEntrega::EN_REVISION);
+        $this->actuarComo(Rol::DELEGADO_ETTE, $this->hija);
 
-        $this->actuarComo(Rol::COORDINADOR, $this->padre);
+        $this->postJson('/api/observaciones', [
+            'anexo' => 'acervo',
+            'dependencia_id' => $this->hija->id,
+            'descripcion' => 'No se registró el archivo de gestión.',
+        ])->assertCreated()->assertJsonPath('data.observable_id', null);
+
+        $this->assertDatabaseHas('observaciones', ['dependencia_id' => $this->hija->id, 'anexo' => 'acervo', 'observable_id' => null]);
+    }
+
+    /** @return array<string, array{0: ?EstadoEntrega}> */
+    public static function estadosNoObservables(): array
+    {
+        return [
+            'sin presentar' => [null],
+            'borrador' => [EstadoEntrega::BORRADOR],
+            'aceptada' => [EstadoEntrega::VERIFICADA],
+            'remitida' => [EstadoEntrega::REMITIDA],
+        ];
+    }
+
+    #[DataProvider('estadosNoObservables')]
+    public function test_solo_se_observa_una_entrega_presentada_y_sin_aceptar(?EstadoEntrega $estado): void
+    {
+        if ($estado !== null) {
+            $this->entregaEn($this->hija, $estado);
+        }
+        $this->actuarComo(Rol::DELEGADO_ETTE, $this->hija);
 
         $this->postJson('/api/observaciones', [
             'anexo' => 'gestion',
-            'observable_id' => $informe->id,
+            'dependencia_id' => $this->hija->id,
+            'descripcion' => 'Observación fuera de revisión.',
+        ])->assertConflict();
+
+        $this->assertDatabaseCount('observaciones', 0);
+    }
+
+    public function test_coordinador_no_observa_fuera_del_cc_asignado(): void
+    {
+        $this->entregaEn($this->hija, EstadoEntrega::EN_REVISION);
+        $this->actuarComo(Rol::DELEGADO_ETTE, $this->padre);
+
+        $this->postJson('/api/observaciones', [
+            'anexo' => 'gestion',
+            'dependencia_id' => $this->hija->id,
             'descripcion' => 'Observación fuera de ámbito.',
         ])->assertForbidden();
     }
 
-    public function test_servidor_no_puede_registrar_observaciones(): void
+    public function test_titular_ette_observa_en_suplencia_solo_con_motivo(): void
     {
         $informe = $this->informeDe($this->hija);
-        $this->actuarComo(Rol::SERVIDOR, $this->hija);
+        $this->entregaEn($this->hija, EstadoEntrega::EN_REVISION);
+        $titular = $this->actuarComo(Rol::ETTE, null);
+        $payload = ['anexo' => 'gestion', 'observable_id' => $informe->id, 'descripcion' => 'Falta el detalle de pendientes.'];
 
-        $this->postJson('/api/observaciones', [
-            'anexo' => 'gestion',
+        $this->postJson('/api/observaciones', $payload)
+            ->assertStatus(422)->assertJsonValidationErrors('motivo_suplencia');
+
+        $this->postJson('/api/observaciones', [...$payload, 'motivo_suplencia' => 'Coordinador con descanso médico.'])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('observaciones', [
             'observable_id' => $informe->id,
-            'descripcion' => 'El servidor no tiene permiso para observar.',
-        ])->assertForbidden();
+            'autor_id' => $titular->id,
+            'en_calidad_de' => CalidadEtte::TITULAR_SUPLENTE->value,
+            'motivo_suplencia' => 'Coordinador con descanso médico.',
+        ]);
     }
 
-    public function test_subsanar_ultima_observacion_reremite_la_entrega(): void
+    public function test_responsable_y_servidor_no_registran_observaciones(): void
     {
-        $informe = $this->informeDe($this->hija);
-        $entrega = $this->crearEntrega($this->hija, EstadoEntrega::OBSERVADA);
+        $this->entregaEn($this->hija, EstadoEntrega::EN_REVISION);
+        $payload = ['anexo' => 'gestion', 'dependencia_id' => $this->hija->id, 'descripcion' => 'No tiene permiso para observar.'];
 
-        // Coordinador observa.
-        $coordinador = $this->actuarComo(Rol::COORDINADOR, $this->padre);
-        $observacion = Observacion::create([
-            'proceso_transferencia_id' => $this->proceso->id,
-            'observable_type' => InformeGestion::class,
-            'observable_id' => $informe->id,
-            'autor_id' => $coordinador->id,
-            'descripcion' => 'Corregir el informe.',
-            'estado' => EstadoObservacion::ABIERTA,
-        ]);
-
-        // El responsable de la hija subsana.
         $this->actuarComo(Rol::SERVIDOR, $this->hija);
-        $this->postJson("/api/observaciones/{$observacion->id}/subsanar", [
-            'respuesta' => 'Se corrigió el informe según lo observado.',
-        ])->assertOk()
-            ->assertJsonPath('data.estado', EstadoObservacion::SUBSANADA->value);
+        $this->postJson('/api/observaciones', $payload)->assertForbidden();
 
-        $entrega->refresh();
-        $this->assertSame(EstadoEntrega::REMITIDA, $entrega->estado);
+        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
+        $this->postJson('/api/observaciones', $payload)->assertForbidden();
     }
 
-    public function test_subsanar_no_reremite_si_quedan_observaciones_abiertas(): void
+    public function test_el_coordinador_retira_su_observacion_antes_de_aceptar(): void
     {
-        $informe = $this->informeDe($this->hija);
-        $entrega = $this->crearEntrega($this->hija, EstadoEntrega::OBSERVADA);
+        $this->entregaEn($this->hija, EstadoEntrega::EN_REVISION);
+        $observacion = $this->observacionDe($this->hija);
 
-        $coordinador = $this->actuarComo(Rol::COORDINADOR, $this->padre);
-        $obs1 = Observacion::create([
-            'proceso_transferencia_id' => $this->proceso->id,
-            'observable_type' => InformeGestion::class,
-            'observable_id' => $informe->id,
-            'autor_id' => $coordinador->id,
-            'descripcion' => 'Primera observación.',
-            'estado' => EstadoObservacion::ABIERTA,
-        ]);
-        Observacion::create([
-            'proceso_transferencia_id' => $this->proceso->id,
-            'observable_type' => InformeGestion::class,
-            'observable_id' => $informe->id,
-            'autor_id' => $coordinador->id,
-            'descripcion' => 'Segunda observación aún abierta.',
-            'estado' => EstadoObservacion::ABIERTA,
-        ]);
+        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
+        $this->postJson("/api/observaciones/{$observacion->id}/retirar")->assertForbidden();
 
-        $this->actuarComo(Rol::SERVIDOR, $this->hija);
-        $this->postJson("/api/observaciones/{$obs1->id}/subsanar", [
-            'respuesta' => 'Subsanada la primera.',
-        ])->assertOk();
+        $this->actuarComo(Rol::DELEGADO_ETTE, $this->hija);
+        $this->postJson("/api/observaciones/{$observacion->id}/retirar")
+            ->assertOk()->assertJsonPath('data.estado', EstadoObservacion::RETIRADA->value);
+    }
 
-        $entrega->refresh();
-        // Aún queda una observación abierta: la entrega sigue OBSERVADA.
-        $this->assertSame(EstadoEntrega::OBSERVADA, $entrega->estado);
+    public function test_tras_aceptar_la_observacion_queda_como_constancia(): void
+    {
+        $this->entregaEn($this->hija, EstadoEntrega::VERIFICADA);
+        $observacion = $this->observacionDe($this->hija);
+        $this->actuarComo(Rol::DELEGADO_ETTE, $this->hija);
+
+        $this->postJson("/api/observaciones/{$observacion->id}/retirar")->assertConflict();
+
+        $this->assertSame(EstadoObservacion::REGISTRADA, $observacion->fresh()->estado);
     }
 
     public function test_listado_de_observaciones_se_acota_al_ambito(): void
     {
-        $informePropio = $this->informeDe($this->hija);
         $otraRama = Dependencia::factory()->create([
             'proceso_transferencia_id' => $this->proceso->id,
             'nivel' => 2,
         ]);
-        $informeAjeno = $this->informeDe($otraRama);
+        $this->observacionDe($this->hija);
+        $this->observacionDe($otraRama);
 
-        $coordinadorGlobal = User::factory()->create();
-        AsignacionRol::factory()->rol(Rol::ETTS)->create([
-            'user_id' => $coordinadorGlobal->id,
-            'proceso_transferencia_id' => $this->proceso->id,
-            'dependencia_id' => null,
-        ]);
-        foreach ([$informePropio, $informeAjeno] as $inf) {
-            Observacion::create([
-                'proceso_transferencia_id' => $this->proceso->id,
-                'observable_type' => InformeGestion::class,
-                'observable_id' => $inf->id,
-                'autor_id' => $coordinadorGlobal->id,
-                'descripcion' => 'Observación.',
-                'estado' => EstadoObservacion::ABIERTA,
-            ]);
-        }
-
-        // El responsable de la hija solo ve la observación de su rama.
         $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
         $respuesta = $this->getJson('/api/observaciones')->assertOk();
-        $this->assertCount(1, $respuesta->json('data'));
+
+        $this->assertSame([$this->hija->id], array_column($respuesta->json('data'), 'dependencia_id'));
     }
 }

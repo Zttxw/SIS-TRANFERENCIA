@@ -7,8 +7,9 @@ namespace App\Modules\Patrimonio\Services;
 use App\Integrations\Contracts\SigaConnectorInterface;
 use App\Integrations\DTOs\SigaBienDTO;
 use App\Integrations\Siga\SigaPatrimonioConnector;
-use App\Modules\Organization\Models\Dependencia;
+use App\Modules\Organization\Models\EquivalenciaCentroCosto;
 use App\Modules\Organization\Models\Servidor;
+use App\Modules\Organization\Services\EquivalenciasCentroCosto;
 use App\Modules\Patrimonio\Models\BienPatrimonial;
 use App\Modules\Patrimonio\Models\VerificacionBien;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
@@ -43,28 +44,19 @@ class IngestaPatrimonioSiga
 
         $extraidoEn = Carbon::now();
 
-        // 1. Obtener centros de costo y resolver a qué dependencia pertenece cada uno.
-        //
-        // El SIGA y el SGD usan llaves de código distintas para la misma unidad
-        // (SGD: ID interno "00025"; SIGA: jerárquico "01.03.07.04"). El empate se
-        // materializa en `dependencias.codigo_siga` (MapeoDependenciasSigaSeeder).
-        // Cada bien debe quedar vinculado a la dependencia maestra del SGD.
-        // Un centro de costo sin empate se revisa antes de publicar sus bienes.
+        // 1. Obtener los centros de costo del SIGA y resolver a qué centro de
+        //    costo del Anexo 01 pertenece cada uno (D-11). La equivalencia se
+        //    define a mano, por nombre, en la tabla de equivalencias: no hay un
+        //    código común entre el SIGA y el Anexo 01. Un centro de costo del
+        //    SIGA que aún no está en la tabla se registra «sin asignar».
+        $equivalencias = app(EquivalenciasCentroCosto::class);
         $centrosCosto = $this->sigaConnector->obtenerCentrosCosto();
-        $mapaDependencias = [];
-
-        $dependenciasPorCodigoSiga = Dependencia::query()
-            ->where('proceso_transferencia_id', $proceso->id)
-            ->where('fuente', FuenteDato::SGD->value)
-            ->whereNotNull('codigo_siga')
-            ->pluck('id', 'codigo_siga');
-
         foreach ($centrosCosto as $cc) {
-            $codigoSiga = trim($cc['codigo']);
-            if ($dependenciasPorCodigoSiga->has($codigoSiga)) {
-                $mapaDependencias[$codigoSiga] = $dependenciasPorCodigoSiga->get($codigoSiga);
-            }
+            $equivalencias->registrarOrigen(
+                $proceso->id, EquivalenciaCentroCosto::ORIGEN_SIGA, trim($cc['codigo']), trim((string) ($cc['nombre'] ?? '')) ?: null,
+            );
         }
+        $mapaDependencias = $equivalencias->mapa($proceso->id, EquivalenciaCentroCosto::ORIGEN_SIGA);
 
         // 2. Obtener los bienes a ingestar
         $bienes = $codigoCentroCosto !== null
@@ -90,7 +82,7 @@ class IngestaPatrimonioSiga
                 $codigoCentroCosto = trim((string) $item->codigoCentroCosto);
                 $depId = $mapaDependencias[$codigoCentroCosto] ?? null;
                 if ($depId === null) {
-                    throw new RuntimeException("El bien {$item->codigoPatrimonial} no tiene un centro de costo SIGA vigente y mapeado.");
+                    throw new RuntimeException("El bien {$item->codigoPatrimonial} pertenece al centro de costo SIGA {$codigoCentroCosto}, que no tiene equivalencia con un CC del Anexo 01.");
                 }
 
                 // Sincronizar servidor responsable si tiene DNI

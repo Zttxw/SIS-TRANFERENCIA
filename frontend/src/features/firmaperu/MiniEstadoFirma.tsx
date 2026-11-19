@@ -26,10 +26,13 @@ export function MiniEstadoFirma({ tipoDocumento, dependenciaId }: Props) {
 
   let punto = ''
   let texto = ''
-  if (estado.firmado && estado.vigente !== false) {
+  if (estado.completo) {
     punto = 'bg-success'
     texto = `Firmado${estado.version ? ` v${estado.version}` : ''}`
-  } else if (estado.firmado && estado.vigente === false) {
+  } else if (estado.vigente) {
+    punto = 'bg-warning'
+    texto = estado.entidad ? 'Falta firma ETTE' : 'Falta firma del responsable'
+  } else if (estado.firmado) {
     punto = 'bg-warning'
     texto = 'Firma no vigente'
   } else if (estado.pendiente_validacion) {

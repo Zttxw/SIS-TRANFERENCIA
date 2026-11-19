@@ -16,7 +16,7 @@ export function useActa(dependenciaId?: number | null) {
     },
     enabled: typeof dependenciaId === 'number' && dependenciaId > 0,
     retry: (failureCount, error) => {
-      // No reintentar en 409 Conflict (estado no consolidado) ni en 403 Forbidden
+      // No reintentar en 409 Conflict (acta no disponible) ni en 403 Forbidden
       if (axios.isAxiosError(error) && (error.response?.status === 409 || error.response?.status === 403)) {
         return false
       }

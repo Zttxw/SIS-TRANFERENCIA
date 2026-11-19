@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Modules\Auth\Models\AsignacionRol;
 use App\Modules\Documentos\Models\DocumentoPendiente;
+use App\Modules\Gestion\Services\InformeGestionPdf;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Enums\FuenteDato;
@@ -102,5 +103,24 @@ class DocumentoPendienteSumillaTest extends TestCase
         ])->assertOk();
 
         $this->assertSame('Resumen agregado por el servidor.', $doc->fresh()->sumilla);
+    }
+
+    public function test_la_sumilla_y_la_justificacion_pasan_a_la_seccion_iv_del_anexo_02(): void
+    {
+        $this->servidor();
+
+        $this->postJson('/api/documentos-pendientes', [
+            'dependencia_id' => $this->dep->id,
+            'asunto' => 'Oficio N° 120 con asunto extenso registrado en mesa de partes',
+            'sumilla' => 'Pedido de información a la gerencia.',
+            'justificacion_pendiente' => 'Espera respuesta externa.',
+            'accion_pendiente' => 'Responder antes del cierre.',
+        ])->assertCreated();
+
+        $fila = app(InformeGestionPdf::class)->datos($this->dep->id)['informe']['pendientes_items'][0];
+
+        $this->assertSame('Pedido de información a la gerencia.', $fila['asunto']);
+        $this->assertSame('PENDIENTE. Justificación: Espera respuesta externa. Acción: Responder antes del cierre', $fila['estado_accion']);
+        $this->assertSame('manual', $fila['origen']);
     }
 }

@@ -1,4 +1,5 @@
-export type EstadoObservacion = 'abierta' | 'en_subsanacion' | 'subsanada' | 'desestimada'
+/** Observación del coordinador ETTE: constancia, sin subsanación (D-07). */
+export type EstadoObservacion = 'registrada' | 'retirada'
 
 export type ClaveAnexoObservable =
   | 'gestion'
@@ -11,14 +12,16 @@ export type ClaveAnexoObservable =
 export interface Observacion {
   id: number
   proceso_transferencia_id: number
-  observable_type: string
-  observable_id: number
+  dependencia_id: number
+  anexo: ClaveAnexoObservable
+  /** null = observación sobre el anexo completo. */
+  observable_type: string | null
+  observable_id: number | null
   autor_id: number
-  responsable_id: number | null
+  en_calidad_de: 'coordinador' | 'titular_suplente' | null
+  motivo_suplencia: string | null
   descripcion: string
   estado: EstadoObservacion
-  respuesta_subsanacion: string | null
-  subsanada_en: string | null
   created_at: string
   updated_at: string
   autor?: {
@@ -26,28 +29,22 @@ export interface Observacion {
     name: string
     dni: string
   }
-  responsable?: {
+  dependencia?: {
     id: number
-    name: string
-    dni: string
+    codigo: string
+    nombre: string
   }
-  observable?: Record<string, any>
+  observable?: Record<string, any> | null
 }
 
+/** Se observa una fila (`observable_id`) o el anexo completo de un CC (`dependencia_id`). */
 export interface RegistrarObservacionPayload {
   anexo: ClaveAnexoObservable
-  observable_id: number
+  observable_id?: number
+  dependencia_id?: number
   descripcion: string
-}
-
-export interface SubsanarObservacionPayload {
-  id: number
-  respuesta: string
-}
-
-export interface DesestimarObservacionPayload {
-  id: number
-  sustento?: string
+  /** Obligatorio cuando observa un titular ETTE en suplencia del coordinador. */
+  motivo_suplencia?: string
 }
 
 export interface FiltrosObservaciones {
@@ -111,26 +108,9 @@ export const ANEXOS_OBSERVABLES_CONFIG: Record<ClaveAnexoObservable, InfoAnexoOb
   },
 }
 
-export function resolverAnexoDesdeTipo(observableType: string): InfoAnexoObservable {
-  if (observableType.includes('InformeGestion') || observableType === 'gestion') {
-    return ANEXOS_OBSERVABLES_CONFIG.gestion
-  }
-  if (observableType.includes('AcervoDocumental') || observableType === 'acervo') {
-    return ANEXOS_OBSERVABLES_CONFIG.acervo
-  }
-  if (observableType.includes('BienPatrimonial') || observableType === 'patrimonio') {
-    return ANEXOS_OBSERVABLES_CONFIG.patrimonio
-  }
-  if (observableType.includes('Personal') || observableType === 'personal') {
-    return ANEXOS_OBSERVABLES_CONFIG.personal
-  }
-  if (observableType.includes('BienNoPatrimonial') || observableType === 'nopatrimonial') {
-    return ANEXOS_OBSERVABLES_CONFIG.nopatrimonial
-  }
-  return ANEXOS_OBSERVABLES_CONFIG.documento
-}
 
 export function formatearDetalleObservable(obs: Observacion): string {
+  if (obs.observable_id === null) return 'Anexo completo'
   const item = obs.observable
   if (!item) return `Elemento #${obs.observable_id}`
   if ('asunto' in item) {

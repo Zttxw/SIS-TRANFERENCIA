@@ -36,11 +36,7 @@ export function DependenciaSelector({ className }: { className?: string }) {
   const esJefe =
     Boolean(usuario?.servidor?.es_responsable) ||
     Boolean(
-      usuario?.roles?.some(
-        (r) =>
-          r.rol === 'responsable_centro_costo' ||
-          r.rol === 'responsable_equipo',
-      ),
+      usuario?.roles?.some((r) => r.rol === 'responsable_centro_costo'),
     )
 
   // Dependencia actualmente activa encontrada en los datos o en el perfil

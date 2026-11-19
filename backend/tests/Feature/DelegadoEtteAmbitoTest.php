@@ -18,7 +18,7 @@ use Tests\TestCase;
  * D1 — El delegado ETTE es una capacidad acotada por asignación a dependencia,
  * no un rol global ni por oficina (doc 05 §3). Su ámbito es la dependencia
  * exacta designada (no el subárbol), y sus capacidades son consulta + firma
- * opcional, sin edición/remisión/consolidación.
+ * opcional, sin edición ni remisión.
  */
 class DelegadoEtteAmbitoTest extends TestCase
 {
@@ -74,19 +74,20 @@ class DelegadoEtteAmbitoTest extends TestCase
     {
         $delegado = $this->delegadoEn($this->padre);
 
-        // Capacidades confirmadas: consulta + firma opcional.
+        // Coordinador ETTE: consulta, observa, verifica y firma el lado ETTE.
         $this->assertTrue($delegado->tienePermiso(Permiso::VerAnexos));
         $this->assertTrue($delegado->tienePermiso(Permiso::VerExpediente));
         $this->assertTrue($delegado->tienePermiso(Permiso::FirmarAnexos));
+        $this->assertTrue($delegado->tienePermiso(Permiso::RegistrarObservaciones));
+        $this->assertTrue($delegado->tienePermiso(Permiso::VerificarEntrega));
 
-        // No puede editar datos, remitir, revisar/consolidar ni gestionar equipo.
+        // No puede editar datos, remitir ni gestionar coordinadores.
         $this->assertFalse($delegado->tienePermiso(Permiso::RegistrarAnexos));
         $this->assertFalse($delegado->tienePermiso(Permiso::RemitirEntrega));
-        $this->assertFalse($delegado->tienePermiso(Permiso::ConsolidarEntrega));
         $this->assertFalse($delegado->tienePermiso(Permiso::GestionarDelegados));
     }
 
-    public function test_el_comite_ette_es_global_y_no_firma_por_si_mismo(): void
+    public function test_el_titular_ette_es_global_y_puede_suplir_al_coordinador(): void
     {
         $comite = User::factory()->create();
         AsignacionRol::factory()->rol(Rol::ETTE)->create([
@@ -98,8 +99,11 @@ class DelegadoEtteAmbitoTest extends TestCase
 
         // El comité conserva su visión institucional (seguimiento).
         $this->assertTrue($comite->tieneAmbitoGlobal());
-        // La firma nace de la designación como delegado, no de pertenecer al comité.
-        $this->assertFalse($comite->tienePermiso(Permiso::FirmarAnexos));
+        // Firma, observa y verifica solo en suplencia del coordinador (D-04).
+        $this->assertTrue($comite->tienePermiso(Permiso::FirmarAnexos));
+        $this->assertTrue($comite->tienePermiso(Permiso::RegistrarObservaciones));
+        $this->assertTrue($comite->tienePermiso(Permiso::VerificarEntrega));
+        $this->assertTrue($comite->tienePermiso(Permiso::RecibirEntregaEtte));
         // El comité sí gestiona su equipo (D2).
         $this->assertTrue($comite->tienePermiso(Permiso::GestionarDelegados));
     }

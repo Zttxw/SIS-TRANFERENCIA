@@ -5,21 +5,19 @@ declare(strict_types=1);
 namespace App\Modules\Transferencia\Services;
 
 use App\Models\User;
+use App\Support\Enums\CalidadEtte;
 use App\Support\Services\ContextoTransferencia;
 use App\Support\Services\PdfService;
 use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * PDF oficial del Anexo 07 (Acta de Transferencia). Unifica la impresión del
- * acta al generador del backend (F5): reutiliza TransferenciaService::obtenerActa.
- *
- * B3 (D-06): el acta se emite ANTES de remitir, por lo que su PDF puede
- * descargarse en la versión de suscripción de la hija (pre-remisión) y también
- * tras consolidar. La declaración del acta (`declara`) fija qué afirma según el
- * momento; no se exige CONSOLIDADA para imprimirla.
- *
- * @var array<string, string> MESES
+ * PDF oficial del Anexo 07 (Acta de Transferencia Administrativa y Entrega de
+ * Cargo) conforme al formato de la directiva (fase 8): cabecera con el CC, su
+ * clasificación y nivel del Anexo 01 y el CC del que depende; apertura con
+ * lugar, fecha y hora; intervinientes; condición de cada documento;
+ * observaciones del coordinador ETTE y la nota de que no sustituye el acta de
+ * la CGR (RF-67).
  */
 class ActaPdf
 {
@@ -28,17 +26,10 @@ class ActaPdf
         7 => 'julio', 8 => 'agosto', 9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre',
     ];
 
-    /** Denominación oficial de cada anexo en la sección III del acta. */
-    private const ANEXOS = [
-        'anexo_02' => 'Anexo N° 02 — Informe de Gestión',
-        'anexo_03' => 'Anexo N° 03 — Registro del Acervo Documentario',
-        'anexo_04' => 'Anexo N° 04 — Registro de Bienes Patrimoniales',
-        'anexo_05' => 'Anexo N° 05 — Información del Personal a cargo del Centro de Costo',
-        'anexo_06' => 'Anexo N° 06 — Bienes No Patrimoniales',
-    ];
-
     public function __construct(
-        private readonly TransferenciaService $transferenciaService,
+        private readonly ActaTransferenciaService $actas,
+        private readonly CondicionesActa $condiciones,
+        private readonly ObservacionesActa $observaciones,
         private readonly ContextoTransferencia $contexto,
         private readonly PdfService $pdf,
     ) {}
@@ -54,77 +45,58 @@ class ActaPdf
     /** @return array<string, mixed> */
     public function datos(int $dependenciaId, User $usuario): array
     {
-        // Materializa/actualiza el acta en su declaración vigente (suscripción de
-        // la hija antes de remitir; recepción/consolidación tras consolidar).
-        $acta = $this->transferenciaService->obtenerActa($dependenciaId, $usuario);
-        $contexto = $this->contexto->paraDependencia($dependenciaId);
-
+        $acta = $this->actas->obtener($dependenciaId, $usuario);
+        $dependencia = $acta->dependencia;
         $fecha = $acta->fecha_acta ?? Carbon::now();
         $intervinientes = $acta->intervinientes ?? [];
 
         return [
-            'contexto' => $contexto,
+            'contexto' => $this->contexto->paraDependencia($dependenciaId),
             'acta' => [
                 'version' => $acta->version,
-                'declara' => $acta->declara->etiqueta(),
                 'numero_acta' => $acta->numero_acta ?? '',
-                'dependencia' => $acta->dependencia?->nombre ?? '',
-                'nivel' => $acta->dependencia?->nivel ?? '',
-                'unidad_superior' => $acta->dependencia?->parent_id
-                    ? ($acta->dependencia?->padre?->nombre ?? 'Unidad orgánica inmediata superior')
-                    : 'Alcaldía / ETTS institucional',
+                'codigo' => $dependencia?->codigo ?? '',
+                'dependencia' => $dependencia?->nombre ?? '',
+                'nivel' => (int) ($dependencia?->nivel ?? 0),
+                'unidad_superior' => $dependencia?->padre?->nombre,
+                'unidad_superior_codigo' => $dependencia?->padre?->codigo,
+                'lugar' => $acta->lugar ?: ActaTransferenciaService::LUGAR_POR_DEFECTO,
                 'dia' => $fecha->day,
                 'mes' => self::MESES[$fecha->month] ?? '',
                 'anio' => $fecha->year,
-                'entrega' => $this->interviniente($intervinientes, 'titular_saliente'),
-                'recepcion' => $this->interviniente($intervinientes, 'titular_entrante', 'coordinador_ette', 'responsable_superior'),
-                'anexos' => $this->anexos($acta->anexos_entregados ?? []),
-                'observaciones' => $acta->observaciones,
+                'hora' => $acta->hora ? substr((string) $acta->hora, 0, 5) : null,
+                'entrega' => $this->interviniente($intervinientes['titular_saliente'] ?? null),
+                'recepcion' => [
+                    ...$this->interviniente($intervinientes['coordinador_ette'] ?? null),
+                    'calidad' => (string) ($intervinientes['coordinador_ette']['calidad'] ?? IntervinientesActa::calidad(CalidadEtte::COORDINADOR)),
+                ],
+                'anexos' => $this->condiciones->filas($acta->anexos_entregados ?? []),
+                'otros_documentos' => $acta->otros_documentos,
+                'observaciones' => $this->observaciones->delCentro($acta->dependencia_id, $acta->proceso_transferencia_id),
+                'comentarios' => $acta->observaciones,
             ],
         ];
-
     }
 
     /**
-     * Normaliza un interviniente del acta a nombre/DNI/cargo. El jsonb admite
-     * tanto un string plano (nombre) como un objeto; aquí se soportan ambos.
+     * Normaliza un interviniente a nombre, DNI y cargo. El JSON admite un
+     * nombre plano o un objeto.
      *
-     * @param  array<string, mixed>  $intervinientes
      * @return array{nombre: string, dni: string, cargo: string}
      */
-    private function interviniente(array $intervinientes, string ...$claves): array
+    private function interviniente(mixed $valor): array
     {
-        foreach ($claves as $clave) {
-            $valor = $intervinientes[$clave] ?? null;
-            if ($valor === null) {
-                continue;
-            }
-            if (is_string($valor)) {
-                return ['nombre' => $valor, 'dni' => '', 'cargo' => ''];
-            }
-            if (is_array($valor)) {
-                return [
-                    'nombre' => (string) ($valor['nombre'] ?? $valor['nombres'] ?? ''),
-                    'dni' => (string) ($valor['dni'] ?? ''),
-                    'cargo' => (string) ($valor['cargo'] ?? ''),
-                ];
-            }
+        if (is_string($valor)) {
+            return ['nombre' => $valor, 'dni' => '', 'cargo' => ''];
+        }
+        if (is_array($valor)) {
+            return [
+                'nombre' => (string) ($valor['nombre'] ?? $valor['nombres'] ?? ''),
+                'dni' => (string) ($valor['dni'] ?? ''),
+                'cargo' => (string) ($valor['cargo'] ?? ''),
+            ];
         }
 
         return ['nombre' => '', 'dni' => '', 'cargo' => ''];
-    }
-
-    /**
-     * @param  array<string, bool>  $entregados
-     * @return list<array{nombre: string, entregado: bool}>
-     */
-    private function anexos(array $entregados): array
-    {
-        $filas = [];
-        foreach (self::ANEXOS as $clave => $nombre) {
-            $filas[] = ['nombre' => $nombre, 'entregado' => (bool) ($entregados[$clave] ?? false)];
-        }
-
-        return $filas;
     }
 }

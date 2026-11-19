@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Transferencia\Services;
 
 use App\Models\User;
-use App\Modules\Transferencia\Models\FirmaBorrador;
 use App\Modules\Transferencia\Models\FirmaSesion;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
-use App\Support\Enums\CaracterFirma;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -24,35 +22,44 @@ class FirmaperuSesionService
         private readonly FirmaperuPdfService $pdf,
         private readonly FirmaperuValidadorService $validador,
         private readonly FirmaperuRegistroService $registro,
+        private readonly FirmantesDocumento $firmantes,
+        private readonly CadenaFirmas $cadena,
+        private readonly SuscripcionEntrega $suscripcion,
     ) {}
 
-    /** @return array<string, mixed> */
-    public function preparar(User $usuario, string $tipo, int $dependenciaId, ?string $previoId = null): array
+    /**
+     * Prepara la firma digital del documento. Sin `documento_previo_id`, la
+     * firma se agrega sobre la cadena vigente del documento, si la hay, para que
+     * ambos lados queden en un único PDF (D-06); si no, firma el PDF generado.
+     *
+     * @return array<string, mixed>
+     */
+    public function preparar(User $usuario, string $tipo, ?int $dependenciaId, ?string $previoId = null, ?string $motivoSuplencia = null): array
     {
         abort_unless(preg_match('/^\d{8}$/', (string) $usuario->dni), 422, 'La cuenta debe tener un DNI válido para firmar.');
         $this->jwt();
         $procesoId = ProcesoTransferencia::where('estado', 'abierto')->value('id');
         abort_unless($procesoId, 409, 'No existe un proceso de transferencia abierto.');
-        $caracter = $this->registro->caracter($usuario, $tipo, $dependenciaId);
+        $firmante = $this->firmantes->lado($usuario, $tipo, $dependenciaId, $motivoSuplencia);
+        $this->suscripcion->exigirFirmaHabilitada($dependenciaId);
         $documento = $this->registro->documento($usuario, $tipo, $dependenciaId);
+        $previoId ??= $this->cadena->estado($procesoId, $dependenciaId, $tipo, $usuario)['sesion_final_id'];
         $previo = $previoId ? FirmaSesion::whereKey($previoId)
             ->where('dependencia_id', $dependenciaId)->where('tipo_documento', $tipo)
             ->where('proceso_transferencia_id', $procesoId)->where('estado', 'firmada')->firstOrFail() : null;
 
         if ($previo) {
-            $generado = FirmaBorrador::where('proceso_transferencia_id', $procesoId)
-                ->where('dependencia_id', $dependenciaId)->where('tipo_documento', $tipo)->first();
+            $generado = $this->cadena->generado($procesoId, $dependenciaId, $tipo);
             abort_unless($this->pdf->generadoVigente($generado, $tipo, $dependenciaId, $usuario)
-                && $this->registro->provieneDelGenerado($previo, $generado), 409,
+                && $this->cadena->provieneDelGenerado($previo, $generado), 409,
                 'El PDF anterior no corresponde al PDF generado actual. Firme el documento generado.');
-            abort_unless($previo->documento_firma_id === $documento->id && $this->registro->vigente($previo),
+            abort_unless($previo->documento_firma_id === $documento->id && $this->cadena->vigente($previo),
                 409, 'El PDF anterior corresponde a otra versión. Firme los datos actuales.');
             abort_unless(Storage::disk('local')->exists($previo->firmado_path), 409, 'El documento firmado anterior no está disponible.');
             $contenido = Storage::disk('local')->get($previo->firmado_path);
             abort_unless(hash_equals($previo->firmado_sha256, hash('sha256', $contenido)), 409, 'El PDF firmado anterior no coincide con su huella.');
         } else {
-            $borrador = FirmaBorrador::where('proceso_transferencia_id', $procesoId)
-                ->where('dependencia_id', $dependenciaId)->where('tipo_documento', $tipo)->first();
+            $borrador = $this->cadena->generado($procesoId, $dependenciaId, $tipo);
             abort_unless($this->pdf->generadoVigente($borrador, $tipo, $dependenciaId, $usuario), 409,
                 'Genere y revise el PDF actualizado en «PDF y firma» antes de firmar.');
             if ($borrador) {
@@ -81,7 +88,9 @@ class FirmaperuSesionService
                 'documento_previo_id' => $previo?->id,
                 'tipo_documento' => $tipo,
                 'documento_firma_id' => $documento->id,
-                'caracter' => $caracter->value,
+                'lado' => $firmante['lado'],
+                'en_calidad_de' => $firmante['en_calidad_de'],
+                'motivo_suplencia' => $firmante['motivo_suplencia'],
                 'estado' => 'pendiente',
                 'param_token_hash' => hash('sha256', $token),
                 'pdf_path' => $ruta,
@@ -153,7 +162,7 @@ class FirmaperuSesionService
             $firmado = $archivo->getContent();
             $usuario = User::findOrFail($sesion->usuario_id);
             abort_unless($usuario->activo, 403, 'La cuenta que inició la firma está inactiva.');
-            $this->registro->caracter($usuario, $sesion->tipo_documento, $sesion->dependencia_id);
+            $this->firmantes->lado($usuario, $sesion->tipo_documento, $sesion->dependencia_id, $sesion->motivo_suplencia);
             if (! $this->validador->tieneConfiguracion()) {
                 abort_unless(Storage::disk('local')->put($ruta, $firmado), 503, 'No se pudo conservar el PDF recibido.');
                 $sesion->update(['estado' => 'pendiente_validacion', 'firmado_path' => $ruta,
@@ -165,7 +174,7 @@ class FirmaperuSesionService
                 return $sesion;
             }
             $detalles = $this->validador->validar($original, $firmado, $sesion->firmante_dni);
-            $this->registro->exigirFirmanteAsignado($sesion);
+            $this->firmantes->exigirFirmanteAsignado($sesion);
             abort_unless(Storage::disk('local')->put($ruta, $firmado), 503, 'No se pudo conservar el PDF firmado.');
             DB::transaction(function () use ($sesion, $ruta, $firmado, $detalles): void {
                 $sesion->update(['estado' => 'firmada', 'firmado_path' => $ruta,
@@ -184,75 +193,6 @@ class FirmaperuSesionService
         return $sesion;
     }
 
-    /**
-     * Subida manual del delegado ETTE (GAP 1 del portal del delegado): el
-     * delegado descarga el PDF del anexo, lo firma/sella a mano y sube el PDF
-     * escaneado como constancia de su firma OPCIONAL. A diferencia del flujo
-     * Firma Perú, NO hay token de applet ni certificado digital que validar
-     * criptográficamente: la firma manuscrita se conserva como recepción
-     * (`pendiente_validacion`) y se registra como firma OPCIONAL del delegado,
-     * que no bloquea la entrega (C-08). El "original" conservado es el PDF
-     * generado vigente, para dejar trazabilidad de qué se firmó.
-     */
-    public function recibirManual(User $usuario, string $tipo, int $dependenciaId, UploadedFile $archivo): FirmaSesion
-    {
-        abort_unless(preg_match('/^\d{8}$/', (string) $usuario->dni), 422, 'La cuenta debe tener un DNI válido para firmar.');
-        $procesoId = ProcesoTransferencia::where('estado', 'abierto')->value('id');
-        abort_unless($procesoId, 409, 'No existe un proceso de transferencia abierto.');
-
-        // Solo el delegado (firma OPCIONAL): este flujo no reemplaza la firma
-        // digital obligatoria del personal/responsable.
-        $caracter = $this->registro->caracter($usuario, $tipo, $dependenciaId);
-        abort_unless($caracter === CaracterFirma::OPCIONAL, 403,
-            'La subida manual está reservada a la firma opcional del delegado.');
-
-        $documento = $this->registro->documento($usuario, $tipo, $dependenciaId);
-        $borrador = FirmaBorrador::where('proceso_transferencia_id', $procesoId)
-            ->where('dependencia_id', $dependenciaId)->where('tipo_documento', $tipo)->first();
-        abort_unless($this->pdf->generadoVigente($borrador, $tipo, $dependenciaId, $usuario), 409,
-            'El anexo no tiene un PDF generado vigente para firmar. Pida al responsable que lo genere.');
-        $original = Storage::disk('local')->get($borrador->pdf_path);
-        abort_unless(hash_equals($borrador->pdf_sha256, hash('sha256', $original)), 409,
-            'El PDF generado no coincide con su huella.');
-
-        $firmado = $archivo->getContent();
-        $id = (string) Str::uuid7();
-        $rutaOriginal = 'firmaperu/'.$id.'/original.pdf';
-        $rutaFirmado = 'firmaperu/'.$id.'/firmado.pdf';
-        abort_unless(Storage::disk('local')->put($rutaOriginal, $original), 503, 'No se pudo conservar el PDF original.');
-
-        try {
-            return DB::transaction(function () use ($id, $procesoId, $dependenciaId, $usuario, $tipo, $documento,
-                $caracter, $original, $firmado, $rutaOriginal, $rutaFirmado): FirmaSesion {
-                abort_unless(Storage::disk('local')->put($rutaFirmado, $firmado), 503, 'No se pudo conservar el PDF firmado.');
-
-                return FirmaSesion::create([
-                    'id' => $id,
-                    'proceso_transferencia_id' => $procesoId,
-                    'dependencia_id' => $dependenciaId,
-                    'usuario_id' => $usuario->id,
-                    'firmante_dni' => $usuario->dni,
-                    'tipo_documento' => $tipo,
-                    'documento_firma_id' => $documento->id,
-                    'caracter' => $caracter->value,
-                    'estado' => 'pendiente_validacion',
-                    'origen' => 'manual',
-                    'pdf_path' => $rutaOriginal,
-                    'firmado_path' => $rutaFirmado,
-                    'original_sha256' => hash('sha256', $original),
-                    'firmado_sha256' => hash('sha256', $firmado),
-                    'mensaje' => 'Firma manuscrita del delegado recibida como constancia; no requiere verificación criptográfica.',
-                    'detalles' => ['recibido_en' => now()->toIso8601String(), 'origen' => 'manual',
-                        'integridad_verificada' => false, 'cadena_verificada' => false],
-                    'expires_at' => now()->addMinutes(max(1, min(60, (int) config('firmaperu.session_minutes')))),
-                ]);
-            });
-        } catch (Throwable $exception) {
-            Storage::disk('local')->delete([$rutaOriginal, $rutaFirmado]);
-            throw $exception;
-        }
-    }
-
     public function validarPendiente(string $id): FirmaSesion
     {
         $this->validador->comprobarConfiguracion();
@@ -269,7 +209,7 @@ class FirmaperuSesionService
             abort_unless(hash_equals($sesion->original_sha256, hash('sha256', $original))
                 && hash_equals($sesion->firmado_sha256, hash('sha256', $firmado)), 409, 'Un archivo conservado no coincide con su huella.');
             $detalles = $this->validador->validar($original, $firmado, $sesion->firmante_dni);
-            $this->registro->exigirFirmanteAsignado($sesion);
+            $this->firmantes->exigirFirmanteAsignado($sesion);
             DB::transaction(function () use ($sesion, $detalles): void {
                 $sesion->update(['estado' => 'firmada', 'firmado_en' => now(), 'mensaje' => null,
                     'detalles' => array_merge($sesion->detalles ?? [], $detalles)]);

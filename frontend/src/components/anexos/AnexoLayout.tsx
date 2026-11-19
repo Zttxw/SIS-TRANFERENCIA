@@ -34,7 +34,7 @@ interface AnexoLayoutProps {
   dependenciaId: number | null
   dependencia?: DependenciaResumenAnexo
   estadoEntrega?: EstadoEntrega | null
-  /** `true` si el anexo admite edición (borrador/observada). Pinta el chip. */
+  /** `true` si el anexo admite edición (borrador). Pinta el chip. */
   esModificable?: boolean
 
   /** Botón(es) de acción primaria (p. ej. «Nueva Serie»). */
@@ -44,8 +44,6 @@ interface AnexoLayoutProps {
 
   /** Clave para el panel de observaciones; omitir para ocultarlo. */
   anexoObservable?: ClaveAnexoObservable
-  /** Id de la primera fila, para anclar las observaciones del anexo. */
-  observableId?: number
 }
 
 /**
@@ -72,7 +70,6 @@ export function AnexoLayout({
   acciones,
   children,
   anexoObservable,
-  observableId,
 }: AnexoLayoutProps) {
   if (!dependenciaId) {
     return (
@@ -117,12 +114,7 @@ export function AnexoLayout({
       {children}
 
       {anexoObservable && (
-        <ObservacionesAnexoPanel
-          anexo={anexoObservable}
-          observableId={observableId}
-          dependenciaId={dependenciaId}
-          esModificable={esModificable}
-        />
+        <ObservacionesAnexoPanel anexo={anexoObservable} dependenciaId={dependenciaId} />
       )}
     </div>
   )

@@ -29,35 +29,28 @@ enum Permiso: string
     case RegistrarAnexos = 'anexos.registrar';
     case VerificarBienes = 'bienes.verificar';
 
-    // Flujo jerárquico de entrega y consolidación.
+    // Entrega del CC: el responsable la presenta a revisión y la remite.
     case RemitirEntrega = 'entregas.remitir';
-    case RevisarEntrega = 'entregas.revisar';
-    case ConsolidarEntrega = 'entregas.consolidar';
+
+    // Directiva 2026 (D-07, D-12): verificación del coordinador ETTE (o del
+    // titular ETTE en suplencia) y cadena ETTS → ETTE de la entrega.
+    case VerificarEntrega = 'entregas.verificar';
+    case RecibirEntregaEtts = 'entregas.recibir_etts';
+    case RemitirEntregaEtte = 'entregas.remitir_ette';
+    case RecibirEntregaEtte = 'entregas.recibir_ette';
 
     // Firma de anexos 02–07 (RF-004/005). La capacidad del delegado ETTE se
     // restringe a las dependencias/documentos para los que está designado
     // (acotado por asignación, no por la sola pertenencia al comité).
     case FirmarAnexos = 'firmas.firmar';
 
-    // Constancia de ausencia de firma ETTE + copia digital (RF-004/005, D-12).
-    // El responsable del centro de costo registra que ETTE no firmó su versión y
-    // marca la entrega de la copia digital (sin presumir acuse). No es firmar.
-    case RegistrarConstanciaAusencia = 'firmas.constancia_ausencia';
-
-    // Gestión del equipo ETTE (RF-008): alta/designación/revocación de delegados
-    // por el comité, limitada a su equipo; no es la administración general de
-    // usuarios ni de roles institucionales.
+    // Gestión de coordinadores ETTE (RF-13, RF-15, D-10): alta por web o Excel,
+    // designación, reemplazo y revocación por el comité, limitada a su equipo;
+    // no es la administración general de usuarios ni de roles institucionales.
     case GestionarDelegados = 'delegados.gestionar';
 
-    // Visto bueno del delegado ETTE sobre lo remitido por una dependencia
-    // asignada. Es una constancia de conformidad acotada a su ámbito; NO
-    // consolida ni cambia el estado de la entrega (eso es atribución de
-    // responsable/ETTS vía entregas.revisar/consolidar).
-    case DarVistoBuenoDelegado = 'delegado.visto_bueno';
-
-    // Observaciones y subsanaciones.
+    // Observaciones del coordinador ETTE: constancia, sin subsanación (D-07).
     case RegistrarObservaciones = 'observaciones.registrar';
-    case SubsanarObservaciones = 'observaciones.subsanar';
 
     // Actas, expediente y reportes.
     case GenerarActas = 'actas.generar';
@@ -77,15 +70,14 @@ enum Permiso: string
             self::VerAnexos => 'Consultar anexos dentro del ámbito',
             self::RegistrarAnexos => 'Registrar y complementar anexos',
             self::VerificarBienes => 'Verificar bienes patrimoniales',
-            self::RemitirEntrega => 'Remitir la entrega al responsable inmediato',
-            self::RevisarEntrega => 'Revisar entregas recibidas',
-            self::ConsolidarEntrega => 'Consolidar y remitir al nivel superior',
+            self::RemitirEntrega => 'Presentar a revisión y remitir la entrega del centro de costo',
+            self::VerificarEntrega => 'Verificar la entrega del centro de costo (lado ETTE)',
+            self::RecibirEntregaEtts => 'Registrar la recepción de entregas en el ETTS',
+            self::RemitirEntregaEtte => 'Enviar entregas del ETTS al ETTE',
+            self::RecibirEntregaEtte => 'Registrar la recepción de entregas en el ETTE',
             self::FirmarAnexos => 'Firmar anexos (según designación)',
-            self::RegistrarConstanciaAusencia => 'Registrar ausencia de firma ETTE y copia digital',
-            self::GestionarDelegados => 'Gestionar delegados ETTE',
-            self::DarVistoBuenoDelegado => 'Dar visto bueno del delegado a lo remitido',
+            self::GestionarDelegados => 'Gestionar coordinadores ETTE',
             self::RegistrarObservaciones => 'Registrar observaciones',
-            self::SubsanarObservaciones => 'Atender y subsanar observaciones',
             self::GenerarActas => 'Generar actas de transferencia',
             self::VerExpediente => 'Consultar el expediente digital',
             self::VerReportes => 'Consultar reportes de avance',
@@ -121,84 +113,60 @@ enum Permiso: string
                 self::VerAnexos,
                 self::RegistrarAnexos,
                 self::VerificarBienes,
-                self::SubsanarObservaciones,
                 self::VerExpediente,
             ],
-            // Responsable de equipo de trabajo: revisa y consolida a sus
-            // integrantes.
-            Rol::RESPONSABLE_EQUIPO => [
-                self::AccederPlataforma,
-                self::VerAnexos,
-                self::RegistrarAnexos,
-                self::VerificarBienes,
-                self::RevisarEntrega,
-                self::ConsolidarEntrega,
-                self::RegistrarObservaciones,
-                self::SubsanarObservaciones,
-                self::RemitirEntrega,
-                self::RegistrarConstanciaAusencia,
-                self::VerExpediente,
-                self::VerReportes,
-            ],
-            // Responsable de centro de costo: consolida su dependencia y sus
-            // unidades subordinadas.
+            // Responsable de centro de costo: prepara, presenta al coordinador y remite
+            // la entrega de su CC. Ve lo que envían sus CC hijos, pero solo lo
+            // consolida: no lo observa ni lo devuelve (D-08).
             Rol::RESPONSABLE_CENTRO_COSTO => [
                 self::AccederPlataforma,
                 self::VerAnexos,
                 self::RegistrarAnexos,
                 self::VerificarBienes,
-                self::RevisarEntrega,
-                self::ConsolidarEntrega,
-                self::RegistrarObservaciones,
-                self::SubsanarObservaciones,
                 self::RemitirEntrega,
-                self::RegistrarConstanciaAusencia,
                 self::GenerarActas,
                 self::VerExpediente,
                 self::VerReportes,
                 self::ExportarReportes,
             ],
-            // Coordinador acreditado: verifica y formula observaciones.
-            Rol::COORDINADOR => [
-                self::AccederPlataforma,
-                self::VerAnexos,
-                self::RegistrarObservaciones,
-                self::VerExpediente,
-                self::VerReportes,
-                self::ExportarReportes,
-            ],
-            // ETTS: recibe las entregas de 1er/2do nivel, las revisa y consolida
-            // institucionalmente (directiva §7.6).
+            // ETTS: recibe las entregas de los CC sin padre en el Anexo 01 y las
+            // envía al ETTE (directiva §7.6).
             Rol::ETTS => [
                 self::AccederPlataforma,
                 self::VerAnexos,
-                self::RevisarEntrega,
-                self::ConsolidarEntrega,
+                self::RecibirEntregaEtts,
+                self::RemitirEntregaEtte,
                 self::GenerarActas,
                 self::GestionarCronograma,
                 self::VerExpediente,
                 self::VerReportes,
                 self::ExportarReportes,
             ],
-            // Comité ETTE: seguimiento institucional (ámbito global) y gestión de
-            // su propio equipo de delegados. No firma por sí mismo ni edita datos.
+            // Titular ETTE (comité): seguimiento institucional (ámbito global),
+            // gestión de los coordinadores y recepción final de la entrega. Firma,
+            // observa y verifica solo **en suplencia** del coordinador ausente,
+            // indicando el motivo (D-04; ver CoordinacionEtte).
             Rol::ETTE => [
                 self::AccederPlataforma,
                 self::VerAnexos,
                 self::VerExpediente,
                 self::VerReportes,
                 self::GestionarDelegados,
+                self::FirmarAnexos,
+                self::RegistrarObservaciones,
+                self::VerificarEntrega,
+                self::RecibirEntregaEtte,
             ],
-            // Delegado ETTE: consulta, firma OPCIONAL y visto bueno acotados a
-            // las dependencias designadas (ámbito por asignación, no global). No
-            // edita/elimina datos, no remite ni consolida; su visto bueno es una
-            // constancia de conformidad, no una consolidación.
+            // Coordinador ETTE: revisa, observa, verifica y firma el lado ETTE de
+            // los CC que tiene asignados (ámbito exacto por asignación, no
+            // global). No edita datos ni remite.
             Rol::DELEGADO_ETTE => [
                 self::AccederPlataforma,
                 self::VerAnexos,
                 self::VerExpediente,
                 self::FirmarAnexos,
-                self::DarVistoBuenoDelegado,
+                self::RegistrarObservaciones,
+                self::VerificarEntrega,
             ],
         };
     }

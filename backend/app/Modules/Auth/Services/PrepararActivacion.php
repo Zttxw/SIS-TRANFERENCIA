@@ -61,7 +61,9 @@ class PrepararActivacion
 
         // Dependencias que este servidor encarga (RN-01): responsable de centro
         // de costo por cada una.
-        $encargadas = Dependencia::query()
+        // Solo los CC del Anexo 01: su encargado sale de la dependencia principal
+        // del SGD vinculada (D-11).
+        $encargadas = Dependencia::query()->centrosCosto()
             ->where('proceso_transferencia_id', $servidor->proceso_transferencia_id)
             ->where('encargado_servidor_id', $servidor->id)
             ->orderBy('codigo')

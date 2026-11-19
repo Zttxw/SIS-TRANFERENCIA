@@ -34,7 +34,7 @@ interface Props {
 // Pendiente=ámbar · Sin registros/Bloqueado=gris.
 function clasesEstado(estado: string): string {
   const e = estado.toLowerCase()
-  if (e.includes('completado') || e.includes('verificado') || e.includes('consolidada')) {
+  if (e.includes('completado') || e.includes('verificado') || e.includes('remitida')) {
     return 'border-success-border bg-success-soft text-success-fg'
   }
   if (e.includes('registrado')) {

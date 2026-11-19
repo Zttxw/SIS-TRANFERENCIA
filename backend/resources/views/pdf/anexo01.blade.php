@@ -26,4 +26,19 @@
             @endforeach
         </tbody>
     </table>
+
+    @if ($institucional ?? false)
+        <p class="declaracion">
+            Relación de los centros de costo registrados en el Plan Operativo Institucional (CEPLAN) que participaron
+            en el proceso de transferencia. Se suscribe al cierre, cuando el ETTE recibió las entregas de todos los
+            centros de costo.
+        </p>
+
+        <table class="firma-bloque">
+            <tr>
+                <td><div class="firma-linea">Equipo de Transferencia del Titular Saliente (ETTS)</div></td>
+                <td><div class="firma-linea">Titular del Equipo de Transferencia del Titular Entrante (ETTE)</div></td>
+            </tr>
+        </table>
+    @endif
 @endsection

@@ -9,22 +9,22 @@ use App\Modules\Auth\Models\AsignacionRol;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
-use App\Modules\Transferencia\Services\FirmaperuRegistroService;
+use App\Modules\Transferencia\Services\SuscripcionEntrega;
 use App\Support\Enums\EstadoEntrega;
 use App\Support\Enums\Rol;
 use Database\Seeders\RolesPermisosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\Concerns\PreparaEntregas;
 use Tests\TestCase;
 
 /**
- * Cierre de la cadena hacia el ETTS (directiva §7.6, Etapa 6): la dependencia de
- * primer nivel (sin padre) remite con destino NULL = ETTS; el ETTS (ámbito
- * global) recibe, revisa y consolida institucionalmente con el mismo flujo.
+ * Cierre de la cadena hacia el ETTS (directiva §7.6, D-02): el CC sin padre en
+ * el Anexo 01 remite con destino NULL = ETTS.
  */
 class CierreHaciaEttsTest extends TestCase
 {
-    use RefreshDatabase;
+    use PreparaEntregas, RefreshDatabase;
 
     private ProcesoTransferencia $proceso;
 
@@ -34,7 +34,7 @@ class CierreHaciaEttsTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesPermisosSeeder::class);
-        $this->partialMock(FirmaperuRegistroService::class, function ($mock): void {
+        $this->partialMock(SuscripcionEntrega::class, function ($mock): void {
             $mock->shouldReceive('requisitosRemision')->andReturn(['puede_remitir' => true, 'firmados' => 6, 'pendientes' => []]);
         });
         $this->proceso = ProcesoTransferencia::factory()->create();
@@ -44,6 +44,7 @@ class CierreHaciaEttsTest extends TestCase
             'nivel' => 1,
             'parent_id' => null,
         ]);
+        $this->entregaEn($this->primerNivel);
     }
 
     private function actuarComo(Rol $rol, ?Dependencia $dependencia): User
@@ -71,25 +72,6 @@ class CierreHaciaEttsTest extends TestCase
         $this->assertNull($entrega->dependencia_destino_id);
         $this->assertTrue($entrega->esHaciaEtts());
         $this->assertSame(EstadoEntrega::REMITIDA, $entrega->estado);
-    }
-
-    public function test_etts_consolida_institucionalmente_la_entrega_de_primer_nivel(): void
-    {
-        // El primer nivel remite.
-        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->primerNivel);
-        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->primerNivel->id])->assertOk();
-
-        // El ETTS (ámbito global) la consolida.
-        $this->actuarComo(Rol::ETTS, null);
-        $this->postJson('/api/transferencia/revisar', [
-            'dependencia_id' => $this->primerNivel->id,
-            'accion' => 'consolidar',
-        ])->assertOk();
-
-        $entrega = Entrega::where('dependencia_id', $this->primerNivel->id)->firstOrFail();
-        $this->assertSame(EstadoEntrega::CONSOLIDADA, $entrega->estado);
-        $this->assertNotNull($entrega->consolidada_en);
-        $this->assertTrue($entrega->esHaciaEtts());
     }
 
     public function test_estado_expone_hacia_etts(): void

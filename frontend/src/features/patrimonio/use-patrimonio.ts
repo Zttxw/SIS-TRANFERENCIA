@@ -57,7 +57,7 @@ export function useVerificarBien() {
     onError: (error) =>
       notificarError(error, {
         conflicto:
-          'No se puede verificar: la entrega de esta dependencia está congelada o consolidada.',
+          'No se puede verificar: la entrega de esta dependencia ya fue presentada al coordinador.',
       }),
   })
 }

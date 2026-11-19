@@ -1,3 +1,4 @@
+import { estaEnFirma, fueRemitida } from '@/types/transferencia'
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -48,9 +49,9 @@ type Perfil = 'ette' | 'etts'
 /* Paleta institucional sobria (Directiva MDSJ) */
 const PALETA = {
   primario: '#003366',
-  consolidada: '#16a34a',
-  remitida: '#2563eb',
-  observada: '#d97706',
+  remitida: '#16a34a',
+  verificada: '#2563eb',
+  en_revision: '#d97706',
   borrador: '#64748b',
   patrimonio: '#0d9488',
   peligro: '#dc2626',
@@ -72,26 +73,26 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
     const pctAvance = metricas.porcentaje_avance ?? 0
     const difMeta = pctAvance - 100 // Diferencia con la meta (100%)
 
-    // Total de observaciones abiertas en todo el pliego
-    const totalObs = dependencias.reduce((sum, dep) => sum + (dep.observaciones_abiertas || 0), 0)
+    // Total de observaciones del coordinador en todo el pliego
+    const totalObs = dependencias.reduce((sum, dep) => sum + (dep.observaciones || 0), 0)
 
     // Desglose por nivel jerárquico (N1, N2, N3, N4)
     const niveles = [1, 2, 3, 4]
     const porNivel = niveles.map((nivel) => {
       const deps = dependencias.filter((d) => d.nivel === nivel)
       const total = deps.length
-      const consolidadas = deps.filter((d) => d.estado_entrega === 'consolidada').length
-      const remitidas = deps.filter((d) => d.estado_entrega === 'remitida').length
-      const observadas = deps.filter((d) => d.estado_entrega === 'observada').length
+      const remitidas = deps.filter((d) => fueRemitida(d.estado_entrega)).length
+      const aceptadas = deps.filter((d) => estaEnFirma(d.estado_entrega)).length
+      const porRevisar = deps.filter((d) => d.estado_entrega === 'en_revision').length
       const pendientes = deps.filter(
-        (d) => d.estado_entrega === 'borrador' || d.estado_entrega === 'sin_iniciar',
+        (d) => d.estado_entrega === 'borrador',
       ).length
 
       // Progreso patrimonial del nivel
       const bienesTotales = deps.reduce((s, d) => s + (d.patrimonio_total || 0), 0)
       const bienesVerificados = deps.reduce((s, d) => s + (d.patrimonio_confirmados || 0), 0)
       const pctPatrimonio = bienesTotales > 0 ? Math.round((bienesVerificados / bienesTotales) * 100) : 0
-      const pctConsolidadas = total > 0 ? Math.round((consolidadas / total) * 100) : 0
+      const pctRemitidas = total > 0 ? Math.round((remitidas / total) * 100) : 0
 
       const nombresNivel: Record<number, string> = {
         1: 'Nivel 1 (Alcaldía / Concejo)',
@@ -104,11 +105,11 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
         nivel: `N${nivel}`,
         nombreCompleto: nombresNivel[nivel] ?? `Nivel ${nivel}`,
         total,
-        consolidadas,
         remitidas,
-        observadas,
+        aceptadas,
+        porRevisar,
         pendientes,
-        pctConsolidadas,
+        pctRemitidas,
         pctPatrimonio,
         bienesTotales,
         bienesVerificados,
@@ -117,16 +118,16 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
 
     // Agrupación para el velocímetro / gauge semicircular
     const gaugeData = [
-      { name: 'Consolidadas', value: metricas.consolidadas, fill: PALETA.consolidada },
       { name: 'Remitidas', value: metricas.remitidas, fill: PALETA.remitida },
-      { name: 'Observadas', value: metricas.observadas, fill: PALETA.observada },
+      { name: 'Aceptadas (a firma)', value: metricas.verificadas, fill: PALETA.verificada },
+      { name: 'Por revisar', value: metricas.en_revision, fill: PALETA.en_revision },
       { name: 'En Preparación', value: metricas.borrador, fill: '#cbd5e1' },
     ]
 
     // Ranking de dependencias con observaciones prioritarias
     const dependenciasCriticas = dependencias
-      .filter((d) => d.observaciones_abiertas > 0 || d.estado_entrega === 'observada')
-      .sort((a, b) => b.observaciones_abiertas - a.observaciones_abiertas)
+      .filter((d) => d.observaciones > 0 || d.estado_entrega === 'en_revision')
+      .sort((a, b) => b.observaciones - a.observaciones)
       .slice(0, 7)
 
     // Dependencias con menor avance patrimonial (con bienes)
@@ -239,7 +240,7 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             {perfil === 'ette'
               ? 'Análisis analítico del cumplimiento por dependencia, avance patrimonial y gestión de delegados.'
-              : 'Seguimiento del flujo de entregas remitidas, gestión de observaciones y cierre de actas.'}
+              : 'Seguimiento de las entregas presentadas, aceptadas y remitidas, y de las observaciones del coordinador.'}
           </p>
         </div>
 
@@ -301,16 +302,16 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
           </CardContent>
         </Card>
 
-        {/* Consolidadas vs Meta */}
+        {/* Remitidas vs Meta */}
         <Card className="border shadow-xs bg-card">
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-nota font-bold uppercase tracking-wider">Consolidadas</span>
+              <span className="text-nota font-bold uppercase tracking-wider">Remitidas</span>
               <ShieldCheck className="h-4 w-4 text-emerald-600" />
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-extrabold text-emerald-600 font-mono">
-                {metricas.consolidadas}
+                {metricas.remitidas}
               </span>
               <span className="text-xs font-bold text-emerald-600">
                 {pctAvance}%
@@ -330,46 +331,46 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
           </CardContent>
         </Card>
 
-        {/* Remitidas (En Revisión) */}
+        {/* Aceptadas (a firma) */}
         <Card className="border shadow-xs bg-card">
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-nota font-bold uppercase tracking-wider">Remitidas</span>
+              <span className="text-nota font-bold uppercase tracking-wider">Aceptadas (a firma)</span>
               <Send className="h-4 w-4 text-blue-600" />
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-extrabold text-blue-600 font-mono">
-                {metricas.remitidas}
+                {metricas.verificadas}
               </span>
               <span className="text-mini text-muted-foreground">
                 {metricas.total_dependencias > 0
-                  ? Math.round((metricas.remitidas / metricas.total_dependencias) * 100)
+                  ? Math.round((metricas.verificadas / metricas.total_dependencias) * 100)
                   : 0}%
               </span>
             </div>
             <p className="mt-1 text-microdato text-blue-700 font-medium">
-              Listas para visto bueno
+              Listas para firma y remisión
             </p>
           </CardContent>
         </Card>
 
-        {/* Observadas / Observaciones */}
+        {/* Por revisar / Observaciones */}
         <Card className="border shadow-xs bg-card">
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-nota font-bold uppercase tracking-wider">Observadas</span>
+              <span className="text-nota font-bold uppercase tracking-wider">Por revisar</span>
               <AlertCircle className="h-4 w-4 text-amber-600" />
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-extrabold text-amber-600 font-mono">
-                {metricas.observadas}
+                {metricas.en_revision}
               </span>
               <span className="text-xs font-semibold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">
                 {totalObs} obs.
               </span>
             </div>
             <p className="mt-1 text-microdato text-amber-700 font-medium">
-              En proceso de subsanación
+              Presentadas, esperan aceptación del coordinador
             </p>
           </CardContent>
         </Card>
@@ -444,7 +445,7 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
                     {pctAvance}%
                   </span>
                   <p className="text-mini font-semibold text-muted-foreground uppercase tracking-tight">
-                    {metricas.consolidadas} / {metricas.total_dependencias} Cerradas
+                    {metricas.remitidas} / {metricas.total_dependencias} Remitidas
                   </p>
                 </div>
               </div>
@@ -454,23 +455,23 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
                 <div className="flex items-center justify-between p-1.5 rounded bg-emerald-50/60 border border-emerald-100">
                   <span className="flex items-center gap-1.5 text-emerald-800 font-medium text-nota">
                     <span className="h-2 w-2 rounded-full bg-emerald-600" />
-                    Consolidadas
+                    Remitidas
                   </span>
-                  <span className="font-mono font-bold text-emerald-700">{metricas.consolidadas}</span>
+                  <span className="font-mono font-bold text-emerald-700">{metricas.remitidas}</span>
                 </div>
                 <div className="flex items-center justify-between p-1.5 rounded bg-blue-50/60 border border-blue-100">
                   <span className="flex items-center gap-1.5 text-blue-800 font-medium text-nota">
                     <span className="h-2 w-2 rounded-full bg-blue-600" />
-                    Remitidas
+                    Aceptadas (a firma)
                   </span>
-                  <span className="font-mono font-bold text-blue-700">{metricas.remitidas}</span>
+                  <span className="font-mono font-bold text-blue-700">{metricas.verificadas}</span>
                 </div>
                 <div className="flex items-center justify-between p-1.5 rounded bg-amber-50/60 border border-amber-100">
                   <span className="flex items-center gap-1.5 text-amber-800 font-medium text-nota">
                     <span className="h-2 w-2 rounded-full bg-amber-600" />
-                    Observadas
+                    Por revisar
                   </span>
-                  <span className="font-mono font-bold text-amber-700">{metricas.observadas}</span>
+                  <span className="font-mono font-bold text-amber-700">{metricas.en_revision}</span>
                 </div>
                 <div className="flex items-center justify-between p-1.5 rounded bg-slate-50 border border-slate-200">
                   <span className="flex items-center gap-1.5 text-slate-700 font-medium text-nota">
@@ -504,31 +505,31 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
                       {item.nombreCompleto}
                     </span>
                     <span className="font-mono text-nota font-bold text-primary">
-                      {item.consolidadas}/{item.total} ({item.pctConsolidadas}%)
+                      {item.remitidas}/{item.total} ({item.pctRemitidas}%)
                     </span>
                   </div>
                   {/* Barra de progreso apilada */}
                   <div className="h-3 w-full rounded-full bg-slate-100 border border-border flex overflow-hidden">
                     <div
-                      style={{ width: `${item.total > 0 ? (item.consolidadas / item.total) * 100 : 0}%` }}
-                      className="bg-emerald-600 h-full transition-all"
-                      title={`Consolidadas: ${item.consolidadas}`}
-                    />
-                    <div
                       style={{ width: `${item.total > 0 ? (item.remitidas / item.total) * 100 : 0}%` }}
-                      className="bg-blue-600 h-full transition-all"
+                      className="bg-emerald-600 h-full transition-all"
                       title={`Remitidas: ${item.remitidas}`}
                     />
                     <div
-                      style={{ width: `${item.total > 0 ? (item.observadas / item.total) * 100 : 0}%` }}
+                      style={{ width: `${item.total > 0 ? (item.aceptadas / item.total) * 100 : 0}%` }}
+                      className="bg-blue-600 h-full transition-all"
+                      title={`Aceptadas (a firma): ${item.aceptadas}`}
+                    />
+                    <div
+                      style={{ width: `${item.total > 0 ? (item.porRevisar / item.total) * 100 : 0}%` }}
                       className="bg-amber-500 h-full transition-all"
-                      title={`Observadas: ${item.observadas}`}
+                      title={`Por revisar: ${item.porRevisar}`}
                     />
                   </div>
                 </div>
               ))}
               <p className="text-microdato text-muted-foreground pt-1">
-                Verde: Consolidadas · Azul: Remitidas · Ámbar: Observadas
+                Verde: Remitidas · Azul: Aceptadas (a firma) · Ámbar: Por revisar
               </p>
             </CardContent>
           </Card>
@@ -596,14 +597,6 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
                     />
                     <Bar
                       yAxisId="left"
-                      dataKey="consolidadas"
-                      name="Consolidadas"
-                      fill={PALETA.consolidada}
-                      radius={[4, 4, 0, 0]}
-                      barSize={22}
-                    />
-                    <Bar
-                      yAxisId="left"
                       dataKey="remitidas"
                       name="Remitidas"
                       fill={PALETA.remitida}
@@ -612,9 +605,17 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
                     />
                     <Bar
                       yAxisId="left"
-                      dataKey="observadas"
-                      name="Observadas"
-                      fill={PALETA.observada}
+                      dataKey="aceptadas"
+                      name="Aceptadas (a firma)"
+                      fill={PALETA.verificada}
+                      radius={[4, 4, 0, 0]}
+                      barSize={22}
+                    />
+                    <Bar
+                      yAxisId="left"
+                      dataKey="porRevisar"
+                      name="Por revisar"
+                      fill={PALETA.en_revision}
                       radius={[4, 4, 0, 0]}
                       barSize={22}
                     />
@@ -629,7 +630,7 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
                     <Line
                       yAxisId="right"
                       type="monotone"
-                      dataKey="pctConsolidadas"
+                      dataKey="pctRemitidas"
                       name="% Avance Cierre"
                       stroke="#dc2626"
                       strokeWidth={2.5}
@@ -701,8 +702,8 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
                     />
                     <Line
                       type="monotone"
-                      dataKey="pctConsolidadas"
-                      name="% Entrega Consolidada"
+                      dataKey="pctRemitidas"
+                      name="% Entregas remitidas"
                       stroke="#2563eb"
                       strokeWidth={2}
                       dot={{ r: 3.5, fill: '#2563eb' }}
@@ -719,12 +720,12 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
           SECCIÓN INFERIOR: BANDEJAS PRIORITARIAS Y DETALLE
           ======================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* TABLA 1: Dependencias que Requieren Seguimiento / Observadas */}
+        {/* TABLA 1: Dependencias que Requieren Seguimiento / Por revisar */}
         <Card className="border shadow-xs">
           <CardHeader className="py-2.5 px-4 border-b border-border bg-muted flex flex-row items-center justify-between">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <span>Oficinas con Observaciones y Alertas ({dependenciasCriticas.length})</span>
+              <span>Centros de costo por revisar o con observaciones ({dependenciasCriticas.length})</span>
             </CardTitle>
             <Link
               to="/observaciones"
@@ -737,7 +738,7 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
             {dependenciasCriticas.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground text-xs">
                 <CheckCircle2 className="mx-auto h-7 w-7 text-emerald-600 mb-1.5" />
-                No hay dependencias con observaciones abiertas pendientes.
+                No hay centros de costo por revisar ni con observaciones.
               </div>
             ) : (
               <div className="divide-y divide-border overflow-x-auto">
@@ -770,22 +771,22 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
                         <td className="py-2 px-3 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-microdato font-semibold ${
-                              dep.estado_entrega === 'observada'
+                              dep.estado_entrega === 'en_revision'
                                 ? 'bg-amber-100 text-amber-800'
-                                : dep.estado_entrega === 'remitida'
+                                : estaEnFirma(dep.estado_entrega)
                                 ? 'bg-blue-100 text-blue-800'
                                 : 'bg-slate-100 text-slate-700'
                             }`}
                           >
-                            {dep.estado_entrega === 'observada'
-                              ? 'Observada'
-                              : dep.estado_entrega === 'remitida'
-                              ? 'Remitida'
+                            {dep.estado_entrega === 'en_revision'
+                              ? 'Por revisar'
+                              : estaEnFirma(dep.estado_entrega)
+                              ? 'Aceptada'
                               : 'Borrador'}
                           </span>
                         </td>
                         <td className="py-2 px-3 text-center font-mono font-bold text-rose-600">
-                          {dep.observaciones_abiertas}
+                          {dep.observaciones}
                         </td>
                         <td className="py-2 px-3 text-right font-mono text-nota text-muted-foreground">
                           {dep.patrimonio_porcentaje}%
@@ -912,7 +913,7 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
               <Users className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-foreground">Delegados ETTE</p>
+              <p className="text-xs font-semibold text-foreground">Coordinadores ETTE</p>
               <p className="text-microdato text-muted-foreground">Cuentas externas</p>
             </div>
           </Link>

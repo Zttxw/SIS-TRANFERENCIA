@@ -5,7 +5,7 @@ import { ArrowRight, Compass, X } from 'lucide-react'
 
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import type { EstadoEntrega } from '@/types/transferencia'
+import { estaEnFirma, type EstadoEntrega } from '@/types/transferencia'
 import { firmaperuService } from '@/features/firmaperu/firmaperu.service'
 import type { TipoDocumentoFirma } from '@/features/firmaperu/firmaperu.types'
 import { useAuth } from '@/auth/hooks'
@@ -21,10 +21,10 @@ export interface AnexoPendiente {
 
 interface QueSigueCardProps {
   estadoEntrega: EstadoEntrega
-  /** El usuario puede editar/llenar (borrador/observada/subsanada). */
+  /** El usuario puede editar/llenar (borrador). */
   esEditable: boolean
   anexos: AnexoPendiente[]
-  /** Ruta del acta (Anexo 07) cuando la entrega está consolidada. */
+  /** Ruta del acta (Anexo 07), que se firma tras la aceptación del coordinador. */
   rutaActa?: string
   className?: string
   dependenciaId: number
@@ -124,60 +124,50 @@ function resolverSugerencia(
   puedeEmitirActa: boolean,
   puedeRemitir: boolean,
 ): Sugerencia | null {
-  // Entrega devuelta con observaciones: lo urgente es subsanar.
-  if (estado === 'observada') {
-    return {
-      titulo: 'Atienda las observaciones',
-      descripcion:
-        'La entrega fue devuelta para subsanación. Revise las observaciones de cada anexo, corrija y responda el sustento.',
-      ruta: '/observaciones',
-      cta: 'Ver observaciones',
-    }
-  }
-
-  // Ya remitida / en revisión: no hay acción del emisor; no se sugiere nada.
-  if (estado === 'remitida' || estado === 'en_revision' || estado === 'subsanada') {
+  // Presentada al coordinador o ya remitida: el responsable no tiene acción pendiente.
+  if (estado === 'en_revision' || estado === 'remitida') {
     return null
   }
 
-  if (hayFirmaPendiente) {
+  // Aceptada por el coordinador: firmar los anexos 02–07 y remitir.
+  if (estaEnFirma(estado)) {
+    if (hayFirmaPendiente) {
+      return {
+        titulo: 'Firme los documentos de la entrega',
+        descripcion: puedeEmitirActa
+          ? 'El coordinador ETTE aceptó la entrega. Genere el Acta (Anexo 07) y firme los anexos en «PDF y firma».'
+          : 'El coordinador ETTE aceptó la entrega. Genere y firme los anexos en «PDF y firma».',
+        ruta: puedeEmitirActa ? rutaActa : '/pdf-firma',
+        cta: puedeEmitirActa ? 'Ir al Acta' : 'Ir a PDF y firma',
+      }
+    }
+    if (!puedeRemitir) return null
     return {
-      titulo: 'Firme los documentos de la entrega',
-      descripcion: 'Visualice, genere y firme los anexos en «PDF y firma» antes de remitir.',
-      ruta: '/pdf-firma',
-      cta: 'Ir a PDF y firma',
+      titulo: 'Remita su entrega',
+      descripcion: 'Los anexos están firmados. Remita la entrega al centro de costo padre o al ETTS.',
+      ruta: '/entregas',
+      cta: 'Ir a remitir',
     }
   }
 
-  // Consolidada: emitir el acta de cierre.
-  if (estado === 'consolidada' && puedeEmitirActa) {
-    return {
-      titulo: 'Emita el Acta de Transferencia',
-      descripcion:
-        'La entrega está consolidada. Genere el Acta (Anexo 07) para la firma y el cierre formal del proceso.',
-      ruta: rutaActa,
-      cta: 'Ir al Acta',
-    }
-  }
-
-  // Borrador editable: señalar el primer anexo incompleto; si todo está, remitir.
+  // Borrador editable: señalar el primer anexo incompleto; si todo está, presentar.
   if (esEditable) {
     const pendiente = anexos.find((a) => !a.completado)
     if (pendiente) {
       return {
         titulo: `Complete ${pendiente.nombre}`,
-        descripcion: `Es el siguiente anexo con información pendiente. Termínelo para avanzar hacia la remisión de la entrega.`,
+        descripcion: 'Es el siguiente anexo con información pendiente. Termínelo antes de presentar la entrega al coordinador ETTE.',
         ruta: pendiente.ruta,
         cta: `Ir a ${pendiente.nombre}`,
       }
     }
     if (!puedeRemitir) return null
     return {
-      titulo: 'Remita su entrega',
+      titulo: 'Presente su entrega al coordinador ETTE',
       descripcion:
-        'Todos los anexos tienen información registrada. Revise y remita la entrega al nivel superior para su consolidación.',
+        'Todos los anexos tienen información registrada. Al presentarla, los anexos se bloquean y el coordinador la revisa y acepta.',
       ruta: '/entregas',
-      cta: 'Ir a remitir',
+      cta: 'Ir a presentar',
     }
   }
 

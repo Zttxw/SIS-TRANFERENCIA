@@ -13,6 +13,7 @@ enum FuenteDato: string
     case SGD = 'sgd';
     case SIGA = 'siga';
     case MANUAL = 'manual';
+    case CEPLAN = 'ceplan';
 
     public function etiqueta(): string
     {
@@ -20,6 +21,7 @@ enum FuenteDato: string
             self::SGD => 'Sistema de Gestión Documentaria',
             self::SIGA => 'SIGA — Módulo de Patrimonio',
             self::MANUAL => 'Registro manual',
+            self::CEPLAN => 'Anexo 01 — Centros de costo (CEPLAN)',
         };
     }
 }

@@ -15,11 +15,12 @@ export const firmaperuService = {
     const res = await api.get<ApiSuccess<RequisitosRemision>>(`/firmaperu/requisitos-remision/${dependenciaId}`, { signal, timeout: 60000 })
     return res.data.data
   },
-  async preparar(tipo: TipoDocumentoFirma, dependenciaId: number, signal: AbortSignal, previoId?: string) {
+  /** Sin previo, el backend agrega la firma sobre la cadena vigente del documento (D-06). */
+  async preparar(tipo: TipoDocumentoFirma, dependenciaId: number, signal: AbortSignal, motivoSuplencia?: string) {
     const res = await api.post<ApiSuccess<PreparacionFirma>>('/firmaperu/preparar', {
       tipo_documento: tipo,
       dependencia_id: dependenciaId,
-      documento_previo_id: previoId,
+      motivo_suplencia: motivoSuplencia,
     }, { signal, timeout: 60000 })
     return res.data.data
   },
@@ -45,6 +46,19 @@ export const firmaperuService = {
   descargarGenerado(tipo: TipoDocumentoFirma, dependenciaId: number) {
     return descargarArchivo('/firmaperu/previsualizar',
       { tipo_documento: tipo, dependencia_id: dependenciaId, solo_generado: 1 }, `Generado-${tipo}.pdf`)
+  },
+  /**
+   * Firma manuscrita del lado ETTE (D-06): el PDF generado firmado a mano y
+   * escaneado. El responsable firma digitalmente encima.
+   */
+  async subirFirmaManuscrita(tipo: TipoDocumentoFirma, dependenciaId: number, archivo: File, motivoSuplencia?: string) {
+    const form = new FormData()
+    form.append('tipo_documento', tipo)
+    form.append('dependencia_id', String(dependenciaId))
+    if (motivoSuplencia) form.append('motivo_suplencia', motivoSuplencia)
+    form.append('signed_file', archivo)
+    const res = await api.post<ApiSuccess<{ sesion_id: string; estado: string }>>('/firmaperu/subir-manual', form, { timeout: 60000 })
+    return res.data.data
   },
   /** Descarga el PDF disponible de un anexo: el firmado vigente si existe, o el generado. */
   descargarDisponible(tipo: TipoDocumentoFirma, dependenciaId: number, estado: EstadoFirma) {

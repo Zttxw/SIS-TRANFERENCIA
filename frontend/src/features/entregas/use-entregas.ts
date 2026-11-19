@@ -3,8 +3,7 @@ import { toast } from 'sonner'
 
 import type {
   FiltrosEntregas,
-  RemitirEntregaPayload,
-  RevisarEntregaPayload,
+  VerificarEntregaPayload,
 } from '@/types/transferencia'
 import { entregasService } from './entregas.service'
 
@@ -33,41 +32,94 @@ export function useEstadoEntrega(dependenciaId?: number | null) {
   })
 }
 
-export function useRemitirEntrega() {
+function invalidarFlujo(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: ['entregas'] })
+  queryClient.invalidateQueries({ queryKey: ['transferencia-estado'] })
+  queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+  queryClient.invalidateQueries({ queryKey: ['observaciones'] })
+}
+
+function mensajeError(error: any, porDefecto: string): string {
+  return error?.response?.data?.message ?? porDefecto
+}
+
+export function usePresentarEntrega() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (payload: RemitirEntregaPayload) => entregasService.remitirEntrega(payload),
+    mutationFn: (dependenciaId: number) => entregasService.presentarEntrega(dependenciaId),
     onSuccess: () => {
-      toast.success('Entrega remitida con éxito al superior jerárquico.')
-      queryClient.invalidateQueries({ queryKey: ['entregas'] })
-      queryClient.invalidateQueries({ queryKey: ['transferencia-estado'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toast.success('Entrega presentada al coordinador ETTE. Los anexos quedan bloqueados para edición.')
+      invalidarFlujo(queryClient)
+      // Al presentar se congelan los documentos pendientes del Anexo 02 (D-09).
+      queryClient.invalidateQueries({ queryKey: ['informe-gestion'] })
     },
-    onError: (error: any) => {
-      const msg = error?.response?.data?.message ?? 'No se pudo remitir la entrega.'
-      toast.error(msg)
-    },
+    onError: (error: any) => toast.error(mensajeError(error, 'No se pudo presentar la entrega.')),
   })
 }
 
-export function useRevisarEntrega() {
+export function useVerificarEntrega() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (payload: RevisarEntregaPayload) => entregasService.revisarEntrega(payload),
-    onSuccess: (_data, variables) => {
-      const accion = variables.accion === 'consolidar' ? 'consolidada' : 'observada'
-      toast.success(`Entrega ${accion} con éxito.`)
-      queryClient.invalidateQueries({ queryKey: ['entregas'] })
-      queryClient.invalidateQueries({ queryKey: ['transferencia-estado'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      queryClient.invalidateQueries({ queryKey: ['observaciones'] })
+    mutationFn: (payload: VerificarEntregaPayload) => entregasService.verificarEntrega(payload),
+    onSuccess: () => {
+      toast.success('Entrega aceptada. Ya pueden firmarse los anexos.')
+      invalidarFlujo(queryClient)
     },
-    onError: (error: any) => {
-      const msg = error?.response?.data?.message ?? 'No se pudo procesar la revisión de la entrega.'
-      toast.error(msg)
-    },
+    onError: (error: any) => toast.error(mensajeError(error, 'No se pudo aceptar la entrega.')),
   })
 }
 
+export function useConsolidado(dependenciaId?: number | null, habilitado = true) {
+  return useQuery({
+    queryKey: ['entregas', 'consolidado', dependenciaId],
+    queryFn: () => entregasService.consolidado(dependenciaId!),
+    enabled: Boolean(dependenciaId) && habilitado,
+    staleTime: 1000 * 30,
+  })
+}
+
+export function useCadenaEtts() {
+  return useQuery({
+    queryKey: ['entregas', 'cadena-etts'],
+    queryFn: () => entregasService.cadenaEtts(),
+    staleTime: 1000 * 20,
+  })
+}
+
+export function useEnviosEtte() {
+  return useQuery({
+    queryKey: ['entregas', 'envios-ette'],
+    queryFn: () => entregasService.enviosEtte(),
+    staleTime: 1000 * 20,
+  })
+}
+
+type PasoCadena = 'recibir-etts' | 'enviar-ette' | 'recibir-ette'
+
+const MENSAJE_PASO: Record<PasoCadena, string> = {
+  'recibir-etts': 'Recepción registrada en el ETTS.',
+  'enviar-ette': 'Entregas enviadas al ETTE. Descargue la constancia del lote.',
+  'recibir-ette': 'Recepción registrada en el ETTE.',
+}
+
+/** Un paso de la cadena ETTS → ETTE sobre uno o varios CC (D-12). */
+export function usePasoCadena(paso: PasoCadena) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ dependenciaIds, comentario }: { dependenciaIds: number[]; comentario?: string }) =>
+      paso === 'recibir-etts'
+        ? entregasService.recibirEnEtts(dependenciaIds)
+        : paso === 'enviar-ette'
+          ? entregasService.enviarAlEtte(dependenciaIds, comentario).then(() => undefined)
+          : entregasService.recibirEnEtte(dependenciaIds),
+    onSuccess: () => {
+      toast.success(MENSAJE_PASO[paso])
+      invalidarFlujo(queryClient)
+      queryClient.invalidateQueries({ queryKey: ['anexo01-institucional'] })
+    },
+    onError: (error: any) => toast.error(mensajeError(error, 'No se pudo registrar el paso.')),
+  })
+}

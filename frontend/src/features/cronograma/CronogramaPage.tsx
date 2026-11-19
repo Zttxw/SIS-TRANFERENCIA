@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Controller, useForm } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 
 import { usePermiso } from '@/auth/hooks'
@@ -15,10 +15,14 @@ import { Textarea } from '@/components/ui/textarea'
 import { aplicarErroresAFormulario, notificarError } from '@/lib/api-errors'
 import { listarOrganigrama } from '@/features/organization/dependencias.service'
 import {
+  BLOQUEA_OPERACION,
   cronogramaService,
+  ETIQUETA_OPERACION,
   type ActividadCronograma,
   type ActividadPayload,
+  type OperacionCronograma,
 } from './cronograma.service'
+import { FeriadosPanel } from './FeriadosPanel'
 
 const valoresIniciales: ActividadPayload = {
   nombre: '',
@@ -26,16 +30,18 @@ const valoresIniciales: ActividadPayload = {
   descripcion: '',
   dependencia_id: null,
   fecha_inicio: '',
+  fecha_cgr: '',
+  dias_habiles_antes: 2,
   fecha_vencimiento: '',
   hora_vencimiento: '',
   estado: 'pendiente',
-  operacion: 'remision',
+  operacion: 'verificacion',
   orden: 0,
 }
 
-/** Etiqueta legible de la operación que gobierna el plazo. */
-const ETIQUETA_OPERACION: Record<string, string> = {
-  remision: 'Remisión',
+function fechaCorta(iso: string): string {
+  const [anio, mes, dia] = iso.slice(0, 10).split('-')
+  return `${dia}/${mes}/${anio}`
 }
 
 /**
@@ -48,7 +54,7 @@ function formatearVencimiento(
   hora: string | null,
 ): string {
   if (!fecha) return 'Sin plazo'
-  const dia = fecha.slice(0, 10)
+  const dia = fechaCorta(fecha)
   if (!hora) return `${dia} · fin del día`
   return `${dia} · ${hora.slice(0, 5)}`
 }
@@ -102,6 +108,8 @@ export function CronogramaPage() {
     setError,
     formState: { errors },
   } = useForm<ActividadPayload>({ defaultValues: valoresIniciales })
+  const conPlazoCgr = Boolean(useWatch({ control, name: 'fecha_cgr' }))
+  const operacionElegida = useWatch({ control, name: 'operacion' })
 
   const actualizar = async () => {
     await cliente.invalidateQueries({ queryKey: ['cronograma'] })
@@ -115,7 +123,9 @@ export function CronogramaPage() {
           etapa: datos.etapa?.trim() || null,
           descripcion: datos.descripcion?.trim() || null,
           fecha_inicio: datos.fecha_inicio || null,
-          fecha_vencimiento: datos.fecha_vencimiento || null,
+          fecha_cgr: datos.fecha_cgr || null,
+          dias_habiles_antes: Number(datos.dias_habiles_antes ?? 2),
+          fecha_vencimiento: datos.fecha_cgr ? null : datos.fecha_vencimiento || null,
           hora_vencimiento: datos.hora_vencimiento || null,
         },
       ),
@@ -137,7 +147,7 @@ export function CronogramaPage() {
     onError: (error) => notificarError(error),
   })
   const extender = useMutation({
-    mutationFn: () => cronogramaService.prorrogar(prorroga!.id, fechaProrroga),
+    mutationFn: () => cronogramaService.prorrogar(prorroga!, fechaProrroga),
     onSuccess: async () => {
       await actualizar()
       setProrroga(null)
@@ -153,6 +163,7 @@ export function CronogramaPage() {
         : {
             ...actividad,
             fecha_inicio: actividad.fecha_inicio?.slice(0, 10) ?? '',
+            fecha_cgr: actividad.fecha_cgr?.slice(0, 10) ?? '',
             fecha_vencimiento: actividad.fecha_vencimiento?.slice(0, 10) ?? '',
             hora_vencimiento: actividad.hora_vencimiento?.slice(0, 5) ?? '',
           },
@@ -173,10 +184,12 @@ export function CronogramaPage() {
         <div>
           <h1 className="text-2xl font-semibold">Cronograma de transferencia</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Define las etapas y plazos del proceso. Cuando una actividad de{' '}
-            <strong>remisión</strong> vence, el sistema bloquea la remisión de
-            las dependencias de su ámbito hasta que se prorrogue el plazo. Las
-            horas de corte se interpretan en hora de Lima.
+            Define las etapas y plazos del proceso. Con un{' '}
+            <strong>plazo CGR</strong>, el vencimiento interno se calcula en
+            días hábiles antes de esa fecha (por defecto 2). Al vencer, la
+            actividad bloquea las acciones de su etapa en los centros de costo
+            de su ámbito hasta que se prorrogue. Las horas de corte se
+            interpretan en hora de Lima.
           </p>
         </div>
         <Button onClick={() => abrir('nueva')}>Nueva actividad</Button>
@@ -208,6 +221,9 @@ export function CronogramaPage() {
                   {a.dependencia?.nombre ?? 'Todo el proceso'} ·{' '}
                   {ETIQUETA_OPERACION[a.operacion] ?? a.operacion}
                 </p>
+                <p className="text-xs text-muted-foreground">
+                  {BLOQUEA_OPERACION[a.operacion]}
+                </p>
               </div>
             ),
           },
@@ -224,6 +240,12 @@ export function CronogramaPage() {
                       a.hora_vencimiento,
                     )}
                   </p>
+                  {a.fecha_cgr && (
+                    <p className="text-xs text-muted-foreground">
+                      {a.dias_habiles_antes} días hábiles antes del plazo CGR
+                      ({fechaCorta(a.fecha_cgr)})
+                    </p>
+                  )}
                   <p
                     className={
                       sit.tono === 'danger'
@@ -275,7 +297,9 @@ export function CronogramaPage() {
                   size="sm"
                   onClick={() => {
                     setProrroga(a)
-                    setFechaProrroga(a.fecha_vencimiento?.slice(0, 10) ?? '')
+                    setFechaProrroga(
+                      (a.fecha_cgr ?? a.fecha_vencimiento)?.slice(0, 10) ?? '',
+                    )
                   }}
                 >
                   Prorrogar
@@ -350,6 +374,32 @@ export function CronogramaPage() {
             )}
           </div>
           <div className="space-y-1">
+            <Label htmlFor="actividad-operacion">Etapa que gobierna</Label>
+            <Controller
+              name="operacion"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  id="actividad-operacion"
+                  value={field.value}
+                  onChange={(valor) => field.onChange(valor as OperacionCronograma)}
+                  options={(
+                    Object.keys(ETIQUETA_OPERACION) as OperacionCronograma[]
+                  ).map((valor) => ({
+                    value: valor,
+                    label: ETIQUETA_OPERACION[valor],
+                  }))}
+                />
+              )}
+            />
+            <p className="text-xs text-muted-foreground">
+              {BLOQUEA_OPERACION[operacionElegida]}
+            </p>
+            {errors.operacion && (
+              <p className="text-xs text-danger-fg">{errors.operacion.message}</p>
+            )}
+          </div>
+          <div className="space-y-1">
             <Label htmlFor="actividad-dependencia">Ámbito</Label>
             <Controller
               name="dependencia_id"
@@ -396,12 +446,50 @@ export function CronogramaPage() {
               )}
             </div>
             <div className="space-y-1">
+              <Label htmlFor="actividad-cgr">Plazo CGR</Label>
+              <Input
+                id="actividad-cgr"
+                type="date"
+                {...register('fecha_cgr')}
+              />
+              {errors.fecha_cgr && (
+                <p className="text-xs text-danger-fg">
+                  {errors.fecha_cgr.message}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="actividad-dias">Días hábiles antes</Label>
+              <Input
+                id="actividad-dias"
+                type="number"
+                min={0}
+                max={30}
+                disabled={!conPlazoCgr}
+                {...register('dias_habiles_antes', { valueAsNumber: true })}
+              />
+              {errors.dias_habiles_antes && (
+                <p className="text-xs text-danger-fg">
+                  {errors.dias_habiles_antes.message}
+                </p>
+              )}
+            </div>
+            <div className="space-y-1">
               <Label htmlFor="actividad-fin">Vencimiento</Label>
               <Input
                 id="actividad-fin"
                 type="date"
+                disabled={conPlazoCgr}
                 {...register('fecha_vencimiento')}
               />
+              {conPlazoCgr && (
+                <p className="text-xs text-muted-foreground">
+                  Se calcula desde el plazo CGR, sin fines de semana ni
+                  feriados.
+                </p>
+              )}
               {errors.fecha_vencimiento && (
                 <p className="text-xs text-danger-fg">
                   {errors.fecha_vencimiento.message}
@@ -447,10 +535,6 @@ export function CronogramaPage() {
               <p className="text-xs text-danger-fg">{errors.estado.message}</p>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Esta actividad controla el plazo de remisión: al vencer, bloquea la
-            remisión de su ámbito hasta que se prorrogue.
-          </p>
           <div className="flex justify-end gap-2">
             <Button
               type="button"
@@ -472,7 +556,11 @@ export function CronogramaPage() {
           if (!extender.isPending) setProrroga(null)
         }}
         title="Prorrogar actividad"
-        description={prorroga?.nombre}
+        description={
+          prorroga?.fecha_cgr
+            ? `${prorroga.nombre} · se mueve el plazo CGR y el vencimiento se recalcula en días hábiles`
+            : prorroga?.nombre
+        }
       >
         <form
           onSubmit={(e) => {
@@ -481,14 +569,18 @@ export function CronogramaPage() {
           }}
           className="space-y-4"
         >
-          <Label htmlFor="fecha-prorroga">Nuevo vencimiento</Label>
+          <Label htmlFor="fecha-prorroga">
+            {prorroga?.fecha_cgr ? 'Nuevo plazo CGR' : 'Nuevo vencimiento'}
+          </Label>
           <Input
             id="fecha-prorroga"
             type="date"
             required
             min={
-              prorroga?.fecha_vencimiento?.slice(0, 10) ||
-              prorroga?.fecha_inicio?.slice(0, 10)
+              (prorroga?.fecha_cgr ?? prorroga?.fecha_vencimiento)?.slice(
+                0,
+                10,
+              ) || prorroga?.fecha_inicio?.slice(0, 10)
             }
             value={fechaProrroga}
             onChange={(e) => setFechaProrroga(e.target.value)}
@@ -513,6 +605,7 @@ export function CronogramaPage() {
           </div>
         </form>
       </Dialog>
+      <FeriadosPanel />
     </div>
   )
 }

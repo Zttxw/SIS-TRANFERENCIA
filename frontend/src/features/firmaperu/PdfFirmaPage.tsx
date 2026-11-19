@@ -6,7 +6,6 @@ import { puedeConsultarActa } from '@/auth/sesion-runtime'
 import { buttonVariants } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
-import { ConstanciaAusenciaEtte } from './ConstanciaAusenciaEtte'
 import { DocumentoFirmaDetalle } from './DocumentoFirmaDetalle'
 import { useRequisitosRemision } from './use-requisitos-remision'
 import type { TipoDocumentoFirma } from './firmaperu.types'
@@ -55,14 +54,13 @@ export function PdfFirmaPage() {
                   {nombre}
                 </h2>
                 <DocumentoFirmaDetalle tipoDocumento={tipo} dependenciaId={dependenciaId} soloLectura={soloLectura} />
-                {tipo === 'anexo07' && !soloLectura && <ConstanciaAusenciaEtte dependenciaId={dependenciaId} />}
               </section>
             ))}
           </div>
           {tiene('entregas.remitir') && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/20 p-4">
               <p className="text-xs text-muted-foreground">
-                {comprobando ? 'Comprobando firmas…' : errorFirmas ? 'No se pudieron comprobar las firmas.' : `Firmas del jefe: ${requisitos?.firmados ?? 0}/6 · anexos 02 al 07`}
+                {comprobando ? 'Comprobando firmas…' : errorFirmas ? 'No se pudieron comprobar las firmas.' : `Documentos con ambas firmas (responsable y coordinador ETTE): ${requisitos?.firmados ?? 0}/6 · anexos 02 al 07`}
               </p>
               <Link to="/entregas" className={buttonVariants({ size: 'sm', variant: requisitos?.puede_remitir ? 'default' : 'outline', className: 'gap-2' })}>
                 Ir a Entrega <ArrowRight className="h-3.5 w-3.5" />

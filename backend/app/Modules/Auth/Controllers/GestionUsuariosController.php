@@ -6,7 +6,6 @@ namespace App\Modules\Auth\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Modules\Auth\Models\AsignacionRol;
 use App\Modules\Auth\Services\GestionUsuariosService;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -57,7 +56,7 @@ class GestionUsuariosController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'password' => ['required', 'string', 'min:8'],
             'rol' => ['nullable', 'string'],
-            'dependencia_id' => ['nullable', 'integer', 'exists:dependencias,id'],
+            'dependencia_id' => ['nullable', 'integer', 'exists:dependencias,id,es_centro_costo,1'],
         ]);
 
         $usuario = $this->usuarios->crearExterno($datos);
@@ -76,7 +75,7 @@ class GestionUsuariosController extends Controller
     {
         $datos = $request->validate([
             'rol' => ['required', 'string'],
-            'dependencia_id' => ['nullable', 'integer', 'exists:dependencias,id'],
+            'dependencia_id' => ['nullable', 'integer', 'exists:dependencias,id,es_centro_costo,1'],
         ]);
 
         $asignacion = $this->usuarios->asignarRol(

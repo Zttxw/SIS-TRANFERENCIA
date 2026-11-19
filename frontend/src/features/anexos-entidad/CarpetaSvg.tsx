@@ -40,8 +40,8 @@ interface CarpetaSvgProps {
 /**
  * Carpeta de archivo dibujada en SVG (no un ícono de librería), con tapa,
  * cuerpo degradado, papeles asomando y animación de apertura. El color
- * comunica el estado de remisión: verde = remitida/consolidada, gris = sin
- * remitir, ámbar = observada.
+ * comunica el estado de la entrega: verde = remitida, ámbar = presentada al
+ * coordinador (por revisar o aceptada), gris = en preparación.
  */
 export function CarpetaSvg({ tono, abierta = false, className }: CarpetaSvgProps) {
   const c = TONOS[tono]

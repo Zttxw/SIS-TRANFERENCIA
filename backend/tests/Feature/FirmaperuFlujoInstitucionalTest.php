@@ -9,18 +9,15 @@ use App\Modules\Acervo\Models\AcervoDocumental;
 use App\Modules\Auth\Models\AsignacionRol;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Models\ActaTransferencia;
-use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\FirmaAnexo;
 use App\Modules\Transferencia\Models\FirmaSesion;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Modules\Transferencia\Services\CadenaFirmas;
 use App\Modules\Transferencia\Services\FirmaperuAuthService;
 use App\Modules\Transferencia\Services\FirmaperuRegistroService;
 use App\Modules\Transferencia\Services\FirmaperuSesionService;
 use App\Modules\Transferencia\Services\FirmaperuValidadorService;
-use App\Modules\Transferencia\Services\ObservacionService;
-use App\Support\Enums\CaracterFirma;
-use App\Support\Enums\EstadoEntrega;
-use App\Support\Enums\EstadoFirma;
+use App\Modules\Transferencia\Services\SuscripcionEntrega;
 use App\Support\Enums\Rol;
 use App\Support\Services\PdfService;
 use Database\Seeders\RolesPermisosSeeder;
@@ -30,15 +27,18 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 use Mockery\MockInterface;
+use Tests\Concerns\PreparaEntregas;
 use Tests\TestCase;
 
 class FirmaperuFlujoInstitucionalTest extends TestCase
 {
-    use RefreshDatabase;
+    use PreparaEntregas, RefreshDatabase;
 
     private Dependencia $dep;
 
     private User $responsable;
+
+    private User $coordinador;
 
     private bool $hayConfianza = true;
 
@@ -48,8 +48,10 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
         $this->seed(RolesPermisosSeeder::class);
         Storage::fake('local');
         config()->set('firmaperu.public_url', 'https://backend.example');
-        $proceso = ProcesoTransferencia::factory()->create(['exige_firma_acta' => true]);
+        $proceso = ProcesoTransferencia::factory()->create();
         $this->dep = Dependencia::factory()->create(['proceso_transferencia_id' => $proceso->id]);
+        $this->entregaEn($this->dep);
+        $this->coordinador = $this->usuario(Rol::DELEGADO_ETTE);
         $this->responsable = $this->usuario(Rol::RESPONSABLE_CENTRO_COSTO);
         $this->mock(FirmaperuAuthService::class, fn (MockInterface $mock) => $mock->shouldReceive('obtenerJwtToken')->andReturn('jwt-prueba'));
         $this->mock(PdfService::class, fn (MockInterface $mock) => $mock->shouldReceive('binario')->andReturn("%PDF-1.7\n%%EOF\n"));
@@ -72,7 +74,7 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
 
     private function preparar(string $tipo = 'anexo07', ?string $previo = null): array
     {
-        if (! $previo) {
+        if (! $previo && auth()->user()->is($this->responsable)) {
             $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => $tipo, 'dependencia_id' => $this->dep->id])->assertCreated();
         }
         $preparacion = $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => $tipo,
@@ -90,16 +92,23 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
         return FirmaSesion::findOrFail($id);
     }
 
+    /** Completa las firmas faltantes de ambos lados (en el acta, solo la ETTE) y remite. */
     private function remitir(): TestResponse
     {
         if (FirmaSesion::where('tipo_documento', 'anexo07')->where('dependencia_id', $this->dep->id)->where('estado', 'firmada')->exists()) {
-            foreach (['anexo02', 'anexo03', 'anexo04', 'anexo05', 'anexo06'] as $tipo) {
-                $sesion = FirmaSesion::where('tipo_documento', $tipo)->where('dependencia_id', $this->dep->id)->where('estado', 'firmada')->latest()->first();
-                if (! $sesion || ! app(FirmaperuRegistroService::class)->vigente($sesion)) {
-                    $this->recibir($this->preparar($tipo));
+            $documentos = app(SuscripcionEntrega::class)->requisitosRemision($this->dep->id, $this->responsable)['documentos'];
+            foreach ($documentos as $tipo => $estado) {
+                foreach (['entidad' => $this->responsable, 'ette' => $this->coordinador] as $lado => $firmante) {
+                    // El acta solo se completa con la firma ETTE sobre la del responsable vigente.
+                    $acta = $tipo === 'anexo07' && ($lado === 'entidad' || $estado['entidad'] === null);
+                    if ($estado[$lado] === null && ! $acta) {
+                        Sanctum::actingAs($firmante);
+                        $this->recibir($this->preparar($tipo));
+                    }
                 }
             }
         }
+        Sanctum::actingAs($this->responsable);
 
         return $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->dep->id]);
     }
@@ -111,10 +120,18 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
         $acta = ActaTransferencia::where('dependencia_id', $this->dep->id)->firstOrFail();
         $this->assertDatabaseHas('firmas_anexo', ['firma_sesion_id' => $sesion->id, 'firmable_id' => $acta->id,
             'firmable_type' => $acta->getMorphClass(), 'version' => 1, 'estado' => 'firmada',
-            'caracter' => 'obligatoria', 'firmante_id' => $this->responsable->id, 'hash_pdf' => $sesion->firmado_sha256]);
-        $this->assertSame('suscrita', $acta->estado);
+            'lado' => 'entidad', 'firmante_id' => $this->responsable->id, 'hash_pdf' => $sesion->firmado_sha256]);
+        $this->assertSame('generada', $acta->estado, 'Con un solo lado el acta no queda suscrita.');
         app(FirmaperuRegistroService::class)->registrar($sesion);
         $this->assertDatabaseCount('firmas_anexo', 1);
+
+        Sanctum::actingAs($this->coordinador);
+        $ette = $this->recibir($this->preparar());
+        $this->assertSame($sesion->id, $ette->documento_previo_id, 'La firma ETTE se agrega sobre el PDF ya firmado.');
+        $this->assertDatabaseHas('firmas_anexo', ['firma_sesion_id' => $ette->id, 'lado' => 'ette', 'en_calidad_de' => 'coordinador']);
+        $this->assertSame('suscrita', $acta->fresh()->estado);
+        $this->assertSame($ette->firmado_path, $acta->fresh()->ruta_pdf_suscrito);
+
         $this->remitir()->assertOk();
     }
 
@@ -131,19 +148,21 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
         $this->remitir()->assertOk();
     }
 
-    public function test_firma_opcional_ette_y_su_ambito_no_sustituyen_al_responsable(): void
+    public function test_un_solo_lado_no_basta_y_el_coordinador_solo_firma_su_cc(): void
     {
         $primera = $this->recibir($this->preparar());
-        $this->usuario(Rol::DELEGADO_ETTE);
-        $this->getJson('/api/transferencia/acta?dependencia_id='.$this->dep->id)->assertOk();
-        $segunda = $this->recibir($this->preparar('anexo07', $primera->id));
-        $this->assertDatabaseHas('firmas_anexo', ['firma_sesion_id' => $segunda->id, 'estado' => 'firmada', 'caracter' => 'opcional']);
-        $this->assertDatabaseCount('firmas_anexo', 2);
+        Sanctum::actingAs($this->coordinador);
+        $segunda = $this->recibir($this->preparar());
+        $this->assertDatabaseHas('firmas_anexo', ['firma_sesion_id' => $segunda->id, 'estado' => 'firmada', 'lado' => 'ette']);
         $otra = Dependencia::factory()->create(['proceso_transferencia_id' => $this->dep->proceso_transferencia_id]);
         $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo07', 'dependencia_id' => $otra->id])->assertForbidden();
+
         FirmaAnexo::where('firma_sesion_id', $primera->id)->update(['estado' => 'cancelada']);
+        $estado = app(CadenaFirmas::class)->estado($this->dep->proceso_transferencia_id, $this->dep->id, 'anexo07', $this->responsable);
+        $this->assertFalse($estado['completo']);
+        $this->assertNull($estado['entidad']);
         Sanctum::actingAs($this->responsable);
-        $this->remitir()->assertConflict();
+        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->dep->id])->assertConflict();
     }
 
     public function test_cambio_del_contenido_del_paquete_invalida_el_acta_y_exige_nueva_version(): void
@@ -176,50 +195,14 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
         $this->remitir()->assertConflict();
     }
 
-    public function test_observacion_versiona_antes_de_re_firmar_y_no_otra_vez_al_remitir(): void
-    {
-        $primera = $this->recibir($this->preparar());
-        $this->remitir()->assertOk();
-        $entrega = Entrega::where('dependencia_id', $this->dep->id)->firstOrFail();
-        $entrega->forceFill(['estado' => EstadoEntrega::OBSERVADA, 'version_acta_correccion' => null])->save();
-        $this->remitir()->assertConflict();
-        $acta = ActaTransferencia::where('dependencia_id', $this->dep->id)->firstOrFail();
-        $this->assertSame(2, $acta->version);
-        $this->remitir()->assertConflict();
-        $this->assertSame(2, $acta->fresh()->version);
-        $segunda = $this->recibir($this->preparar());
-        $this->assertSame(2, $segunda->documento->version);
-        $this->assertSame(EstadoFirma::CANCELADA, FirmaAnexo::where('firma_sesion_id', $primera->id)->firstOrFail()->estado);
-        $this->remitir()->assertOk();
-        $this->assertSame(2, $acta->fresh()->version);
-    }
-
     public function test_anexo_agregado_registra_su_documento_y_version_sin_inventar_un_acta(): void
     {
         $sesion = $this->recibir($this->preparar('anexo03'));
         $this->assertDatabaseHas('firmas_anexo', ['firma_sesion_id' => $sesion->id,
             'firmable_type' => $sesion->documento->getMorphClass(), 'firmable_id' => $sesion->documento_firma_id,
-            'version' => 1, 'caracter' => CaracterFirma::OBLIGATORIA->value]);
+            'version' => 1, 'lado' => 'entidad']);
         $this->assertDatabaseCount('actas_transferencia', 0);
         $this->remitir()->assertConflict();
-    }
-
-    public function test_cerrar_ultima_observacion_no_elude_la_nueva_firma_obligatoria(): void
-    {
-        $this->recibir($this->preparar());
-        $this->remitir()->assertOk();
-        $entrega = Entrega::where('dependencia_id', $this->dep->id)->firstOrFail();
-        $entrega->forceFill(['estado' => EstadoEntrega::OBSERVADA, 'version_acta_correccion' => null])->save();
-        $serie = AcervoDocumental::create(['dependencia_id' => $this->dep->id,
-            'proceso_transferencia_id' => $this->dep->proceso_transferencia_id,
-            'tipo' => 'fisico', 'serie_documental' => 'Serie corregida', 'anio' => 2026, 'cantidad_unidades' => 1]);
-        $observaciones = app(ObservacionService::class);
-        $observacion = $observaciones->registrar($serie, $this->responsable, 'Completar información.');
-        $observaciones->subsanar($observacion, $this->responsable, 'Información completada.');
-        $this->assertSame(EstadoEntrega::OBSERVADA, $entrega->fresh()->estado);
-        $this->remitir()->assertConflict();
-        $this->recibir($this->preparar());
-        $this->remitir()->assertOk();
     }
 
     public function test_el_paso_del_tiempo_no_crea_otra_version_del_mismo_anexo(): void

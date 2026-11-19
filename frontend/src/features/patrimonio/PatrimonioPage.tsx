@@ -110,7 +110,7 @@ export function PatrimonioPage() {
 
   const estadoEntrega = estadoData?.entrega?.estado ?? null
   const esModificable =
-    !estadoEntrega || estadoEntrega === 'borrador' || estadoEntrega === 'observada'
+    !estadoEntrega || estadoEntrega === 'borrador'
   const dependencia = estadoData?.dependencia
 
   const alternarFila = (bienId: number) =>
@@ -483,12 +483,7 @@ export function PatrimonioPage() {
       </Card>
 
       {/* Panel de Observaciones */}
-      <ObservacionesAnexoPanel
-        anexo="patrimonio"
-        observableId={bienes[0]?.id}
-        dependenciaId={dependenciaId ?? undefined}
-        esModificable={esModificable}
-      />
+      <ObservacionesAnexoPanel anexo="patrimonio" dependenciaId={dependenciaId ?? undefined} />
     </div>
   )
 }

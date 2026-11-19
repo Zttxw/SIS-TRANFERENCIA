@@ -60,7 +60,7 @@ export function useEliminarDocumento() {
   return useMutation({
     mutationFn: (id: number) => documentosService.eliminar(id),
     onSuccess: () => {
-      toast.success('Documento eliminado del Anexo 01.')
+      toast.success('Documento pendiente eliminado.')
       queryClient.invalidateQueries({ queryKey: ['documentos-pendientes'] })
       queryClient.invalidateQueries({ queryKey: ['documentos-indicador'] })
       queryClient.invalidateQueries({ queryKey: ['documentos-pendientes-resumen'] })

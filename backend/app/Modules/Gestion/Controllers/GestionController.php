@@ -56,7 +56,7 @@ class GestionController extends Controller
     /**
      * Descarga el PDF oficial del Anexo 02 con el formato de la directiva. Se
      * emite en cualquier estado (marca de agua «BORRADOR» si la entrega aún no
-     * está consolidada), acotado al ámbito del usuario.
+     * fue remitida), acotado al ámbito del usuario.
      */
     public function pdf(Request $request): StreamedResponse
     {

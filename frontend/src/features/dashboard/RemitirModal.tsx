@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { useRemitirEntrega } from './use-dashboard'
 import { ApiError } from '@/types/api'
 import { useRequisitosRemision } from '@/features/firmaperu/use-requisitos-remision'
+import type { HijoPendiente } from '@/types/transferencia'
 
 interface RemitirModalProps {
   open: boolean
@@ -13,6 +14,8 @@ interface RemitirModalProps {
   dependenciaId: number
   dependenciaNombre: string
   haciaEtts: boolean
+  /** CC hijos directos que aún no envían: exigen confirmación (D-08). */
+  hijosPendientes?: HijoPendiente[]
 }
 
 export function RemitirModal({
@@ -21,8 +24,11 @@ export function RemitirModal({
   dependenciaId,
   dependenciaNombre,
   haciaEtts,
+  hijosPendientes = [],
 }: RemitirModalProps) {
   const [comentario, setComentario] = useState('')
+  const [sinHijos, setSinHijos] = useState(false)
+  const faltanHijos = hijosPendientes.length > 0
   const remitirMutation = useRemitirEntrega()
   const { data: requisitos, isFetching: comprobando } = useRequisitosRemision(dependenciaId, open)
 
@@ -30,18 +36,21 @@ export function RemitirModal({
     if (remitirMutation.isPending) return
     remitirMutation.reset()
     setComentario('')
+    setSinHijos(false)
     onClose()
   }
 
   const handleRemitir = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (comprobando || !requisitos?.puede_remitir) return
+    if (comprobando || !requisitos?.puede_remitir || (faltanHijos && !sinHijos)) return
     try {
       await remitirMutation.mutateAsync({
         dependencia_id: dependenciaId,
         comentario: comentario.trim() || undefined,
+        confirmar_sin_hijos: faltanHijos ? sinHijos : undefined,
       })
       setComentario('')
+      setSinHijos(false)
       onClose()
     } catch {
       // La mutación conserva el error para mostrarlo en el diálogo.
@@ -54,12 +63,12 @@ export function RemitirModal({
       onClose={cerrar}
       title="Remitir Entrega de Gestión"
       description={`Está a punto de remitir la entrega formal de "${dependenciaNombre}" ${
-        haciaEtts ? 'directamente hacia el ETTS institucional.' : 'hacia el superior jerárquico.'
+        haciaEtts ? 'al ETTS institucional.' : 'al centro de costo padre (Anexo 01).'
       }`}
     >
       <form onSubmit={handleRemitir} className="space-y-4">
         {!requisitos?.puede_remitir && <p className="text-xs text-warning-fg">
-          {comprobando ? 'Comprobando firmas…' : 'Se requieren los PDF generados y las seis firmas vigentes del jefe (anexos 02 al 07).'}
+          {comprobando ? 'Comprobando firmas…' : 'Se requieren los anexos 02 al 07 con la firma vigente del responsable y del coordinador ETTE.'}
         </p>}
         {remitirMutation.error && (
           <div role="alert" className="rounded-lg border border-danger-border bg-danger-soft p-3 text-sm text-danger-fg">
@@ -69,8 +78,26 @@ export function RemitirModal({
           </div>
         )}
         <div className="rounded-lg border border-warning-border bg-warning-soft p-3 text-xs text-warning-fg">
-          Nota: Una vez remitida la entrega, los anexos quedarán en modo de solo lectura (bloqueados para edición) hasta que el revisor emita una resolución o solicite subsanación.
+          La entrega fue aceptada por el coordinador ETTE. Al remitirla, pasa al {haciaEtts ? 'ETTS' : 'centro de costo padre'}, que solo la consolida.
         </div>
+
+        {faltanHijos && (
+          <div className="space-y-2 rounded-lg border border-warning-border bg-warning-soft p-3 text-xs text-warning-fg">
+            <p className="font-semibold">Centros de costo dependientes que aún no envían su entrega:</p>
+            <ul className="list-disc space-y-0.5 pl-4">
+              {hijosPendientes.map((hijo) => (
+                <li key={hijo.id}>
+                  <span className="font-mono">{hijo.codigo}</span> {hijo.nombre}
+                </li>
+              ))}
+            </ul>
+            <p>Puede remitir sin ellos; enviarán después y quedarán marcados como «enviado tarde».</p>
+            <label className="flex items-center gap-2 font-medium">
+              <input type="checkbox" checked={sinHijos} onChange={(e) => setSinHijos(e.target.checked)} />
+              Remitir sin esperar a estos centros de costo
+            </label>
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <Label htmlFor="comentario">Comentario u observaciones de envío (opcional)</Label>
@@ -89,7 +116,10 @@ export function RemitirModal({
           <Button type="button" variant="outline" onClick={cerrar} disabled={remitirMutation.isPending}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={remitirMutation.isPending || comprobando || !requisitos?.puede_remitir}>
+          <Button
+            type="submit"
+            disabled={remitirMutation.isPending || comprobando || !requisitos?.puede_remitir || (faltanHijos && !sinHijos)}
+          >
             {remitirMutation.isPending ? 'Remitiendo...' : 'Confirmar y Remitir'}
           </Button>
         </div>

@@ -63,8 +63,8 @@
    *             <nombre>-border → borde de alerta/chip
    *             <nombre>-fg     → texto legible sobre -soft
    * info    = remitida / informativo (azul institucional)
-   * warning = observada / atención (ámbar)
-   * success = consolidada / completo (turquesa institucional)
+   * warning = presentada / atención (ámbar)
+   * success = remitida / completo (turquesa institucional)
    * danger  = error / destructivo (rojo)
    * neutral = borrador / vacío (gris)
    * -------------------------------------------------------- */

@@ -22,7 +22,7 @@ class DocumentoPendienteController extends Controller
     ) {}
 
     /**
-     * Lista los asuntos/documentos pendientes del Anexo 01.
+     * Lista los documentos pendientes del CC (sección IV del Anexo 02).
      */
     public function index(Request $request): JsonResponse
     {
@@ -45,7 +45,7 @@ class DocumentoPendienteController extends Controller
             usuario: $request->user()
         );
 
-        return ApiResponse::success($documento, 'Documento registrado en Anexo 01 con éxito.', 201);
+        return ApiResponse::success($documento, 'Documento pendiente registrado con éxito.', 201);
     }
 
     /**
@@ -59,17 +59,17 @@ class DocumentoPendienteController extends Controller
             id: $id
         );
 
-        return ApiResponse::success($documento, 'Documento de Anexo 01 actualizado.');
+        return ApiResponse::success($documento, 'Documento pendiente actualizado.');
     }
 
     /**
-     * Elimina un asunto pendiente del Anexo 01.
+     * Elimina un documento pendiente.
      */
     public function destroy(int $id): JsonResponse
     {
         $this->documentoService->eliminar($id);
 
-        return ApiResponse::success(null, 'Documento eliminado de Anexo 01.');
+        return ApiResponse::success(null, 'Documento pendiente eliminado.');
     }
 
     /**

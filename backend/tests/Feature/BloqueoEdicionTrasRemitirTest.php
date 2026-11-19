@@ -14,12 +14,12 @@ use App\Support\Enums\Rol;
 use Database\Seeders\RolesPermisosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Integridad del flujo (RN-13): una vez remitida la entrega de una dependencia,
- * sus anexos quedan congelados (409) hasta que el revisor la observe
- * (OBSERVADA), que reabre la edición para subsanar.
+ * Integridad del flujo (RN-13, D-07): desde que la entrega se presenta al
+ * coordinador, sus anexos quedan congelados (409); no hay devolución.
  */
 class BloqueoEdicionTrasRemitirTest extends TestCase
 {
@@ -103,22 +103,23 @@ class BloqueoEdicionTrasRemitirTest extends TestCase
             ->assertStatus(409);
     }
 
-    public function test_consolidada_tambien_bloquea(): void
+    /** @return array<string, array{0: EstadoEntrega}> */
+    public static function estadosCongelados(): array
+    {
+        return [
+            'en revisión' => [EstadoEntrega::EN_REVISION],
+            'verificada' => [EstadoEntrega::VERIFICADA],
+        ];
+    }
+
+    #[DataProvider('estadosCongelados')]
+    public function test_presentada_a_revision_o_verificada_tambien_bloquea(EstadoEntrega $estado): void
     {
         $this->actuarComo(Rol::SERVIDOR, $this->dep);
-        $this->crearEntrega(EstadoEntrega::CONSOLIDADA);
+        $this->crearEntrega($estado);
 
         $this->postJson('/api/gestion/informe', $this->payloadInforme())
             ->assertStatus(409);
-    }
-
-    public function test_observada_reabre_la_edicion_para_subsanar(): void
-    {
-        $this->actuarComo(Rol::SERVIDOR, $this->dep);
-        $this->crearEntrega(EstadoEntrega::OBSERVADA);
-
-        $this->postJson('/api/gestion/informe', $this->payloadInforme())
-            ->assertOk();
     }
 
     public function test_bloqueo_cubre_escritura_por_id_de_registro(): void

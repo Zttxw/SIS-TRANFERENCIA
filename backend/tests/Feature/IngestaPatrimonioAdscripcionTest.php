@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Integrations\Contracts\SigaConnectorInterface;
 use App\Integrations\DTOs\SigaBienDTO;
 use App\Modules\Organization\Models\Dependencia;
+use App\Modules\Organization\Models\EquivalenciaCentroCosto;
 use App\Modules\Organization\Models\Servidor;
 use App\Modules\Patrimonio\Models\BienPatrimonial;
 use App\Modules\Patrimonio\Services\IngestaPatrimonioSiga;
@@ -24,16 +25,16 @@ class IngestaPatrimonioAdscripcionTest extends TestCase
     public function test_bienes_de_dos_oficinas_no_cambian_la_adscripcion_sgd_del_servidor(): void
     {
         $proceso = ProcesoTransferencia::factory()->create();
-        $oficinaA = Dependencia::factory()->create([
-            'proceso_transferencia_id' => $proceso->id,
-            'codigo' => '00025',
-            'codigo_siga' => '01.03.07.04',
-        ]);
-        $oficinaB = Dependencia::factory()->create([
-            'proceso_transferencia_id' => $proceso->id,
-            'codigo' => '00026',
-            'codigo_siga' => '01.03.07.05',
-        ]);
+        $oficinaA = Dependencia::factory()->create(['proceso_transferencia_id' => $proceso->id, 'codigo' => '07.05']);
+        $oficinaB = Dependencia::factory()->create(['proceso_transferencia_id' => $proceso->id, 'codigo' => '07.03']);
+        foreach (['01.03.07.04' => $oficinaA, '01.03.07.05' => $oficinaB] as $codigoSiga => $centro) {
+            EquivalenciaCentroCosto::create([
+                'proceso_transferencia_id' => $proceso->id,
+                'origen' => EquivalenciaCentroCosto::ORIGEN_SIGA,
+                'codigo_origen' => $codigoSiga,
+                'centro_costo_id' => $centro->id,
+            ]);
+        }
         $servidor = Servidor::create([
             'proceso_transferencia_id' => $proceso->id,
             'dependencia_id' => $oficinaA->id,

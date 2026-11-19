@@ -1,11 +1,11 @@
-import { CheckCircle2, CircleDashed, Lock, PencilLine, Send } from 'lucide-react'
+import { CheckCircle2, CircleDashed, Lock, Send } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import type { EstadoEntrega } from '@/types/transferencia'
 
 interface EstadoAnexoChipProps {
   estadoEntrega?: EstadoEntrega | null
-  /** El anexo admite edición (borrador/observada): matiza el borrador vacío. */
+  /** El anexo admite edición (borrador): matiza el borrador vacío. */
   esModificable?: boolean
 }
 
@@ -49,25 +49,14 @@ function resolverEstilo(
       }
     case 'en_revision':
       return {
-        label: 'En revisión',
+        label: 'Presentada al coordinador',
         icono: Lock,
         clases: 'border-info-border bg-info-soft text-info-fg',
       }
-    case 'observada':
+    case 'verificada':
+    case 'acta_suscrita':
       return {
-        label: 'Observada',
-        icono: PencilLine,
-        clases: 'border-warning-border bg-warning-soft text-warning-fg',
-      }
-    case 'subsanada':
-      return {
-        label: 'Subsanada',
-        icono: CheckCircle2,
-        clases: 'border-info-border bg-info-soft text-info-fg',
-      }
-    case 'consolidada':
-      return {
-        label: 'Consolidada',
+        label: 'Aceptada · a firma',
         icono: CheckCircle2,
         clases: 'border-success-border bg-success-soft text-success-fg',
       }

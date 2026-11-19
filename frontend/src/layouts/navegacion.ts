@@ -8,6 +8,7 @@ import {
   FileText,
   FolderOpen,
   FolderTree,
+  Inbox,
   LayoutDashboard,
   type LucideIcon,
   MessageSquareWarning,
@@ -102,7 +103,7 @@ export const ITEMS_NAV: ItemNav[] = [
     permiso: PERMISOS.VerAnexos,
   },
   {
-    etiqueta: 'Documentos SGD',
+    etiqueta: 'Documentos pendientes',
     ruta: '/documentos',
     icono: FileText,
     permiso: PERMISOS.VerAnexos,
@@ -118,6 +119,13 @@ export const ITEMS_NAV: ItemNav[] = [
     ruta: '/entregas',
     icono: Send,
     permiso: PERMISOS.VerAnexos,
+  },
+  {
+    etiqueta: 'Cadena ETTS → ETTE',
+    ruta: '/cadena-etts',
+    icono: Inbox,
+    permiso: PERMISOS.RecibirEntregaEtts,
+    permisosAlternativos: [PERMISOS.RemitirEntregaEtte, PERMISOS.RecibirEntregaEtte],
   },
   {
     etiqueta: 'Observaciones',
@@ -136,7 +144,7 @@ export const ITEMS_NAV: ItemNav[] = [
     ruta: '/usuarios',
     icono: UserCog,
     permiso: PERMISOS.GestionarUsuarios,
-    permisosAlternativos: [PERMISOS.GestionarRoles],
+    permisosAlternativos: [PERMISOS.GestionarRoles, PERMISOS.GestionarParametros],
   },
   {
     etiqueta: 'Cronograma',
@@ -145,7 +153,7 @@ export const ITEMS_NAV: ItemNav[] = [
     permiso: PERMISOS.GestionarCronograma,
   },
   {
-    etiqueta: 'Delegados ETTE',
+    etiqueta: 'Coordinadores ETTE',
     ruta: '/delegados',
     icono: UserCog,
     permiso: PERMISOS.GestionarDelegados,

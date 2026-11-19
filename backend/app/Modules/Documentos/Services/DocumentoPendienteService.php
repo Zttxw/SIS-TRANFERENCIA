@@ -16,7 +16,7 @@ class DocumentoPendienteService
     use RespetaEstadoEntrega;
 
     /**
-     * Lista los asuntos/documentos pendientes de atención (Anexo 01).
+     * Lista los documentos pendientes de atención del CC (sección IV del Anexo 02).
      */
     public function listar(array $filtros = []): LengthAwarePaginator
     {
@@ -110,7 +110,7 @@ class DocumentoPendienteService
     }
 
     /**
-     * Registra o actualiza un documento/asunto pendiente (Anexo 01).
+     * Registra o actualiza un documento pendiente; entra a la sección IV del Anexo 02.
      */
     public function guardar(array $datos, User $usuario, ?int $id = null, ?int $procesoId = null): DocumentoPendiente
     {
@@ -158,7 +158,7 @@ class DocumentoPendienteService
     }
 
     /**
-     * Resumen estadístico de pendientes para el Anexo 01.
+     * Resumen estadístico de los documentos pendientes del CC.
      *
      * @return array<string, mixed>
      */

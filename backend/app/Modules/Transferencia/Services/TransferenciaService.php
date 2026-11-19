@@ -6,24 +6,17 @@ namespace App\Modules\Transferencia\Services;
 
 use App\Models\User;
 use App\Modules\Acervo\Models\AcervoDocumental;
-use App\Modules\Documentos\Models\DocumentoPendiente;
 use App\Modules\Gestion\Models\InformeGestion;
 use App\Modules\NoPatrimonial\Models\BienNoPatrimonial;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Patrimonio\Models\BienPatrimonial;
 use App\Modules\Personal\Models\Personal;
-use App\Modules\Transferencia\Models\ActaTransferencia;
 use App\Modules\Transferencia\Models\Entrega;
-use App\Modules\Transferencia\Models\FirmaAnexo;
 use App\Modules\Transferencia\Models\Observacion;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
-use App\Support\Enums\CaracterFirma;
-use App\Support\Enums\DeclaracionActa;
+use App\Support\Enums\AccionPlazo;
 use App\Support\Enums\EstadoEntrega;
-use App\Support\Enums\EstadoFirma;
-use App\Support\Enums\EstadoObservacion;
 use App\Support\Enums\EstadoVerificacionBien;
-use App\Support\Enums\Rol;
 use App\Support\Http\ApiResponse;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -33,7 +26,8 @@ use Illuminate\Support\Facades\DB;
 class TransferenciaService
 {
     public function __construct(
-        protected CronogramaService $cronograma = new CronogramaService,
+        protected CronogramaService $cronograma,
+        protected ConsolidacionCentroCosto $consolidacion,
     ) {}
 
     /**
@@ -46,7 +40,7 @@ class TransferenciaService
         $procesoId = $this->resolverProcesoActivoId();
 
         $query = Entrega::query()
-            ->with(['dependencia', 'dependenciaDestino', 'emisor', 'receptor'])
+            ->with(['dependencia', 'dependenciaDestino', 'emisor', 'presentadaPor', 'verificadaPor'])
             ->where('proceso_transferencia_id', $procesoId)
             ->orderByDesc('id');
 
@@ -58,12 +52,6 @@ class TransferenciaService
             $query->where('dependencia_id', (int) $filtros['dependencia_id']);
         } elseif (! empty($filtros['dependencia_ids'])) {
             $query->whereIn('dependencia_id', $filtros['dependencia_ids']);
-        }
-
-        // Excluye las dependencias propias del usuario (bandeja del revisor: no se
-        // revisa la propia entrega). Solo aplica si no se pidió una dependencia_id puntual.
-        if (empty($filtros['dependencia_id']) && ! empty($filtros['excluir_dependencia_ids'])) {
-            $query->whereNotIn('dependencia_id', $filtros['excluir_dependencia_ids']);
         }
 
         $perPage = min((int) ($filtros['per_page'] ?? 25), 100);
@@ -81,7 +69,7 @@ class TransferenciaService
     {
         $procesoId = $procesoId ?? $this->resolverProcesoActivoId();
 
-        $query = Dependencia::query()
+        $query = Dependencia::query()->centrosCosto()
             ->with(['encargado'])
             ->where('proceso_transferencia_id', $procesoId);
 
@@ -101,22 +89,12 @@ class TransferenciaService
             ->unique('dependencia_id')
             ->keyBy('dependencia_id');
 
-        // Observaciones abiertas por dependencia
-        $observacionesAbiertas = [];
-        $observacionesList = Observacion::query()
+        $observacionesPorCc = Observacion::query()->vigentes()
             ->where('proceso_transferencia_id', $procesoId)
-            ->where('estado', EstadoObservacion::ABIERTA->value)
-            ->get(['id', 'observable_type', 'observable_id']);
-
-        foreach ($observacionesList as $obs) {
-            $modelo = $obs->observable_type;
-            if (class_exists($modelo)) {
-                $depId = $modelo::where('id', $obs->observable_id)->value('dependencia_id');
-                if ($depId) {
-                    $observacionesAbiertas[$depId] = ($observacionesAbiertas[$depId] ?? 0) + 1;
-                }
-            }
-        }
+            ->whereIn('dependencia_id', $ids)
+            ->selectRaw('dependencia_id, count(*) as total')
+            ->groupBy('dependencia_id')
+            ->pluck('total', 'dependencia_id');
 
         // Bienes patrimoniales asignados
         $bienesTotals = BienPatrimonial::query()
@@ -136,24 +114,20 @@ class TransferenciaService
             ->pluck('total', 'dependencia_id');
 
         $total = $dependencias->count();
-        $consolidadas = 0;
-        $remitidas = 0;
-        $observadas = 0;
-        $borrador = 0;
+        $porEstado = array_fill_keys(array_map(fn (EstadoEntrega $e): string => $e->value, EstadoEntrega::cases()), 0);
+        $actividades = $this->cronograma->actividadesDelProceso($procesoId);
+        $plazosVencidos = 0;
 
-        $items = $dependencias->map(function ($dep) use ($entregas, $observacionesAbiertas, $bienesTotals, $bienesConfirmados, &$consolidadas, &$remitidas, &$observadas, &$borrador) {
+        $items = $dependencias->map(function ($dep) use ($entregas, $observacionesPorCc, $bienesTotals, $bienesConfirmados, $actividades, &$porEstado, &$plazosVencidos) {
             $entrega = $entregas->get($dep->id);
-            $estado = $entrega ? $entrega->estado->value : 'borrador';
+            $estadoEntrega = $entrega?->estado ?? EstadoEntrega::BORRADOR;
+            $estado = $estadoEntrega->value;
+            $porEstado[$estado]++;
 
-            if ($estado === 'consolidada') {
-                $consolidadas++;
-            } elseif ($estado === 'remitida') {
-                $remitidas++;
-            } elseif ($estado === 'observada') {
-                $observadas++;
-            } else {
-                $borrador++;
-            }
+            // F-16: plazo de la siguiente acción que le toca al CC.
+            $accion = AccionPlazo::siguientePara($estadoEntrega);
+            $plazo = $accion ? $this->cronograma->situacionPlazo($actividades, $dep->id, $accion) : null;
+            $plazosVencidos += ($plazo['vencido'] ?? false) ? 1 : 0;
 
             $totalBienes = (int) ($bienesTotals->get($dep->id) ?? 0);
             $confirmados = (int) ($bienesConfirmados->get($dep->id) ?? 0);
@@ -172,12 +146,15 @@ class TransferenciaService
                     'cargo' => $dep->encargado->cargo,
                 ] : null,
                 'estado_entrega' => $estado,
-                'observaciones_abiertas' => (int) ($observacionesAbiertas[$dep->id] ?? 0),
+                'observaciones' => (int) ($observacionesPorCc->get($dep->id) ?? 0),
                 'patrimonio_total' => $totalBienes,
                 'patrimonio_confirmados' => $confirmados,
                 'patrimonio_porcentaje' => $porcPatrimonio,
+                'presentada_en' => $entrega?->presentada_en?->toIso8601String(),
+                'verificada_en' => $entrega?->verificada_en?->toIso8601String(),
                 'remitida_en' => $entrega?->remitida_en?->toIso8601String(),
-                'consolidada_en' => $entrega?->consolidada_en?->toIso8601String(),
+                'enviado_tarde' => $this->consolidacion->enviadoTarde($dep, $entregas),
+                'plazo' => $plazo,
             ];
         });
 
@@ -189,15 +166,23 @@ class TransferenciaService
         $patTotal = (int) (clone $patrimonioQuery)->count();
         $patVerificados = (int) (clone $patrimonioQuery)->whereHas('verificacion', fn ($q) => $q->where('estado', EstadoVerificacionBien::CONFIRMADO->value))->count();
         $patValor = (float) (clone $patrimonioQuery)->sum('valor');
+        $remitidas = array_sum(array_map(fn (EstadoEntrega $e): int => $porEstado[$e->value], EstadoEntrega::cadenaInstitucional()));
 
         return [
             'metricas' => [
                 'total_dependencias' => $total,
-                'consolidadas' => $consolidadas,
+                'borrador' => $porEstado[EstadoEntrega::BORRADOR->value],
+                'en_revision' => $porEstado[EstadoEntrega::EN_REVISION->value],
+                // Aceptadas por el coordinador y en firma; `acta_suscrita` es el subtotal con ambas firmas.
+                'verificadas' => $porEstado[EstadoEntrega::VERIFICADA->value] + $porEstado[EstadoEntrega::ACTA_SUSCRITA->value],
+                'acta_suscrita' => $porEstado[EstadoEntrega::ACTA_SUSCRITA->value],
+                // Remitidas: incluye las que siguen la cadena ETTS → ETTE.
                 'remitidas' => $remitidas,
-                'observadas' => $observadas,
-                'borrador' => $borrador,
-                'porcentaje_avance' => $total > 0 ? round(($consolidadas / $total) * 100, 1) : 0,
+                'recibidas_etts' => $porEstado[EstadoEntrega::RECIBIDA_ETTS->value],
+                'remitidas_ette' => $porEstado[EstadoEntrega::REMITIDA_ETTE->value],
+                'recibidas_ette' => $porEstado[EstadoEntrega::RECIBIDA_ETTE->value],
+                'porcentaje_avance' => $total > 0 ? round(($remitidas / $total) * 100, 1) : 0,
+                'plazos_vencidos' => $plazosVencidos,
                 'patrimonio' => [
                     'total_bienes' => $patTotal,
                     'verificados' => $patVerificados,
@@ -252,7 +237,7 @@ class TransferenciaService
             ->count();
 
         // Entrega jerárquica
-        $entrega = Entrega::with(['emisor', 'receptor', 'dependenciaDestino'])
+        $entrega = Entrega::with(['emisor', 'presentadaPor', 'verificadaPor', 'dependenciaDestino'])
             ->where('dependencia_id', $dependenciaId)
             ->where('proceso_transferencia_id', $procesoId)
             ->latest()
@@ -267,7 +252,9 @@ class TransferenciaService
                 'parent_id' => $dep->parent_id,
             ],
             'anexo02_gestion' => [
-                'existe' => $informe !== null,
+                // Al presentar se crea la fila con los pendientes congelados (D-09);
+                // el informe existe cuando el responsable lo guardó (con funciones).
+                'existe' => ! empty($informe?->funciones),
                 'estado' => $informe?->estado ?? 'pendiente',
             ],
             'anexo03_acervo' => [
@@ -285,321 +272,126 @@ class TransferenciaService
             'anexo06_nopatrimonial' => [
                 'total_bienes' => $totalNoPatrimonial,
             ],
+            'observaciones' => Observacion::vigentes()->delCentroCosto($dependenciaId, $procesoId)->count(),
             'entrega' => $entrega ? [
                 'id' => $entrega->id,
                 'estado' => $entrega->estado->value,
                 'destino_id' => $entrega->dependencia_destino_id,
                 'hacia_etts' => $entrega->esHaciaEtts(),
+                'presentada_en' => $entrega->presentada_en?->toIso8601String(),
+                'presentada_por' => $entrega->presentadaPor?->name,
+                'verificada_en' => $entrega->verificada_en?->toIso8601String(),
+                'verificada_por' => $entrega->verificadaPor?->name,
+                'verificada_en_calidad_de' => $entrega->verificada_en_calidad_de?->value,
+                'resultado_verificacion' => $entrega->resultado_verificacion,
                 'remitida_en' => $entrega->remitida_en?->toIso8601String(),
-                'revisada_en' => $entrega->revisada_en?->toIso8601String(),
-                'consolidada_en' => $entrega->consolidada_en?->toIso8601String(),
                 'comentario' => $entrega->comentario,
+                'hijos_pendientes_al_remitir' => $entrega->hijos_pendientes_al_remitir ?? [],
+                'recibida_etts_en' => $entrega->recibida_etts_en?->toIso8601String(),
+                'remitida_ette_en' => $entrega->remitida_ette_en?->toIso8601String(),
+                'recibida_ette_en' => $entrega->recibida_ette_en?->toIso8601String(),
             ] : null,
+            // Hijos directos que aún no envían: advertencia al remitir (D-08).
+            'hijos_pendientes' => $this->consolidacion->hijosPendientes($dep),
         ];
     }
 
     /**
-     * Remite la entrega de la dependencia a su destino (plan §7.8, Etapas 2-4).
+     * Remite la entrega verificada del CC a su destino (plan §3.1).
      *
-     * El destino es el padre jerárquico (`parent_id`). Cuando la dependencia
-     * está en la cima de su cadena (1er nivel, sin padre), el destino es NULL =
-     * el ETTS institucional (directiva §7.6, Etapa 6): el ETTS recibe estas
-     * entregas y las consolida con el mismo `revisarEntrega`.
+     * Ruteo del Anexo 01 (D-02): el destino es el CC padre registrado en CEPLAN
+     * (`parent_id`), sin considerar el nivel. El CC cuyo padre es él mismo se
+     * guarda sin padre y su destino es NULL = el ETTS institucional.
+     *
+     * D-08: el padre puede remitir aunque algún hijo directo no haya enviado; en
+     * ese caso exige `confirmarSinHijos` (409 con la lista si falta) y deja
+     * registrados los hijos pendientes en la entrega.
      */
-    public function remitirEntrega(int $dependenciaId, User $usuario, ?string $comentario = null): Entrega
+    public function remitirEntrega(int $dependenciaId, User $usuario, ?string $comentario = null, bool $confirmarSinHijos = false): Entrega
     {
         $procesoId = $this->resolverProcesoActivoId();
         $dep = Dependencia::findOrFail($dependenciaId);
 
-        // C2: el vencimiento del cronograma bloquea la remisión (RF-007, C-03).
-        // Se cumple en la API, no solo en la interfaz; 409 con causa y plazo.
-        $this->cronograma->exigirPlazoVigente(
-            $procesoId,
-            $dep->id,
-            CronogramaService::OPERACION_REMISION,
-        );
+        if (! $dep->es_centro_costo) {
+            throw new HttpResponseException(ApiResponse::error(
+                'Solo los centros de costo del Anexo 01 envían su entrega.',
+                422,
+            ));
+        }
 
-        $this->asegurarVersionCorreccion($procesoId, $dep->id);
+        // El vencimiento del cronograma bloquea la remisión (D-12). Se cumple en
+        // la API, no solo en la interfaz; 409 con causa y plazo.
+        $this->cronograma->exigirPlazoVigente($procesoId, $dep->id, AccionPlazo::REMITIR);
 
-        return DB::transaction(function () use ($dep, $procesoId, $usuario, $comentario) {
+        return DB::transaction(function () use ($dep, $procesoId, $usuario, $comentario, $confirmarSinHijos) {
             Dependencia::whereKey($dep->id)->lockForUpdate()->firstOrFail();
-            $requisitos = app(FirmaperuRegistroService::class)->requisitosRemision($dep->id, $usuario);
-            if (! $requisitos['puede_remitir']) {
+            $entrega = Entrega::where('proceso_transferencia_id', $procesoId)
+                ->where('dependencia_id', $dep->id)
+                ->lockForUpdate()
+                ->first();
+
+            // D-07 y D-05: solo se remite lo aceptado por el coordinador ETTE y
+            // con los anexos 02 al 07 firmados por ambos lados.
+            if (! ($entrega?->estado ?? EstadoEntrega::BORRADOR)->admiteFirma()) {
                 throw new HttpResponseException(ApiResponse::error(
-                    'Genere los PDF y obtenga la firma vigente del jefe en los anexos 02 al 07 antes de remitir. Pendientes: '
-                        .implode(', ', array_map(fn (string $tipo): string => str_replace('anexo', 'Anexo ', $tipo), $requisitos['pendientes'])),
+                    'Solo se remite una entrega aceptada por el coordinador ETTE y con el acta suscrita. Estado actual: "'
+                        .($entrega?->estado ?? EstadoEntrega::BORRADOR)->etiqueta().'".',
                     409,
                 ));
             }
-            $entrega = Entrega::where('proceso_transferencia_id', $procesoId)
-                ->where('dependencia_id', $dep->id)
-                ->first();
 
-            // H-01: transiciones estrictas. Solo puede remitirse una entrega que
-            // aún no existe (primera remisión) o que está en un estado que admite
-            // (re)envío: BORRADOR (preparación) u OBSERVADA (tras subsanar). Una
-            // entrega ya REMITIDA/EN_REVISION/CONSOLIDADA/CERRADA no vuelve a
-            // remitirse por este endpoint; evita re-remitir lo ya consolidado.
-            $estadosRemisibles = [EstadoEntrega::BORRADOR, EstadoEntrega::OBSERVADA];
-            if ($entrega !== null && ! in_array($entrega->estado, $estadosRemisibles, true)) {
-                throw new HttpResponseException(
-                    ApiResponse::error(
-                        'La entrega no puede remitirse desde el estado "'.$entrega->estado->etiqueta().'".',
-                        409,
-                    )
-                );
+            $requisitos = app(SuscripcionEntrega::class)->requisitosRemision($dep->id, $usuario);
+            if (! $requisitos['puede_remitir']) {
+                throw new HttpResponseException(ApiResponse::error(
+                    'Faltan firmas vigentes del responsable y del coordinador ETTE en los anexos 02 al 07. '
+                        .$this->firmasFaltantes($requisitos),
+                    409,
+                ));
             }
 
-            return Entrega::updateOrCreate(
-                [
-                    'proceso_transferencia_id' => $procesoId,
-                    'dependencia_id' => $dep->id,
-                ],
-                [
-                    // NULL ⇒ ETTS institucional (dependencia sin padre).
-                    'dependencia_destino_id' => $dep->parent_id,
-                    'emisor_id' => $usuario->id,
-                    'estado' => EstadoEntrega::REMITIDA,
-                    'remitida_en' => Carbon::now(),
-                    'comentario' => $comentario,
-                ]
-            );
-        });
-    }
+            $hijosPendientes = $this->consolidacion->hijosPendientes($dep);
+            if ($hijosPendientes !== [] && ! $confirmarSinHijos) {
+                throw new HttpResponseException(ApiResponse::error(
+                    'Hay centros de costo dependientes que aún no envían su entrega: '
+                        .implode(', ', array_column($hijosPendientes, 'codigo'))
+                        .'. Confirme si desea remitir sin ellos; podrán enviar después.',
+                    409,
+                    ['hijos_pendientes' => $hijosPendientes],
+                ));
+            }
 
-    /**
-     * Revisa la entrega remitida por una dependencia subordinada (plan §6
-     * Etapas 3-4, §7.8). El responsable del centro de costo padre evalúa los
-     * entregables y:
-     *  - `observar`   → la devuelve para subsanación (OBSERVADA), o
-     *  - `consolidar` → la incorpora a su propia consolidación (CONSOLIDADA).
-     *
-     * No muta datos de origen (RN-06); solo cambia el estado del flujo y deja
-     * constancia del receptor y la fecha de revisión (RN-14).
-     *
-     * Relación con las observaciones (plan §7.9): marcar la entrega OBSERVADA es
-     * el *estado agregado*; las observaciones concretas sobre cada anexo se
-     * registran por separado (ObservacionService / POST /api/observaciones) por
-     * el mismo revisor (tiene observaciones.registrar). Cuando el responsable
-     * subsana la última observación abierta de la dependencia, la entrega vuelve
-     * a REMITIDA automáticamente (ObservacionService::reRemitirSiCorresponde).
-     */
-    public function revisarEntrega(int $dependenciaId, User $usuario, string $accion, ?string $comentario = null): Entrega
-    {
-        $procesoId = $this->resolverProcesoActivoId();
-
-        $entrega = Entrega::where('proceso_transferencia_id', $procesoId)
-            ->where('dependencia_id', $dependenciaId)
-            ->firstOrFail();
-
-        if (! in_array($entrega->estado, [EstadoEntrega::REMITIDA, EstadoEntrega::EN_REVISION], true)) {
-            throw new \DomainException('Solo pueden revisarse entregas remitidas o en revisión.');
-        }
-
-        // H-02: quien revisa debe ser el receptor del destino de la entrega, no
-        // cualquiera cuyo subárbol contenga a la dependencia que remitió (eso
-        // incluiría a la propia dependencia emisora, que no puede revisarse a sí
-        // misma). El destino es el padre jerárquico; NULL = ETTS institucional.
-        if (! $this->esReceptorDelDestino($usuario, $entrega)) {
-            throw new HttpResponseException(
-                ApiResponse::error(
-                    'Solo el receptor del destino de la entrega puede revisarla.',
-                    403,
-                )
-            );
-        }
-
-        $nuevoEstado = $accion === 'consolidar'
-            ? EstadoEntrega::CONSOLIDADA
-            : EstadoEntrega::OBSERVADA;
-
-        return DB::transaction(function () use ($entrega, $usuario, $nuevoEstado, $comentario) {
             $entrega->fill([
-                'receptor_id' => $usuario->id,
-                'estado' => $nuevoEstado,
-                'revisada_en' => Carbon::now(),
-                'consolidada_en' => $nuevoEstado === EstadoEntrega::CONSOLIDADA ? Carbon::now() : null,
-                'comentario' => $comentario ?? $entrega->comentario,
+                // NULL ⇒ ETTS institucional (CC cuyo padre es él mismo).
+                'dependencia_destino_id' => $dep->parent_id,
+                'emisor_id' => $usuario->id,
+                'estado' => EstadoEntrega::REMITIDA,
+                'remitida_en' => Carbon::now(),
+                'comentario' => $comentario,
+                'hijos_pendientes_al_remitir' => $hijosPendientes === [] ? null : $hijosPendientes,
             ])->save();
 
-            if ($nuevoEstado === EstadoEntrega::OBSERVADA) {
-                $entrega->forceFill(['version_acta_correccion' => null])->save();
-                $this->asegurarVersionCorreccion($entrega->proceso_transferencia_id, $entrega->dependencia_id);
-            }
-
-            return $entrega->fresh(['emisor', 'receptor', 'dependenciaDestino']);
+            return $entrega;
         });
     }
 
     /**
-     * Genera o consulta el Acta oficial de Transferencia (Anexo 07, §7.10).
+     * Detalle legible de las firmas pendientes, por documento y por lado.
      *
-     * B3 (D-05/D-06): el acta se emite ANTES de remitir. En ese momento solo
-     * declara la *suscripción de la hija* (`DeclaracionActa::SUSCRIPCION_HIJA`):
-     * la recepción y la consolidación del padre todavía no ocurren y el acta no
-     * debe afirmarlas. Tras consolidar, el mismo endpoint actualiza la
-     * declaración a `RECEPCION_CONSOLIDACION`.
-     *
-     * Momentos admitidos para emitir/consultar:
-     *  - sin entrega / BORRADOR / OBSERVADA ⇒ pre-remisión, suscripción de la hija;
-     *  - REMITIDA / EN_REVISION ⇒ ya remitida: se conserva la declaración de
-     *    suscripción (no se degrada ni se adelanta la consolidación);
-     *  - CONSOLIDADA ⇒ recepción y consolidación.
-     *
-     * Su relación de anexos entregados refleja la presencia real de cada anexo
-     * (no un hardcode): se apoya en `obtenerEstadoEntrega()` y en la presencia de
-     * documentos pendientes. El *gate* que exige el acta suscrita como condición
-     * de remitir queda pendiente de la matriz de firmantes obligatorios (D-02).
+     * @param  array{pendientes: list<string>, documentos?: array<string, array<string, mixed>>}  $requisitos
      */
-    public function obtenerActa(int $dependenciaId, ?User $usuario = null): ActaTransferencia
+    private function firmasFaltantes(array $requisitos): string
     {
-        $procesoId = $this->resolverProcesoActivoId();
-        $dep = Dependencia::findOrFail($dependenciaId);
+        $detalle = array_map(function (string $tipo) use ($requisitos): string {
+            $documento = $requisitos['documentos'][$tipo] ?? [];
+            $lados = array_filter([
+                empty($documento['entidad']) ? 'responsable' : null,
+                empty($documento['ette']) ? 'coordinador ETTE' : null,
+            ]);
 
-        $entrega = Entrega::where('proceso_transferencia_id', $procesoId)
-            ->where('dependencia_id', $dep->id)
-            ->latest('id')
-            ->first();
+            return str_replace('anexo', 'Anexo ', $tipo).' ('.implode(' y ', $lados).')';
+        }, $requisitos['pendientes']);
 
-        $estado = $entrega?->estado ?? EstadoEntrega::BORRADOR;
-
-        // Tras consolidar, el acta declara recepción/consolidación; en cualquier
-        // momento anterior solo declara la suscripción de la hija (D-06).
-        $declara = $estado === EstadoEntrega::CONSOLIDADA
-            ? DeclaracionActa::RECEPCION_CONSOLIDACION
-            : DeclaracionActa::SUSCRIPCION_HIJA;
-
-        $anexos = $this->presenciaAnexos($dep->id, $procesoId);
-
-        $acta = ActaTransferencia::firstOrNew([
-            'proceso_transferencia_id' => $procesoId,
-            'dependencia_id' => $dep->id,
-        ]);
-
-        if ($acta->exists && $acta->declara !== $declara) {
-            $this->versionarActaPorCorreccion($procesoId, $dep->id);
-            $acta->refresh();
-        }
-
-        $intervinientes = $acta->intervinientes ?? [];
-        $intervinientes['titular_saliente'] = $this->completarInterviniente(
-            $intervinientes['titular_saliente'] ?? null, $this->responsableActa($dep),
-        );
-        if ($dep->padre) {
-            $intervinientes['responsable_superior'] = $this->completarInterviniente(
-                $intervinientes['responsable_superior'] ?? null, $this->responsableActa($dep->padre),
-            );
-        }
-
-        $acta->fill([
-            'numero_acta' => $acta->numero_acta ?? 'ACTA-'.Carbon::now()->year.'-'.str_replace('.', '', (string) $dep->codigo),
-            'fecha_acta' => $acta->fecha_acta ?? Carbon::now()->toDateString(),
-            'intervinientes' => $intervinientes,
-            'anexos_entregados' => $anexos,
-            'estado' => $acta->estado === 'suscrita' ? 'suscrita' : 'generada',
-            'declara' => $declara,
-            'version' => $acta->version ?? 1,
-            'generada_por_id' => $acta->generada_por_id ?? $usuario?->id,
-        ]);
-        $acta->save();
-        $this->asegurarVersionCorreccion($procesoId, $dep->id);
-
-        return $acta->refresh()->load(['evidencias.subidoPor', 'generadaPor', 'dependencia.padre:id,codigo,nombre']);
-    }
-
-    /** @return array{nombre: string, dni: string, cargo: string} */
-    private function responsableActa(Dependencia $dependencia): array
-    {
-        $cuenta = User::where('activo', true)->whereHas('asignacionesRol', fn ($q) => $q
-            ->where('rol', Rol::RESPONSABLE_CENTRO_COSTO->value)
-            ->where('proceso_transferencia_id', $dependencia->proceso_transferencia_id)
-            ->where('dependencia_id', $dependencia->id))->orderBy('id')->first();
-        $servidor = $cuenta
-            ? $dependencia->servidores()->where('proceso_transferencia_id', $dependencia->proceso_transferencia_id)->where('dni', $cuenta->dni)->first()
-            : $dependencia->encargado;
-
-        return [
-            'nombre' => $cuenta?->name ?: ($servidor?->nombreCompleto() ?? ''),
-            'dni' => $cuenta?->dni ?: ($servidor?->dni ?? ''),
-            'cargo' => $servidor?->cargo ?? '',
-        ];
-    }
-
-    /** @param array{nombre: string, dni: string, cargo: string} $automatico
-     * @return array{nombre: string, dni: string, cargo: string}
-     */
-    private function completarInterviniente(mixed $existente, array $automatico): array
-    {
-        if (is_string($existente)) {
-            $existente = ['nombre' => $existente];
-        }
-        foreach (['nombre', 'dni', 'cargo'] as $campo) {
-            if (is_array($existente) && trim((string) ($existente[$campo] ?? '')) !== '') {
-                $automatico[$campo] = (string) $existente[$campo];
-            }
-        }
-
-        return $automatico;
-    }
-
-    /** La corrección obtiene versión antes de firmar, incluso para entregas observadas anteriores a esta integración. */
-    public function asegurarVersionCorreccion(int $procesoId, int $dependenciaId): void
-    {
-        DB::transaction(function () use ($procesoId, $dependenciaId): void {
-            Dependencia::whereKey($dependenciaId)->lockForUpdate()->firstOrFail();
-            $entrega = Entrega::where('proceso_transferencia_id', $procesoId)
-                ->where('dependencia_id', $dependenciaId)->lockForUpdate()->first();
-            if (! $entrega || $entrega->estado !== EstadoEntrega::OBSERVADA || $entrega->version_acta_correccion !== null) {
-                return;
-            }
-            $acta = ActaTransferencia::where('proceso_transferencia_id', $procesoId)
-                ->where('dependencia_id', $dependenciaId)->lockForUpdate()->first();
-            if ($acta) {
-                $this->versionarActaPorCorreccion($procesoId, $dependenciaId);
-                $entrega->forceFill(['version_acta_correccion' => $acta->fresh()->version])->save();
-            }
-        });
-    }
-
-    /**
-     * B3c (D-06): sube la versión del acta de la dependencia e invalida las
-     * firmas OBLIGATORIAS de la versión anterior cuando se corrige una entrega
-     * observada y se vuelve a remitir.
-     *
-     * - El acta (si existe) incrementa `version` y vuelve a `generada` (debe
-     *   re-suscribirse). Las firmas previas se conservan ligadas a su versión.
-     * - Las firmas obligatorias en estado PENDIENTE o FIRMADA de la versión
-     *   vigente pasan a CANCELADA: una firma de una versión observada no ampara
-     *   la versión corregida. Las opcionales (p. ej. ETTE) no se tocan aquí.
-     *
-     * No presupone la matriz de firmantes (D-02): solo invalida lo ya registrado
-     * como obligatorio; no crea firmas ni decide quién debe firmar.
-     */
-    private function versionarActaPorCorreccion(int $procesoId, int $dependenciaId): void
-    {
-        $acta = ActaTransferencia::where('proceso_transferencia_id', $procesoId)
-            ->where('dependencia_id', $dependenciaId)
-            ->first();
-
-        if ($acta === null) {
-            return;
-        }
-
-        $versionAnterior = $acta->version ?? 1;
-
-        FirmaAnexo::query()
-            ->where('firmable_type', $acta->getMorphClass())
-            ->where('firmable_id', $acta->id)
-            ->where('version', $versionAnterior)
-            ->where('caracter', CaracterFirma::OBLIGATORIA->value)
-            ->whereIn('estado', [EstadoFirma::PENDIENTE->value, EstadoFirma::FIRMADA->value])
-            ->update(['estado' => EstadoFirma::CANCELADA->value]);
-
-        $acta->fill([
-            'version' => $versionAnterior + 1,
-            'estado' => 'generada',
-            'ruta_pdf_suscrito' => null,
-        ])->save();
+        return 'Pendientes: '.implode(', ', $detalle).'.';
     }
 
     /**
@@ -614,12 +406,7 @@ class TransferenciaService
         $procesoId = $procesoId ?? $this->resolverProcesoActivoId();
         $estado = $this->obtenerEstadoEntrega($dependenciaId, $procesoId);
 
-        $documentos = DocumentoPendiente::where('dependencia_id', $dependenciaId)
-            ->where('proceso_transferencia_id', $procesoId)
-            ->exists();
-
         return [
-            'anexo_01' => $documentos,
             'anexo_02' => (bool) ($estado['anexo02_gestion']['existe'] ?? false),
             'anexo_03' => ($estado['anexo03_acervo']['total_series'] ?? 0) > 0,
             'anexo_04' => ($estado['anexo04_patrimonio']['total_bienes'] ?? 0) > 0,
@@ -627,36 +414,6 @@ class TransferenciaService
             'anexo_06' => ($estado['anexo06_nopatrimonial']['total_bienes'] ?? 0) > 0,
             'anexo_07' => true,
         ];
-    }
-
-    /**
-     * ¿El usuario ocupa el destino de la entrega y puede por tanto revisarla?
-     *
-     * - Destino NULL ⇒ ETTS institucional: solo un rol de ámbito global (ETTS/
-     *   administrador) recibe y revisa en la cima de la cadena.
-     * - Destino concreto ⇒ el revisor debe tener esa dependencia *destino* en su
-     *   ámbito (se ubica en el padre receptor o por encima), no basta con que su
-     *   subárbol contenga a la dependencia emisora.
-     *
-     * Regla mínima segura (H-02). El receptor formal exacto por cuenta queda
-     * pendiente de D-06; aquí se impide, al menos, que la emisora se revise a sí
-     * misma o que un par en el mismo subárbol tome la revisión del destino.
-     */
-    /**
-     * ¿El usuario es el receptor del destino de la entrega? El destino es el
-     * padre jerárquico inmediato de la dependencia emisora (NULL = ETTS
-     * institucional). Receptor = responsable directo de ese destino, no
-     * cualquiera cuyo subárbol lo contenga: así una dependencia no se revisa a sí
-     * misma ni un abuelo dictamina lo que va dirigido al padre intermedio.
-     */
-    public function esReceptorDelDestino(User $usuario, Entrega $entrega): bool
-    {
-        if ($entrega->dependencia_destino_id === null) {
-            return $usuario->tieneAmbitoGlobal();
-        }
-
-        return $usuario->tieneAmbitoGlobal()
-            || in_array($entrega->dependencia_destino_id, $usuario->idsDependenciasPropias(), true);
     }
 
     private function resolverProcesoActivoId(): int

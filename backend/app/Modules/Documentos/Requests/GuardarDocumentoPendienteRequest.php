@@ -23,7 +23,7 @@ class GuardarDocumentoPendienteRequest extends AnexoFormRequest
             : ['nullable', 'string'];
 
         return [
-            'dependencia_id' => ['required', 'integer', 'exists:dependencias,id'],
+            'dependencia_id' => ['required', 'integer', 'exists:dependencias,id,es_centro_costo,1'],
             'servidor_responsable_id' => ['nullable', 'integer', 'exists:servidores,id'],
             'numero_documento' => ['nullable', 'string', 'max:255'],
             'tipo_documento' => ['nullable', 'string', 'max:100'],

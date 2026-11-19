@@ -40,6 +40,16 @@ export interface FilaPendiente extends FilaBase {
   responsable?: string
 }
 
+/** Documento pendiente del CC (SGD o manual) que entra a la sección IV (D-09). */
+export interface FilaPendienteDocumental {
+  asunto: string
+  estado_accion: string
+  documento_referencia: string
+  plazo: string
+  responsable: string
+  origen: 'sgd' | 'manual'
+}
+
 export interface InformeGestion {
   cabecera?: {
     cargo: string | null
@@ -60,6 +70,9 @@ export interface InformeGestion {
   logros_items: FilaLogro[] | null
   dificultades_items: FilaDificultad[] | null
   pendientes_items: FilaPendiente[] | null
+  /** Documentos pendientes del CC: en vivo hasta presentar, luego la copia congelada. */
+  agenda_documental: FilaPendienteDocumental[]
+  pendientes_congelados_en: string | null
   estado: EstadoInformeGestion
   created_at: string
   updated_at: string

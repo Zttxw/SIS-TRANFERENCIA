@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/pagination'
 import { Spinner } from '@/components/ui/spinner'
 import { ActivarCuentaModal } from './ActivarCuentaModal'
+import { EquivalenciasTab } from './EquivalenciasTab'
 import { UsuariosRolesTab } from './UsuariosRolesTab'
 import { useServidores } from './use-admin'
 import type { ServidorPadronItem } from '@/types/admin'
@@ -33,11 +34,12 @@ import type { ServidorPadronItem } from '@/types/admin'
 export function AdminPage() {
   const puedeGestionarUsuarios = usePermiso(PERMISOS.GestionarUsuarios)
   const puedeGestionarRoles = usePermiso(PERMISOS.GestionarRoles)
+  const puedeGestionarParametros = usePermiso(PERMISOS.GestionarParametros)
 
-  const [pestana, setPestana] = useState<'padron' | 'usuarios'>('padron')
+  const [pestana, setPestana] = useState<'padron' | 'usuarios' | 'centros'>('padron')
 
-  // Sin ninguno de los dos permisos de administración: acceso denegado.
-  if (!puedeGestionarUsuarios && !puedeGestionarRoles) {
+  // Sin ningún permiso de administración: acceso denegado.
+  if (!puedeGestionarUsuarios && !puedeGestionarRoles && !puedeGestionarParametros) {
     return (
       <div className="space-y-6">
         <div>
@@ -71,7 +73,12 @@ export function AdminPage() {
   }
 
   // La pestaña inicial se adapta a los permisos del usuario.
-  const pestanaActiva = !puedeGestionarUsuarios ? 'usuarios' : pestana
+  const disponibles = [
+    puedeGestionarUsuarios && 'padron',
+    puedeGestionarRoles && 'usuarios',
+    puedeGestionarParametros && 'centros',
+  ].filter(Boolean) as ('padron' | 'usuarios' | 'centros')[]
+  const pestanaActiva = disponibles.includes(pestana) ? pestana : disponibles[0]
 
   return (
     <div className="space-y-6">
@@ -111,13 +118,19 @@ export function AdminPage() {
             Usuarios externos y roles
           </TabButton>
         )}
+        {puedeGestionarParametros && (
+          <TabButton
+            activo={pestanaActiva === 'centros'}
+            onClick={() => setPestana('centros')}
+          >
+            Centros de costo (Anexo 01)
+          </TabButton>
+        )}
       </div>
 
-      {pestanaActiva === 'padron' && puedeGestionarUsuarios ? (
-        <PadronTab />
-      ) : (
-        <UsuariosRolesTab />
-      )}
+      {pestanaActiva === 'padron' && <PadronTab />}
+      {pestanaActiva === 'usuarios' && <UsuariosRolesTab />}
+      {pestanaActiva === 'centros' && <EquivalenciasTab />}
     </div>
   )
 }

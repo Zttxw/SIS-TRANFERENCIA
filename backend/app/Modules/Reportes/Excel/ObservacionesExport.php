@@ -25,7 +25,7 @@ class ObservacionesExport implements FromArray, ShouldAutoSize, WithHeadings, Wi
     /** @return list<string> */
     public function headings(): array
     {
-        return ['Código', 'Centro de costo', 'Anexo', 'Observación', 'Estado', 'Autor', 'Registrada', 'Días subsanación'];
+        return ['Código', 'Centro de costo', 'Anexo', 'Observación', 'Autor', 'En calidad de', 'Registrada'];
     }
 
     /** @return list<list<mixed>> */
@@ -36,10 +36,9 @@ class ObservacionesExport implements FromArray, ShouldAutoSize, WithHeadings, Wi
             $f['nombre'],
             $f['anexo'],
             $f['descripcion'],
-            $f['estado_etiqueta'],
             $f['autor'] ?? '',
+            $f['en_calidad_de'] ?? '',
             $f['registrada_en'] ?? '',
-            $f['dias_subsanacion'] ?? '',
         ], $this->data['filas']);
     }
 }

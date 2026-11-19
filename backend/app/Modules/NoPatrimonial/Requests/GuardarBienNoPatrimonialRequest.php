@@ -13,7 +13,7 @@ class GuardarBienNoPatrimonialRequest extends AnexoFormRequest
     public function rules(): array
     {
         return [
-            'dependencia_id' => ['required', 'integer', 'exists:dependencias,id'],
+            'dependencia_id' => ['required', 'integer', 'exists:dependencias,id,es_centro_costo,1'],
             'servidor_id' => ['nullable', 'integer', 'exists:servidores,id'],
             'denominacion' => ['required', 'string', 'max:255'],
             'descripcion' => ['nullable', 'string'],

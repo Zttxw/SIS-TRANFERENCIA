@@ -90,8 +90,8 @@ class DrilldownDocumentalTest extends TestCase
         $this->doc($this->depA, FuenteDato::SGD->value);
         $this->doc($this->depA, FuenteDato::MANUAL->value);
 
-        // El coordinador tiene expediente.ver ⇒ originales disponibles.
-        $this->actuarComo(Rol::COORDINADOR, $this->depA);
+        // El coordinador ETTE tiene expediente.ver ⇒ originales disponibles.
+        $this->actuarComo(Rol::DELEGADO_ETTE, $this->depA);
 
         $respuesta = $this->getJson("/api/documentos-pendientes/drilldown?dependencia_id={$this->depA->id}")
             ->assertOk();
@@ -125,7 +125,7 @@ class DrilldownDocumentalTest extends TestCase
                 'fuente' => FuenteDato::SGD->value,
             ]);
         }
-        $this->actuarComo(Rol::COORDINADOR, $this->depA);
+        $this->actuarComo(Rol::DELEGADO_ETTE, $this->depA);
         $this->getJson('/api/documentos-pendientes/resumen?dependencia_id='.$this->depA->id)
             ->assertOk()->assertJsonPath('data.por_estado.SIN ESTADO', 3);
         $this->getJson('/api/documentos-pendientes/drilldown?dependencia_id='.$this->depA->id.'&estado_atencion=SIN%20ESTADO')

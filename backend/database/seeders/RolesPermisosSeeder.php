@@ -32,6 +32,12 @@ class RolesPermisosSeeder extends Seeder
             $idPorCodigo[$permiso->value] = DB::table('permisos')->where('codigo', $permiso->value)->value('id');
         }
 
+        // Permisos retirados del catálogo (p. ej. entregas.revisar): se quitan
+        // junto con sus asignaciones a roles.
+        $retirados = DB::table('permisos')->whereNotIn('codigo', array_keys($idPorCodigo))->pluck('id');
+        DB::table('rol_permiso')->whereIn('permiso_id', $retirados)->delete();
+        DB::table('permisos')->whereIn('id', $retirados)->delete();
+
         // Mapeo rol→permiso, resincronizado por rol.
         foreach (Rol::cases() as $rol) {
             $deseados = array_map(

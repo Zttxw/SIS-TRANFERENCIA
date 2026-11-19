@@ -1,8 +1,9 @@
+import { ApiError } from '@/types/api'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 import * as dashboardService from './dashboard.service'
-import type { RemitirEntregaPayload, RevisarEntregaPayload } from '@/types/transferencia'
+import type { RemitirEntregaPayload } from '@/types/transferencia'
 
 export function useTableroOperativo() {
   return useQuery({
@@ -35,33 +36,17 @@ export function useRemitirEntrega() {
     mutationFn: (payload: RemitirEntregaPayload) =>
       dashboardService.remitirEntrega(payload),
     onSuccess: (_, variables) => {
-      toast.success('Entrega remitida con éxito al nivel superior.')
+      toast.success('Entrega remitida.')
       queryClient.invalidateQueries({
         queryKey: ['transferencia-estado', variables.dependencia_id],
       })
+      queryClient.invalidateQueries({ queryKey: ['transferencia', 'tablero'] })
+      queryClient.invalidateQueries({ queryKey: ['entregas'] })
     },
     onError: (error: Error) => {
+      // Los hijos pendientes se muestran en el diálogo para confirmar (D-08).
+      if (error instanceof ApiError && error.errors?.hijos_pendientes) return
       toast.error(error.message || 'Error al remitir la entrega.')
-    },
-  })
-}
-
-export function useRevisarEntrega() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (payload: RevisarEntregaPayload) =>
-      dashboardService.revisarEntrega(payload),
-    onSuccess: (_, variables) => {
-      const accion =
-        variables.accion === 'consolidar' ? 'consolidada' : 'observada'
-      toast.success(`Entrega ${accion} correctamente.`)
-      queryClient.invalidateQueries({
-        queryKey: ['transferencia-estado', variables.dependencia_id],
-      })
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Error al revisar la entrega.')
     },
   })
 }

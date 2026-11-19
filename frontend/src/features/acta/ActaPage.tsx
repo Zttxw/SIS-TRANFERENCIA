@@ -38,7 +38,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
 import { PrevisualizarAnexo } from '@/features/firmaperu/PrevisualizarAnexo'
 import { actaService } from './acta.service'
-import { ActaImprimible } from './ActaImprimible'
+import { ActaDatosForm } from './ActaDatosForm'
 import { FirmaDigitalSeamModal } from './FirmaDigitalSeamModal'
 import { SubirEvidenciaModal } from './SubirEvidenciaModal'
 import { useActa, useDescargarEvidencia } from './use-acta'
@@ -124,7 +124,7 @@ export function ActaPage() {
     )
   }
 
-  // 3. Manejo de 409 Conflict (Entrega no consolidada)
+  // 3. 409: el acta aún no puede consultarse (p. ej. el responsable no la emitió)
   const esConflicto409 = axios.isAxiosError(error) && error.response?.status === 409
   const estadoEntregaActual = estadoData?.entrega?.estado ?? 'borrador'
 
@@ -147,21 +147,18 @@ export function ActaPage() {
               </div>
               <div>
                 <CardTitle className="text-lg text-warning-fg">
-                  Acta No Emisible · Requiere Entrega Consolidada
+                  El acta aún no está disponible
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Directiva N.° 001-2026-MDSJ/A §7.10 — El Acta Oficial de Transferencia solo puede emitirse tras la consolidación formal.
+                  {axios.isAxiosError(error) ? (error.response?.data?.message ?? 'El responsable del centro de costo debe emitirla primero.') : ''}
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-5 text-sm">
             <p className="text-muted-foreground leading-relaxed text-xs sm:text-sm">
-              Conforme al marco normativo municipal, el <strong>Acta de Transferencia de Cargo (Anexo 07)</strong> refleja
-              la constancia fidedigna de los bienes, documentos, personal e informe de gestión efectivamente
-              recibidos y verificados. Para generarla, la entrega del centro de costo debe encontrarse en estado{' '}
-              <span className="font-semibold text-success-fg">CONSOLIDADA</span> por el revisor
-              jerárquico o la comisión ETTS.
+              El <strong>Acta de Transferencia (Anexo 07)</strong> la emite el responsable del centro de costo y
+              se firma después de que el coordinador ETTE acepta la entrega.
             </p>
 
             <div className="rounded-lg border bg-background/80 p-4">
@@ -180,7 +177,7 @@ export function ActaPage() {
                 </div>
                 <div>
                   <span className="text-muted-foreground block">Requisito Pendiente:</span>
-                  <span className="font-medium text-foreground">Revisión y Aprobación sin observaciones</span>
+                  <span className="font-medium text-foreground">Emisión del acta por el responsable</span>
                 </div>
               </div>
             </div>
@@ -191,7 +188,7 @@ export function ActaPage() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link to="/entregas" className={buttonVariants({ variant: 'outline', size: 'sm', className: 'gap-1.5' })}>
-                Consultar Bandeja de Entregas
+                Ver la entrega
               </Link>
               <Button variant="ghost" size="sm" onClick={() => refetch()} className="text-xs">
                 Reintentar Consulta
@@ -252,7 +249,7 @@ export function ActaPage() {
       <AnexoHeader
         numeroAnexo="Anexo 07"
         titulo="Acta de Transferencia Administrativa y Entrega de Cargo"
-        subtitulo={`Versión ${acta.version} · ${acta.declara === 'recepcion_consolidacion' ? 'Recepción y consolidación' : 'Suscripción de la dependencia antes de remitir'}`}
+        subtitulo={`Versión ${acta.version} · Suscripción del centro de costo antes de remitir`}
         dependenciaCodigo={depActual.codigo}
         dependenciaNombre={depActual.nombre}
         acciones={
@@ -340,7 +337,7 @@ export function ActaPage() {
           }`}
         >
           <FileCheck2 className="h-4 w-4" />
-          Formato Oficial del Acta (Anexo 07)
+          Datos del acta (Anexo 07)
         </button>
 
         <button
@@ -357,19 +354,14 @@ export function ActaPage() {
         </button>
       </div>
 
-      {/* Pestaña 1: Vista Oficial del Acta */}
+      {/* Pestaña 1: datos del acta que completan las partes antes de firmar */}
       {pestañaActiva === 'acta' && (
         <div className="space-y-4">
-          <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground flex items-center justify-between print:hidden">
-            <span>
-              Vista previa conforme a las especificaciones formales de la Directiva Municipal N.° 001-2026-MDSJ/A.
-            </span>
-            <span className="font-mono text-nota text-foreground font-medium">
-              Hash Documental: {acta.id.toString(16).padStart(8, '0')}
-            </span>
-          </div>
-
-          <ActaImprimible acta={acta} dependencia={depActual} />
+          <p className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground print:hidden">
+            Complete los datos de la reunión y revise la condición de cada documento antes de firmar. Use «Revisar PDF»
+            para ver el acta tal como se firmará. Esta acta no sustituye el Acta de Transferencia de Gestión de la CGR.
+          </p>
+          <ActaDatosForm acta={acta} dependenciaId={dependenciaId} />
         </div>
       )}
 

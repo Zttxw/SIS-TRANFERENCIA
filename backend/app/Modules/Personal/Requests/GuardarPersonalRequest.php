@@ -11,7 +11,7 @@ class GuardarPersonalRequest extends AnexoFormRequest
     public function rules(): array
     {
         return [
-            'dependencia_id' => ['required', 'integer', 'exists:dependencias,id'],
+            'dependencia_id' => ['required', 'integer', 'exists:dependencias,id,es_centro_costo,1'],
             'servidor_id' => ['nullable', 'integer', 'exists:servidores,id'],
             'dni' => ['required', 'string', 'regex:/^[0-9]{8}$/'],
             'nombres' => ['required', 'string', 'max:150'],

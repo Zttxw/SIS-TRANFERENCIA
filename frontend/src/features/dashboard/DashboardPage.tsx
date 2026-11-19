@@ -1,32 +1,28 @@
+import { estaEnFirma, fueRemitida } from '@/types/transferencia'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  AlertCircle,
   Archive,
   ArrowRight,
   BarChart3,
   Building2,
   Calendar,
-  CheckCircle2,
   ClipboardList,
   Clock,
   FileCheck2,
   FileText,
   FolderTree,
   History,
-  Lock,
   Package,
   PackageOpen,
-  Send,
   ShieldAlert,
-  ShieldCheck,
   Users,
 } from 'lucide-react'
 
 import { useAuth, useDependenciaActiva } from '@/auth/hooks'
 import { puedeConsultarActa } from '@/auth/sesion-runtime'
-import { Can } from '@/auth/Can'
 import { QueSigueCard } from '@/components/anexos/QueSigueCard'
+import { CoordinadorEtteAviso } from './CoordinadorEtteAviso'
 import type { TipoDocumentoFirma } from '@/features/firmaperu/firmaperu.types'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
@@ -36,11 +32,8 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
-import type { EstadoEntrega } from '@/types/transferencia'
-import { RemitirModal } from './RemitirModal'
-import { useRequisitosRemision } from '@/features/firmaperu/use-requisitos-remision'
+import { EntregaCentroCostoCard } from '@/features/entregas/EntregaCentroCostoCard'
 import { ResumenAnexos } from './ResumenAnexos'
-import { RevisarModal } from './RevisarModal'
 import { TablaAnexos } from './TablaAnexos'
 import { TableroOperativoView } from './TableroOperativoView'
 import { EquipoDashboard } from './EquipoDashboard'
@@ -48,46 +41,6 @@ import { AnexosEntidadPage } from '@/features/anexos-entidad/AnexosEntidadPage'
 import { useEstadoEntrega, useResumenDocumentos } from './use-dashboard'
 import { DocumentosIndicadorModal } from '@/features/documentos/DocumentosIndicadorModal'
 import { nombreEstadoDocumento } from '@/features/documentos/estados-documentos'
-
-function renderBadgeEstado(estado: EstadoEntrega | null) {
-  switch (estado) {
-    case 'consolidada':
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-semibold text-success-fg">
-          <ShieldCheck className="h-3.5 w-3.5" />
-          Consolidada
-        </span>
-      )
-    case 'remitida':
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-info-soft px-2.5 py-0.5 text-xs font-semibold text-info-fg">
-          <Clock className="h-3.5 w-3.5" />
-          Remitida (En revisión)
-        </span>
-      )
-    case 'observada':
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-danger-soft px-2.5 py-0.5 text-xs font-semibold text-danger-fg">
-          <AlertCircle className="h-3.5 w-3.5" />
-          Observada
-        </span>
-      )
-    case 'subsanada':
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/15 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
-          <History className="h-3.5 w-3.5" />
-          Subsanada
-        </span>
-      )
-    default:
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-fg">
-          <FileText className="h-3.5 w-3.5" />
-          Borrador (En preparación)
-        </span>
-      )
-  }
-}
 
 /**
  * Vista de Dashboard / Mi Entrega de Información.
@@ -100,7 +53,7 @@ export function DashboardPage() {
   const { dependenciaId, setDependenciaId } = useDependenciaActiva()
   const esGlobal = usuario?.es_global === true
 
-  // Delegado ETTE: su portal es el explorador de las dependencias a su cargo
+  // Coordinador ETTE: su portal es el explorador de las dependencias a su cargo
   // (reusa "Anexos de la Entidad" acotado por ámbito), no la vista "Mi entrega".
   const rolesUsuario = new Set(usuario?.roles.map(({ rol }) => rol) ?? [])
   const esDelegado =
@@ -111,10 +64,6 @@ export function DashboardPage() {
 
   const { data: estadoData, isLoading, error } = useEstadoEntrega(dependenciaId)
   const { data: resumenDocs } = useResumenDocumentos(dependenciaId)
-  const { data: requisitosFirma, isFetching: comprobandoFirmas } = useRequisitosRemision(dependenciaId, permisos.has('entregas.remitir'))
-
-  const [modalRemitir, setModalRemitir] = useState(false)
-  const [modalRevisar, setModalRevisar] = useState(false)
   const [indicadorDocumental, setIndicadorDocumental] = useState<{ estado?: string } | null>(null)
 
   // El portal del delegado no depende de la dependencia activa; se resuelve tras
@@ -168,15 +117,8 @@ export function DashboardPage() {
   } = estadoData
 
   const estadoEntrega = entrega?.estado ?? 'borrador'
-  const esEditable =
-    estadoEntrega === 'borrador' ||
-    estadoEntrega === 'observada' ||
-    estadoEntrega === 'subsanada'
+  const esEditable = estadoEntrega === 'borrador'
   const haciaEtts = entrega?.hacia_etts ?? (dependencia.parent_id === null)
-
-  const superiorRevisor = haciaEtts
-    ? 'Equipo de Transferencia del Titular Saliente (ETTS Institucional)'
-    : 'su superior jerárquico inmediato'
 
   // Lista oficial de los 7 Anexos normativos según Directiva N.° 001-2026-MDSJ/GM.
   // Los indicadores de firma enlazan con el módulo PDF y firma.
@@ -310,14 +252,14 @@ export function DashboardPage() {
       fuente: 'Sistema / Consolidado',
       colorFuente: 'bg-indigo-50 text-indigo-700 border-indigo-200',
       resumen:
-        estadoEntrega === 'consolidada'
-          ? 'Acta oficial lista para firma y emisión'
-          : 'Suscripción previa a la remisión',
+        estaEnFirma(estadoEntrega)
+          ? 'Lista para firma: el coordinador aceptó la entrega'
+          : 'Se firma tras la aceptación del coordinador',
       detalle: 'Acta formal de cierre y entrega de cargo',
       ruta: '/acta',
       accion: 'Ver acta',
-      completado: estadoEntrega === 'consolidada',
-      estado: estadoEntrega === 'consolidada' ? 'Consolidada' : 'Por suscribir',
+      completado: fueRemitida(estadoEntrega),
+      estado: fueRemitida(estadoEntrega) ? 'Remitida' : 'Por suscribir',
     },
   ].filter((anexo) => anexo.id !== 'anexo07' || puedeConsultarActa(permisos))
 
@@ -356,6 +298,8 @@ export function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {rolesUsuario.has('responsable_centro_costo') && <CoordinadorEtteAviso dependenciaId={dependencia.id} />}
 
       {/* Barra de Retorno al Tablero Global (Exclusiva para Administrador / ETTS) */}
       {esGlobal && (
@@ -423,120 +367,9 @@ export function DashboardPage() {
         />
       </div>
 
-      {/* ========================================================
-          REMITIR MI ENTREGA — debajo de la tabla, ancho completo
-          ======================================================== */}
-      {(permisos.has('entregas.remitir') || permisos.has('entregas.revisar')) && (
-      <Card className="border shadow-xs">
-        <CardHeader className="py-3 px-4 border-b border-border bg-muted">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-              <Send className="h-4 w-4 text-primary" />
-              <span>{permisos.has('entregas.remitir') ? 'Remitir mi entrega' : 'Revisión de la entrega'}</span>
-            </CardTitle>
-            <div>{renderBadgeEstado(estadoEntrega)}</div>
-          </div>
-        </CardHeader>
+      {/* Entrega del CC: presentar al coordinador, firmar y remitir (D-07). */}
+      {permisos.has('entregas.remitir') && <EntregaCentroCostoCard estado={estadoData} />}
 
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            {/* Texto + alerta contextual */}
-            <div className="flex-1 space-y-2.5 text-xs">
-              <p className="text-muted-foreground leading-relaxed">
-                Al remitir, su información pasará a revisión formal de{' '}
-                <strong className="text-foreground">{superiorRevisor}</strong>. Solo podrá
-                modificarla si se le solicita una corrección mediante observación.
-              </p>
-
-              {esEditable ? (
-                <div className="flex items-start gap-1.5 rounded-lg bg-warning-soft border border-warning-border p-3 text-warning-fg">
-                  <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                  <p className="text-nota leading-normal">
-                    <span className="font-bold">Verificación obligatoria.</span> Asegúrese de haber
-                    revisado los bienes patrimoniales y el acervo documental antes de remitir
-                    formalmente el paquete de entrega.
-                  </p>
-                </div>
-              ) : estadoEntrega === 'remitida' ? (
-                <div className="flex items-start gap-1.5 rounded-lg bg-info-soft border border-info-border p-3 text-info-fg">
-                  <Clock className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                  <p className="text-nota leading-normal">
-                    <span className="font-bold">Entrega en revisión.</span> En custodia del superior
-                    jerárquico; la edición queda bloqueada hasta su validación.
-                  </p>
-                </div>
-              ) : estadoEntrega === 'consolidada' ? (
-                <div className="flex items-start gap-1.5 rounded-lg bg-success-soft border border-success-border p-3 text-success-fg">
-                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                  <p className="text-nota leading-normal">
-                    <span className="font-bold">Entrega consolidada.</span> Su despacho ha completado
-                    formalmente el cierre de entrega de gestión.
-                  </p>
-                </div>
-              ) : null}
-            </div>
-
-            {/* Acción principal de workflow */}
-            <div className="shrink-0 lg:w-64">
-              <Can permiso="entregas.remitir">
-                {esEditable && <p className="mb-2 text-xs text-muted-foreground">
-                  {comprobandoFirmas ? 'Comprobando firmas…' : `Firmas del jefe: ${requisitosFirma?.firmados ?? 0}/6 · anexos 02–07`}
-                </p>}
-                {esEditable && (
-                  <Button
-                    disabled={comprobandoFirmas || !requisitosFirma?.puede_remitir}
-                    onClick={() => setModalRemitir(true)}
-                    className="w-full h-10 bg-primary hover:bg-primary-hover text-white font-semibold text-xs gap-2 shadow-xs cursor-pointer"
-                  >
-                    <Send className="h-3.5 w-3.5" />
-                    <span>Remitir mi entrega</span>
-                  </Button>
-                )}
-              </Can>
-
-              <Can permiso="entregas.revisar">
-                {(estadoEntrega === 'remitida' || estadoEntrega === 'en_revision') && (
-                  <Button
-                    onClick={() => setModalRevisar(true)}
-                    className="w-full h-10 bg-secondary hover:bg-secondary-hover text-white font-semibold text-xs gap-2 shadow-xs cursor-pointer"
-                  >
-                    <ShieldCheck className="h-4 w-4" />
-                    <span>Revisar Entrega</span>
-                  </Button>
-                )}
-              </Can>
-
-              <Can permiso="actas.generar">
-                {estadoEntrega === 'consolidada' && (
-                  <Link
-                    to="/acta"
-                    className={buttonVariants({
-                      className:
-                        'w-full h-10 bg-primary hover:bg-primary-hover text-white font-semibold text-xs gap-2 shadow-xs',
-                    })}
-                  >
-                    <FileCheck2 className="h-4 w-4" />
-                    <span>Generar Acta de Transferencia</span>
-                  </Link>
-                )}
-              </Can>
-
-              {!esEditable && estadoEntrega !== 'consolidada' && (
-                <Button
-                  disabled
-                  variant="outline"
-                  className="w-full h-10 text-xs text-muted-foreground gap-2 cursor-not-allowed"
-                >
-                  <Lock className="h-3.5 w-3.5" />
-                  <span>Edición bloqueada por trámite</span>
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      )}
       {/* ========================================================
           SECUNDARIO: Trazabilidad + Documentos SGD (dos columnas)
           ======================================================== */}
@@ -572,10 +405,10 @@ export function DashboardPage() {
             </div>
 
             <div className="flex justify-between items-center text-muted-foreground">
-              <span>Última revisión:</span>
+              <span>Aceptada por el coordinador:</span>
               <span className="font-mono text-foreground">
-                {entrega?.revisada_en
-                  ? new Date(entrega.revisada_en).toLocaleString('es-PE', {
+                {entrega?.verificada_en
+                  ? new Date(entrega.verificada_en).toLocaleString('es-PE', {
                       day: '2-digit',
                       month: '2-digit',
                       year: 'numeric',
@@ -589,7 +422,7 @@ export function DashboardPage() {
             <div className="flex justify-between items-center text-muted-foreground">
               <span>Destino jerárquico:</span>
               <span className="font-semibold text-foreground">
-                {haciaEtts ? 'ETTS Institucional' : `Despacho Superior (ID ${dependencia.parent_id})`}
+                {haciaEtts ? 'ETTS institucional' : 'Centro de costo padre (Anexo 01)'}
               </span>
             </div>
 
@@ -652,21 +485,6 @@ export function DashboardPage() {
       {indicadorDocumental && <DocumentosIndicadorModal key={`${dependencia.id}-${indicadorDocumental.estado ?? 'todos'}`}
         dependenciaId={dependencia.id} estado={indicadorDocumental.estado} onClose={() => setIndicadorDocumental(null)} />}
 
-      {/* Modales de workflow */}
-      <RemitirModal
-        open={modalRemitir}
-        onClose={() => setModalRemitir(false)}
-        dependenciaId={dependencia.id}
-        dependenciaNombre={dependencia.nombre}
-        haciaEtts={haciaEtts}
-      />
-
-      <RevisarModal
-        open={modalRevisar}
-        onClose={() => setModalRevisar(false)}
-        dependenciaId={dependencia.id}
-        dependenciaNombre={dependencia.nombre}
-      />
     </div>
   )
 }

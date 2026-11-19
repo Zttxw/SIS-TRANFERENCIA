@@ -9,7 +9,6 @@ use App\Modules\Patrimonio\Models\BienPatrimonial;
 use App\Modules\Patrimonio\Models\VerificacionBien;
 use App\Support\Concerns\RespetaEstadoEntrega;
 use App\Support\Enums\EstadoConservacion;
-use App\Support\Enums\EstadoObservacion;
 use App\Support\Enums\EstadoVerificacionBien;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
@@ -125,16 +124,6 @@ class PatrimonioService
                     'verificado_en' => Carbon::now(),
                 ]
             );
-
-            // Si hay observación, también la vinculamos como observación polimórfica (RN-10)
-            if (! empty($datos['observacion']) && $estadoEnum->requiereObservacion()) {
-                $bien->observaciones()->create([
-                    'proceso_transferencia_id' => $bien->proceso_transferencia_id,
-                    'autor_id' => $usuario->id,
-                    'descripcion' => $datos['observacion'],
-                    'estado' => EstadoObservacion::ABIERTA->value,
-                ]);
-            }
 
             return $bien->load(['dependencia', 'servidor', 'verificacion.verificadoPor']);
         });

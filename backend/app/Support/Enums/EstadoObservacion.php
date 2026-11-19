@@ -5,22 +5,20 @@ declare(strict_types=1);
 namespace App\Support\Enums;
 
 /**
- * Ciclo de vida de una observación y su subsanación (plan §7.9).
+ * Estado de una observación del coordinador ETTE (D-07). La observación es una
+ * constancia: no se subsana ni devuelve la entrega. El coordinador puede
+ * retirarla mientras no acepte la entrega.
  */
 enum EstadoObservacion: string
 {
-    case ABIERTA = 'abierta';
-    case EN_SUBSANACION = 'en_subsanacion';
-    case SUBSANADA = 'subsanada';
-    case DESESTIMADA = 'desestimada';
+    case REGISTRADA = 'registrada';
+    case RETIRADA = 'retirada';
 
     public function etiqueta(): string
     {
         return match ($this) {
-            self::ABIERTA => 'Abierta',
-            self::EN_SUBSANACION => 'En subsanación',
-            self::SUBSANADA => 'Subsanada',
-            self::DESESTIMADA => 'Desestimada',
+            self::REGISTRADA => 'Registrada',
+            self::RETIRADA => 'Retirada',
         };
     }
 }

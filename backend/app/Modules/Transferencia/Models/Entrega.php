@@ -7,15 +7,21 @@ namespace App\Modules\Transferencia\Models;
 use App\Models\User;
 use App\Modules\Organization\Models\Dependencia;
 use App\Support\Concerns\Auditable;
+use App\Support\Enums\CalidadEtte;
 use App\Support\Enums\EstadoEntrega;
 use App\Support\Models\BaseModel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * Entrega jerárquica de información entre dependencias (plan §7.8).
+ * Entrega de un centro de costo en el proceso (plan §3.1): una por CC y proceso.
+ * Registra la presentación a revisión, la verificación del lado ETTE y la
+ * remisión al CC padre o al ETTS y, para las que llegan al ETTS, la cadena
+ * institucional ETTS → ETTE (D-12). `receptor_id`, `revisada_en` y
+ * `consolidada_en` son historial de solo lectura del flujo anterior.
  *
  * @property EstadoEntrega $estado
+ * @property CalidadEtte|null $verificada_en_calidad_de
  */
 class Entrega extends BaseModel
 {
@@ -28,19 +34,38 @@ class Entrega extends BaseModel
         'dependencia_id',
         'dependencia_destino_id',
         'emisor_id',
-        'receptor_id',
         'estado',
+        'presentada_en',
+        'presentada_por_id',
+        'verificada_en',
+        'verificada_por_id',
+        'verificada_en_calidad_de',
+        'motivo_suplencia_verificacion',
+        'resultado_verificacion',
         'remitida_en',
-        'revisada_en',
-        'consolidada_en',
         'comentario',
+        'hijos_pendientes_al_remitir',
+        'recibida_etts_en',
+        'recibida_etts_por_id',
+        'envio_ette_id',
+        'remitida_ette_en',
+        'remitida_ette_por_id',
+        'recibida_ette_en',
+        'recibida_ette_por_id',
     ];
 
     protected function casts(): array
     {
         return [
             'estado' => EstadoEntrega::class,
+            'verificada_en_calidad_de' => CalidadEtte::class,
+            'presentada_en' => 'datetime',
+            'verificada_en' => 'datetime',
             'remitida_en' => 'datetime',
+            'recibida_etts_en' => 'datetime',
+            'remitida_ette_en' => 'datetime',
+            'recibida_ette_en' => 'datetime',
+            'hijos_pendientes_al_remitir' => 'array',
             'revisada_en' => 'datetime',
             'consolidada_en' => 'datetime',
         ];
@@ -65,20 +90,43 @@ class Entrega extends BaseModel
     }
 
     /** @return BelongsTo<User, $this> */
-    public function receptor(): BelongsTo
+    public function presentadaPor(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'receptor_id');
+        return $this->belongsTo(User::class, 'presentada_por_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function verificadaPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verificada_por_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function recibidaEttsPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'recibida_etts_por_id');
+    }
+
+    /** @return BelongsTo<EnvioEtte, $this> */
+    public function envioEtte(): BelongsTo
+    {
+        return $this->belongsTo(EnvioEtte::class, 'envio_ette_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function recibidaEttePor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'recibida_ette_por_id');
     }
 
     public function esModificable(): bool
     {
-        return in_array($this->estado, [EstadoEntrega::BORRADOR, EstadoEntrega::OBSERVADA], true);
+        return $this->estado->admiteEdicion();
     }
 
     /**
-     * ¿La entrega se remite al ETTS institucional? Ocurre cuando la dependencia
-     * está en la cima de su cadena de consolidación (sin padre): su destino es
-     * el ETTS, no otra dependencia (directiva §7.6).
+     * ¿La entrega se remite al ETTS institucional? Ocurre cuando el CC no tiene
+     * padre en el Anexo 01 (su padre es él mismo): su destino es el ETTS.
      */
     public function esHaciaEtts(): bool
     {

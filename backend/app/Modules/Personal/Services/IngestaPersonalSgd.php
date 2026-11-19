@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\Personal\Services;
 
 use App\Modules\Organization\Models\Servidor;
+use App\Modules\Organization\Services\EquivalenciasCentroCosto;
 use App\Modules\Personal\Models\Personal;
 use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Support\Enums\EstadoEntrega;
 use App\Support\Enums\FuenteDato;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -39,14 +41,18 @@ class IngestaPersonalSgd
             ->whereNotNull('dependencia_id')
             ->whereNotIn('dependencia_id', Entrega::query()->select('dependencia_id')
                 ->where('proceso_transferencia_id', $proceso->id)
-                ->whereNotIn('estado', ['borrador', 'observada']))
+                ->where('estado', '!=', EstadoEntrega::BORRADOR->value))
             ->whereNotNull('dni');
 
         if ($codigoDependencia !== null) {
+            // Acepta el código del CC (Anexo 01) o el de una dependencia del
+            // SGD; en ese caso se proyecta el CC al que pertenece.
             $depId = DB::table('dependencias')
                 ->where('proceso_transferencia_id', $proceso->id)
+                ->where('es_centro_costo', true)
                 ->where('codigo', $codigoDependencia)
-                ->value('id');
+                ->value('id')
+                ?? (app(EquivalenciasCentroCosto::class)->destinosSgd($proceso->id)[$codigoDependencia] ?? null);
 
             // Dependencia inexistente: nada que proyectar.
             $query->where('dependencia_id', $depId ?? -1);

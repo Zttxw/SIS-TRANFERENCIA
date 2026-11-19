@@ -40,8 +40,6 @@ class GestionUsuariosService
     private const ROLES_ASIGNABLES = [
         Rol::ETTS,
         Rol::ETTE,
-        Rol::COORDINADOR,
-        Rol::RESPONSABLE_EQUIPO,
         Rol::RESPONSABLE_CENTRO_COSTO,
         Rol::DELEGADO_ETTE,
     ];
@@ -104,7 +102,7 @@ class GestionUsuariosService
      * personal externo). La cuenta no se vincula a un servidor (servidor_id
      * null). Opcionalmente asigna un rol inicial.
      *
-     * @param  array{dni: string, name: string, email?: ?string, password: string, rol?: ?string, dependencia_id?: ?int}  $datos
+     * @param  array{dni: string, name: string, email?: ?string, celular?: ?string, password: string, rol?: ?string, dependencia_id?: ?int}  $datos
      */
     public function crearExterno(array $datos, ?int $procesoId = null): User
     {
@@ -121,6 +119,7 @@ class GestionUsuariosService
                 'dni' => $datos['dni'],
                 'name' => $datos['name'],
                 'email' => $datos['email'] ?? null,
+                'celular' => $datos['celular'] ?? null,
                 'password' => Hash::make($datos['password']),
                 'activo' => true,
                 'servidor_id' => null,
@@ -185,7 +184,7 @@ class GestionUsuariosService
      *  - Nunca deja al sistema sin administradores (no aplica aquí porque
      *    administrador no es revocable, pero se documenta la invariante).
      *
-     * @return bool  true si se revocó; false si la asignación no existe o no es revocable.
+     * @return bool true si se revocó; false si la asignación no existe o no es revocable.
      */
     public function revocarRol(int $asignacionId): bool
     {

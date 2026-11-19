@@ -5,6 +5,7 @@ import type {
   ReporteConciliacion,
   ReporteMatriz,
   ReporteObservaciones,
+  ReporteVerificacion,
 } from '@/types/reportes'
 
 export function useMatrizAnexos() {
@@ -25,5 +26,12 @@ export function useObservacionesReporte() {
   return useQuery<ReporteObservaciones>({
     queryKey: ['reportes', 'observaciones'],
     queryFn: () => reportesService.obtener('observaciones'),
+  })
+}
+
+export function useVerificacionReporte() {
+  return useQuery<ReporteVerificacion>({
+    queryKey: ['reportes', 'verificacion'],
+    queryFn: () => reportesService.obtener('verificacion'),
   })
 }

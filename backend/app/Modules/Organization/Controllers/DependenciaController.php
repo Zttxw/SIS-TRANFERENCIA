@@ -22,7 +22,8 @@ class DependenciaController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Dependencia::query()
+        // Solo los centros de costo del Anexo 01 participan del flujo (D-01).
+        $query = Dependencia::query()->centrosCosto()
             ->with('encargado:id,dni,nombres,apellidos,cargo')
             ->where('proceso_transferencia_id', app(ContextoTransferencia::class)->procesoActivoId())
             ->orderBy('codigo');
@@ -66,12 +67,12 @@ class DependenciaController extends Controller
         $procesoId = app(ContextoTransferencia::class)->procesoActivoId();
         $ambito = $usuario->dependenciasEnAmbito();
         $responsables = $usuario->asignacionesRol()->where('proceso_transferencia_id', $procesoId)
-            ->whereIn('rol', [Rol::RESPONSABLE_CENTRO_COSTO->value, Rol::RESPONSABLE_EQUIPO->value])
+            ->where('rol', Rol::RESPONSABLE_CENTRO_COSTO->value)
             ->pluck('dependencia_id')->filter()->all();
         if ($usuario->servidor?->es_responsable && $usuario->servidor->dependencia_id) {
             $responsables[] = $usuario->servidor->dependencia_id;
         }
-        $unidades = Dependencia::query()->where('proceso_transferencia_id', $procesoId)->where('activa', true)
+        $unidades = Dependencia::query()->centrosCosto()->where('proceso_transferencia_id', $procesoId)->where('activa', true)
             ->with('encargado:id,nombres,apellidos,cargo')
             ->get(['id', 'parent_id', 'codigo', 'nombre', 'nivel', 'encargado_servidor_id'])->sortBy('codigo')->values()
             ->map(function (Dependencia $dep) use ($ambito, $responsables): array {

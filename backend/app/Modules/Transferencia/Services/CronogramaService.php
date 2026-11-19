@@ -6,64 +6,64 @@ namespace App\Modules\Transferencia\Services;
 
 use App\Modules\Transferencia\Models\CronogramaActividad;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Support\Enums\AccionPlazo;
 use App\Support\Http\ApiResponse;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Carbon;
 
 /**
- * Reglas del cronograma del proceso (RF-007, C-03). El vencimiento de una
- * actividad bloquea la operación que gobierna (por ahora, la remisión: lo
- * confirmado). Las demás operaciones bloqueables (firma, visto bueno,
- * consolidación) y la forma de retomar un trámite vencido siguen en D-03; este
- * servicio solo aplica lo confirmado y expone un punto único para ampliarlo.
+ * Reglas del cronograma del proceso (RF-20 a RF-22, RN-03, D-12).
+ *
+ * - Con plazo CGR, el vencimiento interno es `dias_habiles_antes` días hábiles
+ *   antes de esa fecha (por defecto 2) y se recalcula si cambia el calendario.
+ * - El vencimiento de una actividad bloquea, en la API, las acciones de la
+ *   etapa que gobierna (OperacionCronograma): presentar y aceptar (actividad 3),
+ *   firmar y remitir (actividad 4), remitir (remisión).
+ * - La sustitución de un coordinador no toca el cronograma (RF-25).
  */
 class CronogramaService
 {
-    public const OPERACION_REMISION = 'remision';
+    public function __construct(private readonly CalendarioHabil $calendario) {}
 
     /**
-     * Lista las actividades del cronograma del proceso activo, ordenadas por
-     * etapa/orden. Añade su situación de vencimiento derivada.
+     * Actividades del cronograma del proceso activo, por orden y vencimiento.
      *
      * @return Collection<int, CronogramaActividad>
      */
     public function listar(?int $procesoId = null): Collection
     {
-        $procesoId = $procesoId ?? $this->resolverProcesoActivoId();
-
-        return CronogramaActividad::query()
-            ->with('dependencia:id,codigo,nombre')
-            ->where('proceso_transferencia_id', $procesoId)
-            ->orderBy('orden')
-            ->orderBy('fecha_vencimiento')
-            ->get();
+        return $this->actividadesDelProceso($procesoId ?? $this->resolverProcesoActivoId())
+            ->load('dependencia:id,codigo,nombre');
     }
 
     /**
-     * Crea una actividad del cronograma. La auditoría (autor/fecha/valores) la
-     * registra el trait Auditable del modelo (criterio RF-007).
+     * Crea una actividad. La auditoría la registra el trait Auditable.
      *
      * @param  array<string, mixed>  $datos
      */
     public function crear(array $datos, ?int $procesoId = null): CronogramaActividad
     {
-        $datos['proceso_transferencia_id'] = $procesoId ?? $this->resolverProcesoActivoId();
-        $datos['operacion'] = $datos['operacion'] ?? self::OPERACION_REMISION;
+        $actividad = new CronogramaActividad($datos);
+        $actividad->proceso_transferencia_id = $procesoId ?? $this->resolverProcesoActivoId();
+        $this->aplicarPlazoCgr($actividad);
+        $actividad->save();
 
-        return CronogramaActividad::create($datos)->fresh();
+        return $actividad->fresh();
     }
 
     /**
-     * Actualiza una actividad (p. ej. una prórroga de plazo). El movimiento de
-     * auditoría conserva los valores anteriores y nuevos.
+     * Actualiza una actividad (p. ej. una prórroga). El movimiento de auditoría
+     * conserva los valores anteriores y nuevos.
      *
      * @param  array<string, mixed>  $datos
      */
     public function actualizar(int $id, array $datos): CronogramaActividad
     {
         $actividad = CronogramaActividad::findOrFail($id);
-        $actividad->fill($datos)->save();
+        $actividad->fill($datos);
+        $this->aplicarPlazoCgr($actividad);
+        $actividad->save();
 
         return $actividad->fresh();
     }
@@ -74,46 +74,56 @@ class CronogramaService
     }
 
     /**
-     * Actividad vencida que bloquea la operación dada para una dependencia, o
-     * null si no hay bloqueo. Considera las actividades generales del proceso
-     * y las específicas de la dependencia.
+     * Recalcula el vencimiento de las actividades con plazo CGR (tras cambiar
+     * los feriados). Devuelve cuántas cambiaron.
+     */
+    public function recalcularPlazosCgr(): int
+    {
+        $this->calendario->refrescar();
+        $cambiadas = 0;
+        CronogramaActividad::query()->whereNotNull('fecha_cgr')->get()
+            ->each(function (CronogramaActividad $actividad) use (&$cambiadas): void {
+                $this->aplicarPlazoCgr($actividad);
+                if ($actividad->isDirty('fecha_vencimiento')) {
+                    $actividad->save();
+                    $cambiadas++;
+                }
+            });
+
+        return $cambiadas;
+    }
+
+    /**
+     * Actividad vencida que bloquea la acción para el CC, o null. Considera las
+     * actividades generales del proceso y las específicas del CC.
      */
     public function actividadBloqueante(
         int $procesoId,
         int $dependenciaId,
-        string $operacion,
+        AccionPlazo $accion,
         ?Carbon $referencia = null,
     ): ?CronogramaActividad {
-        $referencia = $referencia ?? Carbon::now();
-
-        $actividades = CronogramaActividad::query()
+        return CronogramaActividad::query()
             ->where('proceso_transferencia_id', $procesoId)
-            ->paraOperacion($operacion)
+            ->queBloquean($accion)
             ->aplicablesA($dependenciaId)
             ->whereNotNull('fecha_vencimiento')
-            ->get();
-
-        foreach ($actividades as $actividad) {
-            if ($actividad->estaVencida($referencia)) {
-                return $actividad;
-            }
-        }
-
-        return null;
+            ->get()
+            ->first(fn (CronogramaActividad $actividad): bool => $actividad->estaVencida($referencia));
     }
 
     /**
-     * Lanza 409 si la operación está bloqueada por una actividad vencida. El
-     * bloqueo se cumple en la API, no solo en la interfaz (criterio RF-007). La
-     * respuesta indica la causa y el plazo aplicable.
+     * Lanza 409 si la acción está bloqueada por una actividad vencida. El
+     * bloqueo se cumple en la API, no solo en la interfaz; la respuesta indica
+     * la causa y el plazo aplicable.
      */
     public function exigirPlazoVigente(
         int $procesoId,
         int $dependenciaId,
-        string $operacion,
+        AccionPlazo $accion,
         ?Carbon $referencia = null,
     ): void {
-        $actividad = $this->actividadBloqueante($procesoId, $dependenciaId, $operacion, $referencia);
+        $actividad = $this->actividadBloqueante($procesoId, $dependenciaId, $accion, $referencia);
 
         if ($actividad === null) {
             return;
@@ -124,18 +134,20 @@ class CronogramaService
         // Con hora de corte se informa fecha y hora de Lima; sin ella, solo el día.
         $cuando = $actividad->hora_vencimiento !== null
             ? $vencioLima?->format('d/m/Y H:i').' (hora de Lima)'
-            : $actividad->fecha_vencimiento?->toDateString();
+            : $actividad->fecha_vencimiento?->format('d/m/Y');
 
         throw new HttpResponseException(
             ApiResponse::error(
-                'La operación está bloqueada: el plazo de la actividad "'.$actividad->nombre.'" venció el '
-                    .$cuando.'.',
+                'No se puede '.mb_strtolower($accion->etiqueta()).': el plazo de la actividad "'.$actividad->nombre
+                    .'" venció el '.$cuando.'.',
                 409,
                 [
                     'cronograma' => [
                         'actividad_id' => $actividad->id,
                         'actividad' => $actividad->nombre,
-                        'operacion' => $actividad->operacion,
+                        'accion' => $accion->value,
+                        'operacion' => $actividad->operacion->value,
+                        'fecha_cgr' => $actividad->fecha_cgr?->toDateString(),
                         'fecha_vencimiento' => $actividad->fecha_vencimiento?->toDateString(),
                         'hora_vencimiento' => $actividad->hora_vencimiento,
                         'vencio_en' => $vencimiento?->toIso8601String(),
@@ -143,6 +155,67 @@ class CronogramaService
                 ],
             )
         );
+    }
+
+    /**
+     * Situación del plazo de la acción para un CC (F-16): la actividad vencida
+     * que la bloquea o, si no hay, la de vencimiento más próximo, con los días
+     * hábiles que faltan. null si ninguna actividad la gobierna.
+     *
+     * @param  Collection<int, CronogramaActividad>  $actividades  del proceso (actividadesDelProceso)
+     * @return array{accion: string, accion_etiqueta: string, actividad: string, fecha_vencimiento: string,
+     *     hora_vencimiento: ?string, dias_habiles: int, vencido: bool}|null
+     */
+    public function situacionPlazo(Collection $actividades, int $dependenciaId, AccionPlazo $accion, ?Carbon $referencia = null): ?array
+    {
+        $referencia ??= Carbon::now();
+        $aplicables = $actividades->filter(fn (CronogramaActividad $a): bool => $a->fecha_vencimiento !== null
+            && ! $a->estado?->estaCompletada()
+            && in_array($accion, $a->operacion->accionesBloqueadas(), true)
+            && ($a->dependencia_id === null || $a->dependencia_id === $dependenciaId));
+
+        $actividad = $aplicables->first(fn (CronogramaActividad $a): bool => $a->estaVencida($referencia))
+            ?? $aplicables->sortBy(fn (CronogramaActividad $a): int => $a->instanteVencimiento()->getTimestamp())->first();
+
+        if ($actividad === null) {
+            return null;
+        }
+        $vencido = $actividad->estaVencida($referencia);
+
+        return [
+            'accion' => $accion->value,
+            'accion_etiqueta' => $accion->etiqueta(),
+            'actividad' => $actividad->nombre,
+            'fecha_vencimiento' => $actividad->fecha_vencimiento->toDateString(),
+            'hora_vencimiento' => $actividad->hora_vencimiento,
+            'dias_habiles' => $vencido ? 0 : $this->calendario->diasHabilesHasta(
+                $referencia->copy()->setTimezone(CronogramaActividad::ZONA_PLAZO),
+                $actividad->fecha_vencimiento,
+            ),
+            'vencido' => $vencido,
+        ];
+    }
+
+    /** @return Collection<int, CronogramaActividad> */
+    public function actividadesDelProceso(int $procesoId): Collection
+    {
+        return CronogramaActividad::query()
+            ->where('proceso_transferencia_id', $procesoId)
+            ->orderBy('orden')
+            ->orderBy('fecha_vencimiento')
+            ->get();
+    }
+
+    /** Con plazo CGR, el vencimiento interno se deriva en días hábiles (RN-03). */
+    private function aplicarPlazoCgr(CronogramaActividad $actividad): void
+    {
+        if (! $actividad->usaPlazoCgr()) {
+            return;
+        }
+        $vencimiento = $this->calendario->restarDiasHabiles($actividad->fecha_cgr, (int) ($actividad->dias_habiles_antes ?? 2));
+        if ($actividad->fecha_vencimiento?->toDateString() !== $vencimiento->toDateString()) {
+            $actividad->fecha_vencimiento = $vencimiento->toDateString();
+        }
     }
 
     private function resolverProcesoActivoId(): int

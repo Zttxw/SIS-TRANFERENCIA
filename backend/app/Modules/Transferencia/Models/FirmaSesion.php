@@ -4,12 +4,23 @@ declare(strict_types=1);
 
 namespace App\Modules\Transferencia\Models;
 
+use App\Support\Enums\CalidadEtte;
+use App\Support\Enums\LadoFirma;
 use Database\Factories\FirmaSesionFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Sesión de firma de un documento: digital (applet Firma Perú) o el escaneo
+ * con firma manuscrita del lado ETTE (`origen = manual`). `documento_previo_id`
+ * enlaza la sesión con la firma sobre la que se agrega (cadena, D-06).
+ *
+ * @property LadoFirma $lado
+ * @property ?CalidadEtte $en_calidad_de
+ * @property ?string $motivo_suplencia
+ */
 class FirmaSesion extends Model
 {
     /** @use HasFactory<FirmaSesionFactory> */
@@ -23,7 +34,8 @@ class FirmaSesion extends Model
 
     protected function casts(): array
     {
-        return ['expires_at' => 'datetime', 'firmado_en' => 'datetime', 'detalles' => 'array'];
+        return ['expires_at' => 'datetime', 'firmado_en' => 'datetime', 'detalles' => 'array',
+            'lado' => LadoFirma::class, 'en_calidad_de' => CalidadEtte::class];
     }
 
     protected static function newFactory(): FirmaSesionFactory

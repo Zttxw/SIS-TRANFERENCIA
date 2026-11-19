@@ -30,7 +30,7 @@ class MatrizAnexosExport implements FromArray, ShouldAutoSize, WithHeadings, Wit
         return [
             'Código', 'Centro de costo', 'Nivel', 'Encargado', 'Estado entrega',
             'A02', 'A03', 'A04', 'A05', 'A06',
-            'Obs. abiertas', 'Bienes', 'Verificados', '% Patrimonio',
+            'Observaciones', 'Bienes', 'Verificados', '% Patrimonio',
         ];
     }
 
@@ -48,7 +48,7 @@ class MatrizAnexosExport implements FromArray, ShouldAutoSize, WithHeadings, Wit
             $f['anexo_04'] ? 'Sí' : '—',
             $f['anexo_05'] ? 'Sí' : '—',
             $f['anexo_06'] ? 'Sí' : '—',
-            $f['observaciones_abiertas'],
+            $f['observaciones'],
             $f['patrimonio_total'],
             $f['patrimonio_confirmados'],
             $f['patrimonio_porcentaje'].' %',

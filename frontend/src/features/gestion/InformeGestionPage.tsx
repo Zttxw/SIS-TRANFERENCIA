@@ -15,6 +15,7 @@ import { Select } from '@/components/ui/select'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
 import { useGuardarInformeGestion, useInformeGestion } from './use-gestion'
 import { SeccionFilas } from './SeccionFilas'
+import { PendientesDocumentalesTabla } from './PendientesDocumentalesTabla'
 import type {
   EstadoInformeGestion,
   FilaDificultad,
@@ -39,7 +40,7 @@ export function InformeGestionPage() {
 
   const estadoEntrega = estadoData?.entrega?.estado ?? null
   const esModificable =
-    !estadoEntrega || estadoEntrega === 'borrador' || estadoEntrega === 'observada'
+    !estadoEntrega || estadoEntrega === 'borrador'
 
   // Estado de cabecera (Sección I) y de las cuatro tablas de filas.
   const [nivel, setNivel] = useState<NivelOrganizacional | null>(null)
@@ -162,7 +163,6 @@ export function InformeGestionPage() {
       esModificable={esModificable}
       acciones={acciones}
       anexoObservable="gestion"
-      observableId={informe?.id}
     >
       {cargando ? (
         <CargaBloque texto="Cargando Informe de Gestión (Anexo 02)…" />
@@ -330,7 +330,7 @@ export function InformeGestionPage() {
           <SeccionFilas<FilaPendiente>
             numero={4}
             titulo="Agenda pendiente y asuntos que requieren atención"
-            descripcion="Asuntos en trámite, estado y acción requerida, documento de referencia, plazo y responsable (opcional)."
+            descripcion="Asuntos en trámite, estado y acción requerida, documento de referencia, plazo y responsable (opcional). Los documentos pendientes del SGD se agregan solos."
             hint="Lo que el sucesor debe atender de inmediato: trámites abiertos, plazos por vencer y expedientes en curso."
             colorNumero="bg-blue-600 text-white"
             columnas={[
@@ -351,6 +351,11 @@ export function InformeGestionPage() {
             onChange={setPendientes}
             disabled={!esModificable || guardarMut.isPending}
             etiquetaAgregar="Agregar asunto"
+          />
+
+          <PendientesDocumentalesTabla
+            filas={informe?.agenda_documental ?? []}
+            congeladosEn={informe?.pendientes_congelados_en ?? null}
           />
 
           {/* Barra de acciones inferior */}

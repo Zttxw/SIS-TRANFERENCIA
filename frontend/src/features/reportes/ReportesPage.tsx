@@ -1,3 +1,4 @@
+import { estaEnFirma, fueRemitida } from '@/types/transferencia'
 import { useMemo, useState } from 'react'
 import {
   AlertCircle,
@@ -6,7 +7,6 @@ import {
   Boxes,
   Building2,
   Check,
-  CheckCircle2,
   Clock,
   Filter,
   Layers,
@@ -43,26 +43,29 @@ import {
   useConciliacionPatrimonial,
   useMatrizAnexos,
   useObservacionesReporte,
+  useVerificacionReporte,
 } from './use-reportes'
 import type {
   ClaveReporte,
   FilaConciliacion,
   FilaMatriz,
   FilaObservacion,
+  FilaVerificacion,
 } from '@/types/reportes'
 
 const TABS: { clave: ClaveReporte; etiqueta: string; icono: typeof BarChart3 }[] = [
   { clave: 'matriz-anexos', etiqueta: 'Matriz de anexos', icono: BarChart3 },
   { clave: 'conciliacion-patrimonial', etiqueta: 'Conciliación patrimonial', icono: Boxes },
   { clave: 'observaciones', etiqueta: 'Observaciones', icono: MessageSquareWarning },
+  { clave: 'verificacion', etiqueta: 'Verificación por CC', icono: ShieldCheck },
 ]
 
 /* Paleta institucional (MDSJ) */
 const PALETA = {
   primario: '#003366',
-  consolidada: '#16a34a',
-  remitida: '#2563eb',
-  observada: '#d97706',
+  remitida: '#16a34a',
+  verificada: '#2563eb',
+  en_revision: '#d97706',
   borrador: '#64748b',
   patrimonio: '#0d9488',
   peligro: '#dc2626',
@@ -85,25 +88,29 @@ function Presencia({ ok }: { ok: boolean }) {
 /** Chip visual para estado de entrega */
 function BadgeEstado({ estado }: { estado: string }) {
   switch (estado) {
-    case 'consolidada':
+    case 'remitida':
+    case 'recibida_etts':
+    case 'remitida_ette':
+    case 'recibida_ette':
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-microdato font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-          Consolidada
-        </span>
-      )
-    case 'remitida':
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-microdato font-semibold bg-blue-100 text-blue-800 border border-blue-200">
-          <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
           Remitida
         </span>
       )
-    case 'observada':
+    case 'verificada':
+    case 'acta_suscrita':
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-microdato font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+          Aceptada
+        </span>
+      )
+    case 'en_revision':
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-microdato font-semibold bg-amber-100 text-amber-800 border border-amber-200">
           <span className="h-1.5 w-1.5 rounded-full bg-amber-600" />
-          Observada
+          Por revisar
         </span>
       )
     default:
@@ -173,15 +180,15 @@ function MatrizView() {
     ]
 
     // 2. Donut de estados
-    const consolidadas = metricas?.consolidadas ?? 0
     const remitidas = metricas?.remitidas ?? 0
-    const observadas = metricas?.observadas ?? 0
+    const aceptadas = metricas?.verificadas ?? 0
+    const porRevisar = metricas?.en_revision ?? 0
     const borrador = metricas?.borrador ?? 0
 
     const datosDonutEstados = [
-      { name: 'Consolidadas', value: consolidadas, fill: PALETA.consolidada },
       { name: 'Remitidas', value: remitidas, fill: PALETA.remitida },
-      { name: 'Observadas', value: observadas, fill: PALETA.observada },
+      { name: 'Aceptadas (a firma)', value: aceptadas, fill: PALETA.verificada },
+      { name: 'Por revisar', value: porRevisar, fill: PALETA.en_revision },
       { name: 'En Preparación', value: borrador, fill: PALETA.borrador },
     ]
 
@@ -190,16 +197,16 @@ function MatrizView() {
     const datosNivel = niveles.map((nivel) => {
       const depsNivel = filas.filter((f) => f.nivel === nivel)
       const nTotal = depsNivel.length
-      const nCons = depsNivel.filter((f) => f.estado_entrega === 'consolidada').length
-      const nRem = depsNivel.filter((f) => f.estado_entrega === 'remitida').length
-      const nObs = depsNivel.filter((f) => f.estado_entrega === 'observada').length
+      const nCons = depsNivel.filter((f) => fueRemitida(f.estado_entrega)).length
+      const nRem = depsNivel.filter((f) => estaEnFirma(f.estado_entrega)).length
+      const nObs = depsNivel.filter((f) => f.estado_entrega === 'en_revision').length
       const nBorr = depsNivel.filter((f) => f.estado_entrega === 'borrador').length
       return {
         nivel: `Nivel ${nivel}`,
         total: nTotal,
-        consolidadas: nCons,
-        remitidas: nRem,
-        observadas: nObs,
+        remitidas: nCons,
+        aceptadas: nRem,
+        porRevisar: nObs,
         borrador: nBorr,
         pctAvance: nTotal > 0 ? Math.round((nCons / nTotal) * 100) : 0,
       }
@@ -215,7 +222,10 @@ function MatrizView() {
         (f.encargado && f.encargado.toLowerCase().includes(texto))
 
       const matchEstado =
-        filtroEstado === 'todos' || f.estado_entrega === filtroEstado
+        filtroEstado === 'todos' ||
+        f.estado_entrega === filtroEstado ||
+        (filtroEstado === 'verificada' && estaEnFirma(f.estado_entrega)) ||
+        (filtroEstado === 'remitida' && fueRemitida(f.estado_entrega))
 
       let matchFaltante = true
       if (filtroFaltante === 'sin_a02') matchFaltante = !f.anexo_02
@@ -223,7 +233,7 @@ function MatrizView() {
       if (filtroFaltante === 'sin_a04') matchFaltante = !f.anexo_04
       if (filtroFaltante === 'sin_a05') matchFaltante = !f.anexo_05
       if (filtroFaltante === 'sin_a06') matchFaltante = !f.anexo_06
-      if (filtroFaltante === 'con_obs') matchFaltante = f.observaciones_abiertas > 0
+      if (filtroFaltante === 'con_obs') matchFaltante = f.observaciones > 0
 
       return matchTexto && matchEstado && matchFaltante
     })
@@ -302,10 +312,10 @@ function MatrizView() {
       header: 'Obs.',
       align: 'center',
       cell: (f) =>
-        f.observaciones_abiertas > 0 ? (
+        f.observaciones > 0 ? (
           <span className="inline-flex items-center gap-0.5 font-mono font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded text-microdato">
             <AlertCircle className="h-3 w-3" />
-            {f.observaciones_abiertas}
+            {f.observaciones}
           </span>
         ) : (
           <span className="text-muted-foreground font-mono text-microdato">0</span>
@@ -360,17 +370,17 @@ function MatrizView() {
           <Card className="border shadow-xs bg-card">
             <CardContent className="p-3">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-microdato font-bold uppercase tracking-wider">Consolidadas</span>
+                <span className="text-microdato font-bold uppercase tracking-wider">Remitidas</span>
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
               </div>
               <div className="mt-1 text-2xl font-extrabold text-emerald-600 font-mono">
-                {metricas.consolidadas}
+                {metricas.remitidas}
               </div>
               <div className="w-full bg-slate-100 h-1.5 rounded-full mt-1 overflow-hidden">
                 <div
                   className="bg-emerald-600 h-full rounded-full"
                   style={{
-                    width: `${metricas.total_dependencias ? (metricas.consolidadas / metricas.total_dependencias) * 100 : 0}%`,
+                    width: `${metricas.total_dependencias ? (metricas.remitidas / metricas.total_dependencias) * 100 : 0}%`,
                   }}
                 />
               </div>
@@ -380,11 +390,11 @@ function MatrizView() {
           <Card className="border shadow-xs bg-card">
             <CardContent className="p-3">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-microdato font-bold uppercase tracking-wider">Remitidas</span>
+                <span className="text-microdato font-bold uppercase tracking-wider">Aceptadas (a firma)</span>
                 <Clock className="h-3.5 w-3.5 text-blue-600" />
               </div>
               <div className="mt-1 text-2xl font-extrabold text-blue-600 font-mono">
-                {metricas.remitidas}
+                {metricas.verificadas}
               </div>
               <p className="text-microdato text-blue-700 font-medium mt-0.5">En revisión</p>
             </CardContent>
@@ -393,11 +403,11 @@ function MatrizView() {
           <Card className="border shadow-xs bg-card">
             <CardContent className="p-3">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-microdato font-bold uppercase tracking-wider">Observadas</span>
+                <span className="text-microdato font-bold uppercase tracking-wider">Por revisar</span>
                 <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
               </div>
               <div className="mt-1 text-2xl font-extrabold text-amber-600 font-mono">
-                {metricas.observadas}
+                {metricas.en_revision}
               </div>
               <p className="text-microdato text-amber-700 font-medium mt-0.5">Con observaciones</p>
             </CardContent>
@@ -477,7 +487,7 @@ function MatrizView() {
                   <Bar
                     dataKey="completados"
                     name="Completados (Sí)"
-                    fill={PALETA.consolidada}
+                    fill={PALETA.remitida}
                     radius={[4, 4, 0, 0]}
                     barSize={28}
                   />
@@ -556,7 +566,7 @@ function MatrizView() {
               </div>
             </div>
             <div className="w-full pt-2 border-t border-border text-center text-microdato text-muted-foreground">
-              {metricas?.consolidadas ?? 0} de {metricas?.total_dependencias ?? 0} entregas consolidadas
+              {metricas?.remitidas ?? 0} de {metricas?.total_dependencias ?? 0} entregas remitidas
             </div>
           </CardContent>
         </Card>
@@ -606,14 +616,6 @@ function MatrizView() {
                   />
                   <Bar
                     yAxisId="left"
-                    dataKey="consolidadas"
-                    name="Consolidadas"
-                    fill={PALETA.consolidada}
-                    radius={[3, 3, 0, 0]}
-                    barSize={20}
-                  />
-                  <Bar
-                    yAxisId="left"
                     dataKey="remitidas"
                     name="Remitidas"
                     fill={PALETA.remitida}
@@ -622,9 +624,17 @@ function MatrizView() {
                   />
                   <Bar
                     yAxisId="left"
-                    dataKey="observadas"
-                    name="Observadas"
-                    fill={PALETA.observada}
+                    dataKey="aceptadas"
+                    name="Aceptadas (a firma)"
+                    fill={PALETA.verificada}
+                    radius={[3, 3, 0, 0]}
+                    barSize={20}
+                  />
+                  <Bar
+                    yAxisId="left"
+                    dataKey="porRevisar"
+                    name="Por revisar"
+                    fill={PALETA.en_revision}
                     radius={[3, 3, 0, 0]}
                     barSize={20}
                   />
@@ -686,42 +696,42 @@ function MatrizView() {
             </button>
             <button
               type="button"
-              onClick={() => setFiltroEstado('consolidada')}
+              onClick={() => setFiltroEstado('remitida')}
               className={cn(
                 'px-2.5 py-1 rounded-lg text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5',
-                filtroEstado === 'consolidada'
+                filtroEstado === 'remitida'
                   ? 'bg-emerald-600 text-white font-semibold'
                   : 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100',
               )}
             >
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-              Consolidadas ({metricas?.consolidadas ?? 0})
+              Remitidas ({metricas?.remitidas ?? 0})
             </button>
             <button
               type="button"
-              onClick={() => setFiltroEstado('remitida')}
+              onClick={() => setFiltroEstado('verificada')}
               className={cn(
                 'px-2.5 py-1 rounded-lg text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5',
-                filtroEstado === 'remitida'
+                filtroEstado === 'verificada'
                   ? 'bg-blue-600 text-white font-semibold'
                   : 'bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100',
               )}
             >
               <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
-              Remitidas ({metricas?.remitidas ?? 0})
+              Aceptadas (a firma) ({metricas?.verificadas ?? 0})
             </button>
             <button
               type="button"
-              onClick={() => setFiltroEstado('observada')}
+              onClick={() => setFiltroEstado('en_revision')}
               className={cn(
                 'px-2.5 py-1 rounded-lg text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5',
-                filtroEstado === 'observada'
+                filtroEstado === 'en_revision'
                   ? 'bg-amber-600 text-white font-semibold'
                   : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100',
               )}
             >
               <span className="h-1.5 w-1.5 rounded-full bg-amber-600" />
-              Observadas ({metricas?.observadas ?? 0})
+              Por revisar ({metricas?.en_revision ?? 0})
             </button>
             <button
               type="button"
@@ -819,7 +829,7 @@ function ConciliacionView() {
     const sinIniciar = filas.filter((f) => f.porcentaje === 0).length
 
     const datosDonutPatr = [
-      { name: '100% Verificado', value: completas, fill: PALETA.consolidada },
+      { name: '100% Verificado', value: completas, fill: PALETA.remitida },
       { name: 'En Proceso (1-99%)', value: enProceso, fill: PALETA.patrimonio },
       { name: 'Sin Iniciar (0%)', value: sinIniciar, fill: '#f87171' },
     ]
@@ -1031,7 +1041,7 @@ function ConciliacionView() {
                   <Bar
                     dataKey="confirmados"
                     name="Verificados"
-                    fill={PALETA.consolidada}
+                    fill={PALETA.remitida}
                     stackId="a"
                     radius={[0, 0, 0, 0]}
                   />
@@ -1151,340 +1161,193 @@ function ConciliacionView() {
 }
 
 /* =========================================================================
-   VISTA 3: OBSERVACIONES (ANÁLISIS DE INCIDENCIAS CON GRÁFICOS)
+   VISTA 3: OBSERVACIONES DEL COORDINADOR ETTE (CONSTANCIA, SIN SUBSANACIÓN)
    ========================================================================= */
 function ObservacionesView() {
   const { data, isLoading, error, refetch } = useObservacionesReporte()
   const [busqueda, setBusqueda] = useState('')
-  const [filtroEstado, setFiltroEstado] = useState<string>('todos')
 
-  const r = data?.resumen
   const filas = data?.filas ?? []
-
-  // Análisis gráfico de observaciones
-  const { datosPorAnexo, datosPorEstado, filasFiltradas } = useMemo(() => {
-    // 1. Observaciones por Anexo
-    const anexosMap: Record<string, number> = {}
-    filas.forEach((f) => {
-      const nom = f.anexo || 'General'
-      anexosMap[nom] = (anexosMap[nom] || 0) + 1
-    })
-    const datosPorAnexo = Object.entries(anexosMap).map(([anexo, cant]) => ({
-      anexo,
-      cantidad: cant,
-    }))
-
-    // 2. Observaciones por Estado
-    const datosPorEstado = [
-      { name: 'Abiertas', value: r?.abiertas ?? 0, fill: '#dc2626' },
-      { name: 'En Subsanación', value: r?.en_subsanacion ?? 0, fill: '#2563eb' },
-      { name: 'Subsanadas', value: r?.subsanadas ?? 0, fill: '#16a34a' },
-      { name: 'Desestimadas', value: r?.desestimadas ?? 0, fill: '#64748b' },
-    ]
-
-    // 3. Filtrado
-    const texto = busqueda.toLowerCase().trim()
-    const filtradas = filas.filter((f) => {
-      const matchTexto =
-        texto === '' ||
-        f.codigo.toLowerCase().includes(texto) ||
-        f.nombre.toLowerCase().includes(texto) ||
-        f.descripcion.toLowerCase().includes(texto)
-
-      const matchEstado =
-        filtroEstado === 'todos' || f.estado === filtroEstado
-
-      return matchTexto && matchEstado
-    })
-
-    return {
-      datosPorAnexo,
-      datosPorEstado,
-      filasFiltradas: filtradas,
-    }
-  }, [filas, r, busqueda, filtroEstado])
+  const texto = busqueda.toLowerCase().trim()
+  const filtradas = texto === ''
+    ? filas
+    : filas.filter((f) =>
+        [f.codigo, f.nombre, f.descripcion, f.anexo, f.autor ?? ''].some((v) => v.toLowerCase().includes(texto)),
+      )
 
   const columnas: ColumnaTabla<FilaObservacion>[] = [
     {
       id: 'codigo',
       header: 'Código',
-      cell: (f) => (
-        <span className="font-mono font-bold text-primary text-nota whitespace-nowrap">
-          [{f.codigo}]
-        </span>
-      ),
+      cell: (f) => <span className="whitespace-nowrap font-mono text-nota font-bold text-primary">[{f.codigo}]</span>,
     },
     {
       id: 'nombre',
       header: 'Centro de costo',
-      cell: (f) => (
-        <span className="font-medium text-foreground uppercase text-nota">
-          {f.nombre}
-        </span>
-      ),
+      cell: (f) => <span className="text-nota font-medium uppercase text-foreground">{f.nombre}</span>,
     },
     {
       id: 'anexo',
       header: 'Anexo',
-      cell: (f) => (
-        <Badge variant="outline" className="text-microdato font-mono">
-          {f.anexo}
-        </Badge>
-      ),
+      cell: (f) => <Badge variant="outline" className="text-microdato">{f.anexo}</Badge>,
     },
     {
       id: 'descripcion',
-      header: 'Observación formulada',
-      cell: (f) => (
-        <div className="max-w-[340px]">
-          <p className="line-clamp-2 text-nota text-foreground">{f.descripcion}</p>
-          {f.autor && (
-            <p className="text-microdato text-muted-foreground mt-0.5">Por: {f.autor}</p>
-          )}
-        </div>
-      ),
+      header: 'Observación',
+      cell: (f) => <p className="max-w-[420px] whitespace-pre-wrap text-nota text-foreground">{f.descripcion}</p>,
     },
     {
-      id: 'estado',
-      header: 'Estado',
+      id: 'autor',
+      header: 'Registró',
       cell: (f) => (
-        <span
-          className={`inline-flex items-center px-2 py-0.5 rounded-full text-microdato font-semibold ${
-            f.estado === 'abierta'
-              ? 'bg-rose-100 text-rose-800'
-              : f.estado === 'en_subsanacion'
-              ? 'bg-blue-100 text-blue-800'
-              : f.estado === 'subsanada'
-              ? 'bg-emerald-100 text-emerald-800'
-              : 'bg-slate-100 text-slate-700'
-          }`}
-        >
-          {f.estado_etiqueta}
+        <span className="text-microdato text-muted-foreground">
+          {f.autor ?? '—'}
+          {f.en_calidad_de ? <span className="block">{f.en_calidad_de}</span> : null}
         </span>
       ),
     },
     {
       id: 'registrada',
-      header: 'Registrada',
-      cell: (f) => (
-        <span className="text-microdato text-muted-foreground whitespace-nowrap font-mono">
-          {f.registrada_en ?? '—'}
-        </span>
-      ),
-    },
-    {
-      id: 'dias',
-      header: 'Días límite',
-      align: 'right',
-      cell: (f) => (
-        <span className="font-mono text-nota font-bold text-foreground">
-          {f.dias_subsanacion ?? '—'} d
-        </span>
-      ),
+      header: 'Fecha',
+      cell: (f) => <span className="whitespace-nowrap font-mono text-microdato text-muted-foreground">{f.registrada_en ?? '—'}</span>,
     },
   ]
 
   return (
-    <div className="space-y-6">
-      {/* KPIS OBSERVACIONES */}
-      {r && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-          <Card className="border shadow-xs bg-card">
-            <CardContent className="p-3.5">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-microdato font-bold uppercase tracking-wider">Abiertas</span>
-                <AlertCircle className="h-4 w-4 text-rose-600" />
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-rose-600 font-mono">
-                {r.abiertas}
-              </div>
-              <p className="text-microdato text-rose-700 font-medium mt-0.5">
-                Requieren subsanación
-              </p>
-            </CardContent>
-          </Card>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-muted-foreground">
+          {data
+            ? `${data.resumen.observaciones} observaciones en ${data.resumen.centros_costo} centros de costo. Son constancia de la revisión del coordinador ETTE: no requieren subsanación.`
+            : 'Observaciones registradas por los coordinadores ETTE.'}
+        </p>
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por CC, anexo o texto…"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="h-8 pl-8 text-xs"
+          />
+        </div>
+      </div>
+      <DataTable
+        columnas={columnas}
+        filas={filtradas}
+        rowKey={(f) => `${f.dependencia_id}-${f.registrada_en}-${f.descripcion.slice(0, 20)}`}
+        loading={isLoading}
+        error={error}
+        onReintentar={() => refetch()}
+        vacio={{ titulo: 'Sin observaciones', descripcion: 'Los coordinadores ETTE no registraron observaciones en este ámbito.' }}
+      />
+    </div>
+  )
+}
 
-          <Card className="border shadow-xs bg-card">
-            <CardContent className="p-3.5">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-microdato font-bold uppercase tracking-wider">En Subsanación</span>
-                <Clock className="h-4 w-4 text-blue-600" />
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-blue-600 font-mono">
-                {r.en_subsanacion}
-              </div>
-              <p className="text-microdato text-blue-700 font-medium mt-0.5">
-                En plazo de descargo
-              </p>
-            </CardContent>
-          </Card>
+/* =========================================================================
+   VISTA 4: RESULTADO DE LA VERIFICACIÓN POR CC (RF-55, COMITÉ ETTE)
+   ========================================================================= */
+function VerificacionView() {
+  const { data, isLoading, error, refetch } = useVerificacionReporte()
+  const [busqueda, setBusqueda] = useState('')
 
-          <Card className="border shadow-xs bg-card">
-            <CardContent className="p-3.5">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-microdato font-bold uppercase tracking-wider">Subsanadas</span>
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-emerald-600 font-mono">
-                {r.subsanadas}
-              </div>
-              <p className="text-microdato text-emerald-700 font-medium mt-0.5">
-                Conformes por el revisor
-              </p>
-            </CardContent>
-          </Card>
+  const filas = data?.filas ?? []
+  const texto = busqueda.toLowerCase().trim()
+  const filtradas = texto === ''
+    ? filas
+    : filas.filter((f) => [f.codigo, f.nombre, f.estado_etiqueta].some((v) => v.toLowerCase().includes(texto)))
 
-          <Card className="border shadow-xs bg-card">
-            <CardContent className="p-3.5">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-microdato font-bold uppercase tracking-wider">Desestimadas</span>
-                <Minus className="h-4 w-4 text-slate-500" />
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-slate-600 font-mono">
-                {r.desestimadas}
-              </div>
-              <p className="text-microdato text-slate-500 font-medium mt-0.5">
-                Cerradas sin efecto
-              </p>
-            </CardContent>
-          </Card>
+  const resumen = data?.resumen
+  const tarjetas = resumen
+    ? [
+        { etiqueta: 'Centros de costo', valor: resumen.centros_costo },
+        { etiqueta: 'Sin presentar', valor: resumen.sin_presentar },
+        { etiqueta: 'Por revisar', valor: resumen.en_revision },
+        { etiqueta: 'Aceptadas', valor: resumen.aceptadas },
+      ]
+    : []
+
+  const columnas: ColumnaTabla<FilaVerificacion>[] = [
+    {
+      id: 'codigo',
+      header: 'Código',
+      cell: (f) => <span className="whitespace-nowrap font-mono text-nota font-bold text-primary">[{f.codigo}]</span>,
+    },
+    {
+      id: 'nombre',
+      header: 'Centro de costo',
+      cell: (f) => <span className="text-nota font-medium uppercase text-foreground">{f.nombre}</span>,
+    },
+    { id: 'estado', header: 'Estado', cell: (f) => <BadgeEstado estado={f.estado_entrega} /> },
+    {
+      id: 'faltantes',
+      header: 'Anexos sin registros',
+      cell: (f) => <span className="text-nota">{f.anexos_faltantes.length ? f.anexos_faltantes.join(', ') : '—'}</span>,
+    },
+    {
+      id: 'bienes',
+      header: 'Bienes sin conformidad',
+      align: 'right',
+      cell: (f) => <span className="font-mono text-nota">{f.bienes_sin_conformidad}</span>,
+    },
+    {
+      id: 'observaciones',
+      header: 'Obs.',
+      align: 'right',
+      cell: (f) => <span className="font-mono text-nota">{f.observaciones}</span>,
+    },
+    {
+      id: 'aceptacion',
+      header: 'Aceptación y constancia',
+      cell: (f) =>
+        f.verificada_en ? (
+          <div className="max-w-[360px] text-microdato">
+            <p className="font-medium text-foreground">
+              {f.verificada_en} · {f.verificada_por}
+              {f.en_calidad_de ? ` (${f.en_calidad_de})` : ''}
+            </p>
+            {f.resultado_verificacion && <p className="mt-0.5 line-clamp-3 text-muted-foreground">{f.resultado_verificacion}</p>}
+          </div>
+        ) : (
+          <span className="text-microdato text-muted-foreground">Pendiente</span>
+        ),
+    },
+  ]
+
+  return (
+    <div className="space-y-4">
+      {tarjetas.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {tarjetas.map((t) => (
+            <Card key={t.etiqueta} className="border shadow-xs">
+              <CardContent className="p-4">
+                <p className="text-microdato font-bold uppercase tracking-wider text-muted-foreground">{t.etiqueta}</p>
+                <p className="mt-1 font-mono text-2xl font-extrabold text-foreground">{t.valor}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
-
-      {/* GRÁFICOS OBSERVACIONES */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        <Card className="lg:col-span-8 border shadow-xs">
-          <CardHeader className="py-2.5 px-4 border-b border-border bg-muted">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-              <BarChart3 className="h-4 w-4 text-primary" />
-              <span>Observaciones Agrupadas por Tipo de Anexo</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4">
-            <div className="h-[220px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={datosPorAnexo}
-                  margin={{ top: 10, right: 15, left: -15, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="anexo" tick={{ fontSize: 11 }} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11 }} tickLine={false} allowDecimals={false} />
-                  <Tooltip
-                    contentStyle={{
-                      fontSize: '12px',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                    }}
-                  />
-                  <Bar
-                    dataKey="cantidad"
-                    name="Observaciones"
-                    fill="#d97706"
-                    radius={[4, 4, 0, 0]}
-                    barSize={32}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-4 border shadow-xs">
-          <CardHeader className="py-2.5 px-4 border-b border-border bg-muted">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-              <AlertCircle className="h-4 w-4 text-primary" />
-              <span>Estado de Observaciones</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 flex flex-col items-center">
-            <div className="relative w-full h-[180px] flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={datosPorEstado}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={45}
-                    outerRadius={70}
-                    paddingAngle={3}
-                    dataKey="value"
-                    strokeWidth={1}
-                  >
-                    {datosPorEstado.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(val: unknown, name: unknown) => [
-                      `${val ?? 0} obs.`,
-                      String(name ?? ''),
-                    ]}
-                  />
-                  <Legend
-                    verticalAlign="bottom"
-                    height={36}
-                    iconType="circle"
-                    iconSize={8}
-                    wrapperStyle={{ fontSize: '11px' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* TABLA Y BUSCADOR */}
-      <Card className="border shadow-xs overflow-hidden">
-        <CardHeader className="p-4 border-b border-border bg-muted space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-              <MessageSquareWarning className="h-4 w-4 text-amber-600" />
-              <span>Relación Oficial de Observaciones ({filasFiltradas.length})</span>
-            </CardTitle>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-2 pt-1">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por código, dependencia o texto de observación..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                className="pl-8 text-xs h-8 bg-background"
-              />
-            </div>
-            <div className="flex items-center gap-1.5">
-              <select
-                value={filtroEstado}
-                onChange={(e) => setFiltroEstado(e.target.value)}
-                className="h-8 rounded-lg border border-input bg-background px-2.5 text-xs focus:ring-1 focus:ring-primary"
-              >
-                <option value="todos">Todos los estados</option>
-                <option value="abierta">Abiertas</option>
-                <option value="en_subsanacion">En subsanación</option>
-                <option value="subsanada">Subsanadas</option>
-                <option value="desestimada">Desestimadas</option>
-              </select>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <DataTable<FilaObservacion & { __k: number }>
-            columnas={columnas}
-            filas={filasFiltradas.map((f, i) => ({ ...f, __k: i }))}
-            rowKey={(f) => `${f.dependencia_id}-${f.__k}`}
-            loading={isLoading}
-            error={error}
-            onReintentar={() => refetch()}
-            vacio={{
-              titulo: 'Sin observaciones registradas',
-              descripcion: 'No hay observaciones que coincidan con los filtros aplicados.',
-            }}
+      <div className="flex justify-end">
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Buscar centro de costo…"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="h-8 pl-8 text-xs"
           />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+      <DataTable
+        columnas={columnas}
+        filas={filtradas}
+        rowKey={(f) => f.dependencia_id}
+        loading={isLoading}
+        error={error}
+        onReintentar={() => refetch()}
+        vacio={{ titulo: 'Sin centros de costo', descripcion: 'No hay centros de costo en su ámbito.' }}
+      />
     </div>
   )
 }
@@ -1515,7 +1378,7 @@ export function ReportesPage() {
             Consolidados de la Transferencia
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Matriz de anexos, conciliación patrimonial y observaciones con analítica institucional.
+            Matriz de anexos, conciliación patrimonial, observaciones del coordinador y verificación por centro de costo.
           </p>
         </div>
         <BotonesExport reporte={tab} />
@@ -1545,6 +1408,7 @@ export function ReportesPage() {
       {tab === 'matriz-anexos' && <MatrizView />}
       {tab === 'conciliacion-patrimonial' && <ConciliacionView />}
       {tab === 'observaciones' && <ObservacionesView />}
+      {tab === 'verificacion' && <VerificacionView />}
     </div>
   )
 }

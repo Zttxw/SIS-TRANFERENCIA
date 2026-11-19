@@ -1,6 +1,6 @@
 /**
  * Servicio del Dashboard de Estado de la Entrega (plan E3).
- * Consume /transferencia/estado y llamadas de workflow (remitir / revisar).
+ * Consume /transferencia/estado y la remisión de la entrega.
  */
 
 import { api } from '@/lib/api'
@@ -9,7 +9,6 @@ import type {
   EstadoEntregaResponse,
   RemitirEntregaPayload,
   ResumenDocumentosResponse,
-  RevisarEntregaPayload,
   TableroOperativoData,
 } from '@/types/transferencia'
 
@@ -44,11 +43,5 @@ export async function remitirEntrega(
   payload: RemitirEntregaPayload,
 ): Promise<void> {
   await api.post('/transferencia/remitir', payload)
-}
-
-export async function revisarEntrega(
-  payload: RevisarEntregaPayload,
-): Promise<void> {
-  await api.post('/transferencia/revisar', payload)
 }
 

@@ -60,7 +60,7 @@ export function AcervoPage() {
 
   const estadoEntrega = estadoData?.entrega?.estado ?? null
   const esModificable =
-    !estadoEntrega || estadoEntrega === 'borrador' || estadoEntrega === 'observada'
+    !estadoEntrega || estadoEntrega === 'borrador'
 
   const series = paginado?.data ?? []
 

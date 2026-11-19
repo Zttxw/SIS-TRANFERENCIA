@@ -24,7 +24,7 @@ use Tests\TestCase;
 
 /**
  * PDF oficiales de los anexos 03–06 y del acta 07 (F5). Verifica que cada
- * endpoint produce un PDF y que el acta respeta el gate de CONSOLIDADA.
+ * endpoint produce un PDF y que el acta se obtiene antes de remitir.
  */
 class AnexosPdfTest extends TestCase
 {
@@ -138,8 +138,7 @@ class AnexosPdfTest extends TestCase
 
     public function test_pdf_acta_disponible_antes_de_remitir(): void
     {
-        // B3/D-06: el acta se emite antes de remitir, por lo que su PDF se
-        // obtiene desde la suscripción de la hija (antes exigía CONSOLIDADA/409).
+        // El acta se emite antes de remitir: su PDF se obtiene en cualquier estado.
         $this->actuar(Rol::RESPONSABLE_CENTRO_COSTO);
 
         Entrega::create([
@@ -147,20 +146,6 @@ class AnexosPdfTest extends TestCase
             'dependencia_id' => $this->dep->id,
             'dependencia_destino_id' => $this->dep->parent_id,
             'estado' => EstadoEntrega::REMITIDA,
-        ]);
-
-        $this->assertEsPdf($this->get("/api/transferencia/acta/pdf?dependencia_id={$this->dep->id}"));
-    }
-
-    public function test_pdf_acta_consolidada_produce_pdf(): void
-    {
-        $this->actuar(Rol::RESPONSABLE_CENTRO_COSTO);
-
-        Entrega::create([
-            'proceso_transferencia_id' => $this->proceso->id,
-            'dependencia_id' => $this->dep->id,
-            'dependencia_destino_id' => $this->dep->parent_id,
-            'estado' => EstadoEntrega::CONSOLIDADA,
         ]);
 
         $this->assertEsPdf($this->get("/api/transferencia/acta/pdf?dependencia_id={$this->dep->id}"));

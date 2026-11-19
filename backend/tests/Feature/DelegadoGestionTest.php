@@ -78,9 +78,9 @@ class DelegadoGestionTest extends TestCase
             ->where('rol', Rol::DELEGADO_ETTE->value)->count());
     }
 
-    public function test_el_comite_revoca_una_designacion(): void
+    public function test_el_comite_revoca_una_designacion_y_la_conserva_como_historial(): void
     {
-        $this->actuarComo(Rol::ETTE);
+        $comite = $this->actuarComo(Rol::ETTE);
         $candidato = User::factory()->create();
         $asignacion = AsignacionRol::factory()->rol(Rol::DELEGADO_ETTE)->create([
             'user_id' => $candidato->id,
@@ -90,7 +90,9 @@ class DelegadoGestionTest extends TestCase
 
         $this->deleteJson("/api/delegados/{$asignacion->id}")->assertOk();
 
-        $this->assertDatabaseMissing('asignaciones_rol', ['id' => $asignacion->id]);
+        $this->assertDatabaseHas('asignaciones_rol', ['id' => $asignacion->id, 'revocada_por_id' => $comite->id]);
+        $this->assertFalse($candidato->fresh()->tieneRol(Rol::DELEGADO_ETTE));
+        $this->getJson('/api/delegados/historial')->assertOk()->assertJsonPath('data.0.id', $asignacion->id);
     }
 
     public function test_revocar_no_elimina_otros_roles_del_usuario(): void
@@ -116,8 +118,8 @@ class DelegadoGestionTest extends TestCase
 
         // Revocar el delegado sí; el rol servidor permanece intacto.
         $this->deleteJson("/api/delegados/{$rolDelegado->id}")->assertOk();
-        $this->assertDatabaseHas('asignaciones_rol', ['id' => $rolServidor->id]);
-        $this->assertDatabaseMissing('asignaciones_rol', ['id' => $rolDelegado->id]);
+        $this->assertTrue($usuario->fresh()->tieneRol(Rol::SERVIDOR));
+        $this->assertFalse($usuario->fresh()->tieneRol(Rol::DELEGADO_ETTE));
     }
 
     public function test_un_delegado_no_puede_gestionar_delegados(): void

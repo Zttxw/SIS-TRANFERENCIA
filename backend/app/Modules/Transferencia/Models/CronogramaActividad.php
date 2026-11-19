@@ -6,7 +6,9 @@ namespace App\Modules\Transferencia\Models;
 
 use App\Modules\Organization\Models\Dependencia;
 use App\Support\Concerns\Auditable;
+use App\Support\Enums\AccionPlazo;
 use App\Support\Enums\EstadoActividadCronograma;
+use App\Support\Enums\OperacionCronograma;
 use App\Support\Models\BaseModel;
 use Database\Factories\CronogramaActividadFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,12 +18,17 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
- * Actividad/etapa del cronograma del proceso (RF-007, C-03). Su vencimiento
- * bloquea la operación indicada (C2). El estado administrativo (pendiente/en
+ * Actividad/etapa del cronograma del proceso (RF-007, RF-20). Su vencimiento
+ * bloquea las acciones de la etapa que gobierna (`operacion`). Con plazo CGR
+ * (`fecha_cgr`), el vencimiento se calcula `dias_habiles_antes` días hábiles
+ * antes (RN-03, CronogramaService). El estado administrativo (pendiente/en
  * curso/completada) es independiente de la vigencia temporal: una actividad
  * puede estar vencida y aún no completada.
  *
  * @property EstadoActividadCronograma $estado
+ * @property OperacionCronograma $operacion
+ * @property ?Carbon $fecha_cgr
+ * @property int $dias_habiles_antes
  * @property ?Carbon $fecha_vencimiento
  */
 class CronogramaActividad extends BaseModel
@@ -51,6 +58,8 @@ class CronogramaActividad extends BaseModel
         'nombre',
         'descripcion',
         'fecha_inicio',
+        'fecha_cgr',
+        'dias_habiles_antes',
         'fecha_vencimiento',
         'hora_vencimiento',
         'estado',
@@ -67,7 +76,10 @@ class CronogramaActividad extends BaseModel
     {
         return [
             'estado' => EstadoActividadCronograma::class,
+            'operacion' => OperacionCronograma::class,
             'fecha_inicio' => 'date',
+            'fecha_cgr' => 'date',
+            'dias_habiles_antes' => 'integer',
             'fecha_vencimiento' => 'date',
             'hora_vencimiento' => 'string',
             'orden' => 'integer',
@@ -126,10 +138,23 @@ class CronogramaActividad extends BaseModel
         return $referencia->greaterThan($vencimiento);
     }
 
-    /** Actividades que gobiernan una operación dada (p. ej. 'remision'). @param Builder<static> $query */
-    public function scopeParaOperacion(Builder $query, string $operacion): Builder
+    /**
+     * Actividades cuyo vencimiento bloquea la acción.
+     *
+     * @param  Builder<static>  $query
+     */
+    public function scopeQueBloquean(Builder $query, AccionPlazo $accion): Builder
     {
-        return $query->where('operacion', $operacion);
+        return $query->whereIn('operacion', array_map(
+            fn (OperacionCronograma $operacion): string => $operacion->value,
+            OperacionCronograma::queBloquean($accion),
+        ));
+    }
+
+    /** ¿El vencimiento se calcula desde el plazo CGR? */
+    public function usaPlazoCgr(): bool
+    {
+        return $this->fecha_cgr !== null;
     }
 
     /**

@@ -15,7 +15,7 @@ class GuardarInformeGestionRequest extends AnexoFormRequest
     public function rules(): array
     {
         return [
-            'dependencia_id' => ['required', 'integer', 'exists:dependencias,id'],
+            'dependencia_id' => ['required', 'integer', 'exists:dependencias,id,es_centro_costo,1'],
             'servidor_responsable_id' => ['nullable', 'integer', 'exists:servidores,id'],
             'nivel_organizacional' => ['nullable', 'string', 'in:primer_nivel,segundo_nivel,tercer_nivel,equipo_trabajo'],
             'cargo_periodo' => ['nullable', 'string', 'max:255'],

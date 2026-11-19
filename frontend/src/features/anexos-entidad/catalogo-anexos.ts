@@ -9,22 +9,22 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-import type { DependenciaSemaforoItem, EstadoEntrega } from '@/types/transferencia'
+import { estaEnFirma, fueRemitida, type DependenciaSemaforoItem, type EstadoEntrega } from '@/types/transferencia'
 import type { TipoDocumentoFirma } from '@/features/firmaperu/firmaperu.types'
 import type { TonoCarpeta } from './CarpetaSvg'
 
-/** ¿La dependencia ya remitió su entrega? (remitida / en revisión / consolidada). */
-export function estaRemitida(estado: EstadoEntrega | 'sin_iniciar'): boolean {
-  return estado === 'remitida' || estado === 'en_revision' || estado === 'consolidada'
+/** ¿El CC ya remitió su entrega? */
+export function estaRemitida(estado: EstadoEntrega): boolean {
+  return fueRemitida(estado)
 }
 
 /**
- * Tono de la carpeta por estado de remisión: verde = remitida (o consolidada),
- * gris = aún sin remitir, ámbar = observada (devuelta para subsanar).
+ * Tono de la carpeta: verde = remitida, ámbar = presentada al coordinador (por
+ * revisar o aceptada, a firma), gris = aún en preparación.
  */
-export function tonoDeCarpeta(estado: EstadoEntrega | 'sin_iniciar'): TonoCarpeta {
-  if (estado === 'observada') return 'ambar'
-  return estaRemitida(estado) ? 'verde' : 'gris'
+export function tonoDeCarpeta(estado: EstadoEntrega): TonoCarpeta {
+  if (fueRemitida(estado)) return 'verde'
+  return estado === 'en_revision' || estaEnFirma(estado) ? 'ambar' : 'gris'
 }
 
 /** Estado visual de un "archivo" de anexo dentro de la carpeta de una dependencia. */
@@ -48,14 +48,10 @@ export interface AnexoArchivo {
  * es la navegación tipo explorador, no la captura.
  */
 export function anexosDeLaDependencia(dep: DependenciaSemaforoItem): AnexoArchivo[] {
-  const consolidada = dep.estado_entrega === 'consolidada'
-  const remitida = dep.estado_entrega === 'remitida' || consolidada
+  const presentada = dep.estado_entrega !== 'borrador'
+  const remitida = fueRemitida(dep.estado_entrega)
   const pctPat = dep.patrimonio_porcentaje ?? 0
-  const estadoRemision: EstadoAnexo = consolidada
-    ? 'listo'
-    : remitida
-      ? 'parcial'
-      : 'pendiente'
+  const estadoRemision: EstadoAnexo = remitida ? 'listo' : presentada ? 'parcial' : 'pendiente'
 
   return [
     {
@@ -121,8 +117,8 @@ export function anexosDeLaDependencia(dep: DependenciaSemaforoItem): AnexoArchiv
       nombre: 'Acta de Transferencia',
       icono: FileCheck2,
       tipoFirma: 'anexo07',
-      estado: consolidada ? 'listo' : 'pendiente',
-      detalle: consolidada ? 'Acta consolidada' : 'Pendiente de cierre',
+      estado: remitida ? 'listo' : 'pendiente',
+      detalle: remitida ? 'Acta firmada y remitida' : 'Se firma tras la aceptación del coordinador',
     },
   ]
 }

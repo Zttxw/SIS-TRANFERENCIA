@@ -120,7 +120,7 @@ class GestionUsuariosTest extends TestCase
         $cuenta = User::factory()->create();
 
         $this->postJson("/api/usuarios/{$cuenta->id}/roles", [
-            'rol' => Rol::COORDINADOR->value,
+            'rol' => Rol::DELEGADO_ETTE->value,
         ])->assertStatus(422)->assertJsonValidationErrors('dependencia_id');
     }
 

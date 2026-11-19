@@ -20,7 +20,7 @@ Artisan::command('firmaperu:validar-pendientes {--id=}', function (FirmaperuSesi
     }
     $correctos = 0;
     $fallos = 0;
-    $consulta = FirmaSesion::where('estado', 'pendiente_validacion');
+    $consulta = FirmaSesion::where('estado', 'pendiente_validacion')->where('origen', '!=', 'manual');
     if ($this->option('id')) {
         $consulta->whereKey($this->option('id'));
     }

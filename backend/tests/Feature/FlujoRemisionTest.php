@@ -9,22 +9,24 @@ use App\Modules\Auth\Models\AsignacionRol;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
-use App\Modules\Transferencia\Services\FirmaperuRegistroService;
+use App\Modules\Transferencia\Services\SuscripcionEntrega;
 use App\Support\Enums\EstadoEntrega;
 use App\Support\Enums\Rol;
 use Database\Seeders\RolesPermisosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\PreparaEntregas;
 use Tests\TestCase;
 
 /**
- * Flujo de remisión jerárquica (aclaración del usuario, plan §6, §7.8):
- * el encargado/delegado de una dependencia remite al padre; el responsable del
- * padre revisa (observa o consolida). Prueba los estados y la autorización.
+ * Remisión de la entrega del CC (plan §3.1, D-02, D-08): el responsable remite
+ * al CC padre solo lo que el coordinador ETTE verificó; el CC padre no revisa ni
+ * devuelve lo que envían sus hijos.
  */
 class FlujoRemisionTest extends TestCase
 {
-    use RefreshDatabase;
+    use PreparaEntregas, RefreshDatabase;
 
     private ProcesoTransferencia $proceso;
 
@@ -36,7 +38,7 @@ class FlujoRemisionTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesPermisosSeeder::class);
-        $this->partialMock(FirmaperuRegistroService::class, function ($mock): void {
+        $this->partialMock(SuscripcionEntrega::class, function ($mock): void {
             $mock->shouldReceive('requisitosRemision')->andReturn(['puede_remitir' => true, 'firmados' => 6, 'pendientes' => []]);
         });
         $this->proceso = ProcesoTransferencia::factory()->create();
@@ -62,17 +64,17 @@ class FlujoRemisionTest extends TestCase
 
     public function test_servidor_sin_rol_de_responsable_no_puede_remitir_su_oficina(): void
     {
+        $this->entregaEn($this->hija);
         $this->actuarComo(Rol::SERVIDOR, $this->hija);
 
-        $this->postJson('/api/transferencia/remitir', [
-            'dependencia_id' => $this->hija->id,
-        ])->assertForbidden();
+        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->hija->id])->assertForbidden();
 
-        $this->assertDatabaseMissing('entregas', ['dependencia_id' => $this->hija->id]);
+        $this->assertSame(EstadoEntrega::VERIFICADA, Entrega::where('dependencia_id', $this->hija->id)->value('estado'));
     }
 
-    public function test_encargado_remite_su_entrega_al_padre(): void
+    public function test_responsable_remite_la_entrega_verificada_al_cc_padre(): void
     {
+        $this->entregaEn($this->hija);
         $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
 
         $this->postJson('/api/transferencia/remitir', [
@@ -83,153 +85,56 @@ class FlujoRemisionTest extends TestCase
         $entrega = Entrega::where('dependencia_id', $this->hija->id)->firstOrFail();
         $this->assertSame(EstadoEntrega::REMITIDA, $entrega->estado);
         $this->assertSame($this->padre->id, $entrega->dependencia_destino_id);
+        $this->assertNotNull($entrega->remitida_en);
     }
 
-    public function test_responsable_padre_consolida_entrega_de_la_hija(): void
+    /** @return array<string, array{0: ?EstadoEntrega}> */
+    public static function estadosSinVerificar(): array
     {
-        // La hija remite.
-        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
-        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->hija->id])->assertOk();
+        return [
+            'sin entrega' => [null],
+            'borrador' => [EstadoEntrega::BORRADOR],
+            'en revisión' => [EstadoEntrega::EN_REVISION],
+            'ya remitida' => [EstadoEntrega::REMITIDA],
+        ];
+    }
 
-        // El responsable del padre (su ámbito incluye a la hija) consolida.
+    #[DataProvider('estadosSinVerificar')]
+    public function test_solo_se_remite_una_entrega_verificada(?EstadoEntrega $estado): void
+    {
+        if ($estado !== null) {
+            $this->entregaEn($this->hija, $estado);
+        }
+        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
+
+        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->hija->id])->assertConflict();
+
+        $this->assertSame($estado, Entrega::where('dependencia_id', $this->hija->id)->first()?->estado);
+    }
+
+    public function test_el_responsable_del_cc_padre_no_observa_a_sus_hijos(): void
+    {
+        $this->entregaEn($this->hija, EstadoEntrega::EN_REVISION);
         $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->padre);
-        $this->postJson('/api/transferencia/revisar', [
+
+        $this->postJson('/api/observaciones', [
+            'anexo' => 'gestion',
             'dependencia_id' => $this->hija->id,
-            'accion' => 'consolidar',
-        ])->assertOk();
-
-        $entrega = Entrega::where('dependencia_id', $this->hija->id)->firstOrFail();
-        $this->assertSame(EstadoEntrega::CONSOLIDADA, $entrega->estado);
-        $this->assertNotNull($entrega->revisada_en);
-    }
-
-    public function test_responsable_padre_observa_y_devuelve(): void
-    {
-        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
-        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->hija->id])->assertOk();
-
-        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->padre);
-        $this->postJson('/api/transferencia/revisar', [
-            'dependencia_id' => $this->hija->id,
-            'accion' => 'observar',
-            'comentario' => 'Falta el Anexo 04.',
-        ])->assertOk();
-
-        $entrega = Entrega::where('dependencia_id', $this->hija->id)->firstOrFail();
-        $this->assertSame(EstadoEntrega::OBSERVADA, $entrega->estado);
-        $this->assertTrue($entrega->esModificable());
-    }
-
-    public function test_no_puede_remitir_una_entrega_ya_consolidada(): void
-    {
-        // La hija remite y el padre consolida.
-        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
-        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->hija->id])->assertOk();
-
-        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->padre);
-        $this->postJson('/api/transferencia/revisar', [
-            'dependencia_id' => $this->hija->id,
-            'accion' => 'consolidar',
-        ])->assertOk();
-
-        // Re-remitir la entrega ya consolidada debe rechazarse (H-01, 409).
-        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
-        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->hija->id])
-            ->assertStatus(409);
-
-        $entrega = Entrega::where('dependencia_id', $this->hija->id)->firstOrFail();
-        $this->assertSame(EstadoEntrega::CONSOLIDADA, $entrega->estado);
-    }
-
-    public function test_puede_re_remitir_una_entrega_observada(): void
-    {
-        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
-        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->hija->id])->assertOk();
-
-        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->padre);
-        $this->postJson('/api/transferencia/revisar', [
-            'dependencia_id' => $this->hija->id,
-            'accion' => 'observar',
-            'comentario' => 'Falta el Anexo 04.',
-        ])->assertOk();
-
-        // Tras observar, la hija corrige y vuelve a remitir: permitido.
-        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
-        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->hija->id])
-            ->assertOk();
-
-        $entrega = Entrega::where('dependencia_id', $this->hija->id)->firstOrFail();
-        $this->assertSame(EstadoEntrega::REMITIDA, $entrega->estado);
-    }
-
-    public function test_la_emisora_no_puede_revisar_su_propia_entrega(): void
-    {
-        // La hija remite su propia entrega (destino = el padre).
-        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
-        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->hija->id])->assertOk();
-
-        // El mismo responsable de la hija intenta consolidarla: su ámbito cubre a
-        // la hija pero no al destino (el padre). H-02 ⇒ 403.
-        $this->postJson('/api/transferencia/revisar', [
-            'dependencia_id' => $this->hija->id,
-            'accion' => 'consolidar',
+            'descripcion' => 'El padre intenta devolver la entrega.',
         ])->assertForbidden();
 
-        $entrega = Entrega::where('dependencia_id', $this->hija->id)->firstOrFail();
-        $this->assertSame(EstadoEntrega::REMITIDA, $entrega->estado);
+        $this->assertSame(EstadoEntrega::EN_REVISION, Entrega::where('dependencia_id', $this->hija->id)->value('estado'));
     }
 
-    public function test_servidor_no_puede_revisar(): void
+    public function test_el_cc_padre_consulta_las_entregas_de_su_subarbol(): void
     {
-        // El rol servidor no tiene el permiso entregas.revisar.
-        $this->actuarComo(Rol::SERVIDOR, $this->hija);
-
-        $this->postJson('/api/transferencia/revisar', [
-            'dependencia_id' => $this->hija->id,
-            'accion' => 'consolidar',
-        ])->assertForbidden();
-    }
-
-    public function test_bandeja_del_padre_no_muestra_su_propia_entrega_y_marca_puede_revisar(): void
-    {
-        // La hija remite al padre.
-        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
-        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->hija->id])->assertOk();
-
-        // El padre también remite su propia entrega (destino = ETTS).
+        $this->entregaEn($this->hija, EstadoEntrega::REMITIDA);
+        $this->entregaEn($this->padre, EstadoEntrega::BORRADOR);
         $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->padre);
-        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->padre->id])->assertOk();
 
-        // Bandeja del padre: ve la de la hija (puede_revisar) pero NO la suya propia.
-        $resp = $this->getJson('/api/transferencia/entregas')->assertOk();
-        $deps = collect($resp->json('data'))->pluck('dependencia_id')->all();
-        $this->assertContains($this->hija->id, $deps);
-        $this->assertNotContains($this->padre->id, $deps);
+        $dependencias = collect($this->getJson('/api/transferencia/entregas')->assertOk()->json('data'))
+            ->pluck('dependencia_id')->all();
 
-        $entregaHija = collect($resp->json('data'))->firstWhere('dependencia_id', $this->hija->id);
-        $this->assertTrue($entregaHija['puede_revisar']);
-    }
-
-    public function test_abuelo_no_puede_dictaminar_entrega_dirigida_al_padre_intermedio(): void
-    {
-        $abuelo = Dependencia::factory()->create(['proceso_transferencia_id' => $this->proceso->id, 'nivel' => 1]);
-        $this->padre->update(['parent_id' => $abuelo->id]);
-
-        // La hija remite al padre intermedio.
-        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
-        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->hija->id])->assertOk();
-
-        // El abuelo ve la entrega de la hija en su subárbol, pero no es el receptor:
-        // no puede dictaminarla (va dirigida al padre intermedio).
-        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $abuelo);
-        $resp = $this->getJson('/api/transferencia/entregas')->assertOk();
-        $entregaHija = collect($resp->json('data'))->firstWhere('dependencia_id', $this->hija->id);
-        $this->assertNotNull($entregaHija);
-        $this->assertFalse($entregaHija['puede_revisar']);
-
-        $this->postJson('/api/transferencia/revisar', [
-            'dependencia_id' => $this->hija->id,
-            'accion' => 'consolidar',
-        ])->assertForbidden();
+        $this->assertEqualsCanonicalizing([$this->padre->id, $this->hija->id], $dependencias);
     }
 }

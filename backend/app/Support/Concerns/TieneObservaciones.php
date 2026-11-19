@@ -8,7 +8,7 @@ use App\Modules\Transferencia\Models\Observacion;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
- * Permite adjuntar observaciones a cualquier anexo o elemento (plan §7.9).
+ * Fila de anexo que el coordinador ETTE puede observar (D-07).
  */
 trait TieneObservaciones
 {
@@ -16,10 +16,5 @@ trait TieneObservaciones
     public function observaciones(): MorphMany
     {
         return $this->morphMany(Observacion::class, 'observable');
-    }
-
-    public function tieneObservacionesAbiertas(): bool
-    {
-        return $this->observaciones()->abiertas()->exists();
     }
 }

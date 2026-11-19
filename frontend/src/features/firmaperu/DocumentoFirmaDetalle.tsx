@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { CheckCircle2, Clock3, FileText, Loader2, Lock } from 'lucide-react'
+import { CheckCircle2, Circle, Clock3, FileText, Loader2, Lock } from 'lucide-react'
 
 import { BotonFirmaPeru } from './BotonFirmaPeru'
 import { BotonGenerarPdf } from './BotonGenerarPdf'
 import { PrevisualizarAnexo } from './PrevisualizarAnexo'
 import { BotonDescargarPdf } from '@/components/anexos/BotonDescargarPdf'
 import { firmaperuService } from './firmaperu.service'
-import type { EstadoFirma, TipoDocumentoFirma } from './firmaperu.types'
+import { cn } from '@/lib/utils'
+import type { EstadoFirma, FirmaLado, TipoDocumentoFirma } from './firmaperu.types'
 
 interface Props {
   tipoDocumento: TipoDocumentoFirma
@@ -21,8 +22,8 @@ interface Props {
  * Panel de documento + firma del anexo, mostrado al expandir su fila en la tabla
  * «Mi entrega» (plan 07, F3-3). Reúne el estado del PDF/firma (query
  * ['firmaperu', tipo, dep]) y las acciones secundarias — previsualizar, generar
- * y firmar — reusando BotonGenerarPdf + BotonFirmaPeru. El estado de firma es
- * independiente del estado de llenado del anexo. Firmar no congela el anexo.
+ * y firmar — reusando BotonGenerarPdf + BotonFirmaPeru. Muestra la firma de
+ * cada lado (responsable y coordinador ETTE, D-05) en la cadena vigente.
  */
 export function DocumentoFirmaDetalle({ tipoDocumento, dependenciaId, bloqueado = false, notaBloqueo, soloLectura = false }: Props) {
   const { data: estado, isLoading, isError, refetch } = useQuery<EstadoFirma>({
@@ -33,11 +34,12 @@ export function DocumentoFirmaDetalle({ tipoDocumento, dependenciaId, bloqueado 
   })
 
   const tieneBorrador = Boolean(estado?.borrador_generado || estado?.firmado)
-  // Firmado y vigente: ya no se regenera el PDF y «Visualizar» muestra el firmado real.
-  const firmadoVigente = Boolean(estado?.firmado && estado.vigente !== false)
+  // Con alguna firma vigente ya no se regenera el PDF y «Visualizar» muestra el firmado real.
+  const firmadoVigente = Boolean(estado?.firmado && estado.vigente)
   const verFirmadoId = firmadoVigente ? estado?.documento_id ?? null : null
 
   return (
+    <div className="space-y-2">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       {/* Estado del documento (texto discreto) */}
       <div className="flex items-center gap-2 text-xs">
@@ -82,6 +84,40 @@ export function DocumentoFirmaDetalle({ tipoDocumento, dependenciaId, bloqueado 
         </div>
       )}
     </div>
+    {!bloqueado && estado?.vigente && tipoDocumento !== 'anexo01' && <LadosFirma estado={estado} />}
+    </div>
+  )
+}
+
+/** Casillas de firma por lado: responsable (entidad) y coordinador ETTE. */
+function LadosFirma({ estado }: { estado: EstadoFirma }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      <CasillaLado titulo="Responsable del CC" firma={estado.entidad} />
+      <CasillaLado titulo="Coordinador ETTE" firma={estado.ette} />
+    </div>
+  )
+}
+
+function CasillaLado({ titulo, firma }: { titulo: string; firma: FirmaLado | null }) {
+  const detalle = firma
+    ? [
+        firma.firmante,
+        firma.en_calidad_de === 'titular_suplente' ? 'titular suplente' : null,
+        firma.origen === 'manuscrita' ? 'manuscrita' : 'digital',
+      ].filter(Boolean).join(' · ')
+    : 'Pendiente'
+  return (
+    <span
+      title={firma?.motivo_suplencia ? `Motivo de suplencia: ${firma.motivo_suplencia}` : undefined}
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-mini',
+        firma ? 'border-success-border bg-success-soft text-success-fg' : 'text-muted-foreground',
+      )}
+    >
+      {firma ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
+      <span className="font-semibold">{titulo}:</span> {detalle}
+    </span>
   )
 }
 
@@ -93,15 +129,22 @@ function EstadoDocumento({ estado, bloqueado, notaBloqueo }: { estado?: EstadoFi
       </span>
     )
   }
-  if (estado?.firmado && estado.vigente !== false) {
+  if (estado?.completo) {
     const fecha = estado.firmado_en ? ` · ${new Date(estado.firmado_en).toLocaleDateString('es-PE')}` : ''
     return (
       <span className="inline-flex items-center gap-1.5 font-medium text-success-fg">
-        <CheckCircle2 className="h-3.5 w-3.5" /> Firmado{estado.version ? ` v${estado.version}` : ''}{fecha}
+        <CheckCircle2 className="h-3.5 w-3.5" /> Firmado por ambos lados{estado.version ? ` v${estado.version}` : ''}{fecha}
       </span>
     )
   }
-  if (estado?.firmado && estado.vigente === false) {
+  if (estado?.vigente) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-warning-fg">
+        <Clock3 className="h-3.5 w-3.5" /> Falta la firma {estado.entidad ? 'del coordinador ETTE' : 'del responsable'}
+      </span>
+    )
+  }
+  if (estado?.firmado) {
     return (
       <span className="inline-flex items-center gap-1.5 text-warning-fg">
         <Clock3 className="h-3.5 w-3.5" /> Firma anterior · los datos cambiaron, vuelva a firmar

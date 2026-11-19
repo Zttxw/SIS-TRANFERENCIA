@@ -101,29 +101,6 @@ test('una firma vigente ofrece la descarga como acción principal', async () => 
   assert.doesNotMatch(html, /aria-label="Firmar con Firma Perú"/)
 })
 
-test('la vista del acta muestra nombre, DNI y cargo de los intervinientes estructurados', async () => {
-  const { ActaImprimible } = await cargarComponente('../src/features/acta/ActaImprimible.tsx', {})
-  const html = renderToStaticMarkup(React.createElement(ActaImprimible, {
-    acta: {
-      fecha_acta: '2026-11-12', numero_acta: 'ACTA-PRUEBA',
-      intervinientes: { titular_saliente: { nombre: 'Adriana Quispe', dni: '12345678', cargo: 'Directora de OTI' } },
-      dependencia: { padre: { nombre: 'Planeamiento' } },
-    },
-    dependencia: { nombre: 'OTI', codigo: '00025', nivel: 3, parent_id: 1 },
-  }))
-  assert.match(html, /Adriana Quispe · DNI 12345678 · Directora de OTI/)
-  assert.match(html, /Planeamiento/)
-})
-
-test('la vista del acta conserva compatibilidad con nombres guardados como texto', async () => {
-  const { ActaImprimible } = await cargarComponente('../src/features/acta/ActaImprimible.tsx', {})
-  const html = renderToStaticMarkup(React.createElement(ActaImprimible, {
-    acta: { fecha_acta: '2026-11-12', intervinientes: { titular_saliente: 'Nombre anterior' } },
-    dependencia: { nombre: 'OTI', codigo: '00025', nivel: 3, parent_id: 1 },
-  }))
-  assert.match(html, /Nombre anterior/)
-})
-
   test('Mi entrega muestra el estado del acta sin controles de generación o firma', async () => {
     const { TablaAnexos } = await cargarComponente(
       '../src/features/dashboard/TablaAnexos.tsx',

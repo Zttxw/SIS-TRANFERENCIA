@@ -20,11 +20,12 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Mockery\MockInterface;
+use Tests\Concerns\PreparaEntregas;
 use Tests\TestCase;
 
 class FlujoDocumentosFirmadosTest extends TestCase
 {
-    use RefreshDatabase;
+    use PreparaEntregas, RefreshDatabase;
 
     private Dependencia $dep;
 
@@ -99,30 +100,39 @@ class FlujoDocumentosFirmadosTest extends TestCase
 
     public function test_no_permite_firmar_sin_generar_ni_remitir_sin_las_seis_firmas(): void
     {
+        $this->entregaEn($this->dep);
         $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo03', 'dependencia_id' => $this->dep->id])->assertConflict();
         $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->dep->id])->assertConflict();
-        $this->assertDatabaseCount('entregas', 0);
+        $this->assertDatabaseMissing('entregas', ['estado' => 'remitida']);
         $this->firmar('anexo07');
         $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->dep->id])->assertConflict();
     }
 
-    public function test_seis_firmas_del_jefe_habilitan_remision_sin_exigir_ette_y_una_cancelada_la_bloquea(): void
+    public function test_remitir_exige_las_seis_firmas_de_ambos_lados_y_una_cancelada_la_bloquea(): void
     {
+        $this->entregaEn($this->dep);
+        $coordinador = $this->usuario(Rol::DELEGADO_ETTE, $this->dep);
         $sesiones = [];
         foreach (['anexo02', 'anexo03', 'anexo04', 'anexo05', 'anexo06', 'anexo07'] as $tipo) {
-            $sesiones[$tipo] = $this->firmar($tipo);
+            Sanctum::actingAs($this->jefe);
+            $this->firmar($tipo);
         }
         $url = '/api/firmaperu/requisitos-remision/'.$this->dep->id;
+        $this->getJson($url)->assertOk()->assertJsonPath('data.puede_remitir', false)->assertJsonPath('data.firmados', 0)
+            ->assertJsonPath('data.documentos.anexo03.ette', null);
+
+        Sanctum::actingAs($coordinador);
+        foreach (['anexo02', 'anexo03', 'anexo04', 'anexo05', 'anexo06', 'anexo07'] as $tipo) {
+            $sesiones[$tipo] = $this->firmar($tipo, false);
+        }
+        Sanctum::actingAs($this->jefe);
         $this->getJson($url)->assertOk()->assertJsonPath('data.puede_remitir', true)->assertJsonPath('data.firmados', 6);
+        $this->assertDatabaseHas('entregas', ['dependencia_id' => $this->dep->id, 'estado' => 'acta_suscrita']);
+
         FirmaAnexo::where('firma_sesion_id', $sesiones['anexo03']->id)->update(['estado' => 'cancelada']);
-        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->dep->id])->assertConflict();
+        $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->dep->id])->assertConflict()
+            ->assertJsonFragment(['message' => 'Faltan firmas vigentes del responsable y del coordinador ETTE en los anexos 02 al 07. Pendientes: Anexo 03 (coordinador ETTE).']);
         FirmaAnexo::where('firma_sesion_id', $sesiones['anexo03']->id)->update(['estado' => 'firmada']);
-        AcervoDocumental::create(['proceso_transferencia_id' => $this->dep->proceso_transferencia_id,
-            'dependencia_id' => $this->dep->id, 'tipo' => 'fisico', 'serie_documental' => 'Contenido modificado', 'cantidad_unidades' => 1]);
-        $this->getJson($url)->assertOk()->assertJsonPath('data.puede_remitir', false)
-            ->assertJsonPath('data.pendientes', ['anexo03', 'anexo07']);
-        $this->firmar('anexo03');
-        $this->firmar('anexo07');
         $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->dep->id])->assertOk();
     }
 
@@ -143,6 +153,7 @@ class FlujoDocumentosFirmadosTest extends TestCase
 
     public function test_estado_reporta_firme_yo_y_sirve_el_pdf_firmado_inline(): void
     {
+        $this->entregaEn($this->dep);
         $sesion = $this->firmar('anexo03');
 
         // El jefe que firmó ve firme_yo = true; otro firmante habilitado lo ve en false.
@@ -160,15 +171,17 @@ class FlujoDocumentosFirmadosTest extends TestCase
             ->assertOk()->assertJsonPath('data.firmado', true)->assertJsonPath('data.firme_yo', false);
     }
 
-    public function test_firmas_del_delegado_ette_y_del_servidor_no_sustituyen_la_del_jefe(): void
+    public function test_el_servidor_no_firma_y_la_firma_del_coordinador_sola_no_basta(): void
     {
+        $this->entregaEn($this->dep);
         $this->generar('anexo03');
+        $this->usuario(Rol::SERVIDOR, $this->dep);
+        $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo03', 'dependencia_id' => $this->dep->id])->assertForbidden();
+
         $this->usuario(Rol::DELEGADO_ETTE, $this->dep);
         $sesion = $this->firmar('anexo03', false);
-        $this->assertDatabaseHas('firmas_anexo', ['firma_sesion_id' => $sesion->id, 'caracter' => 'opcional']);
-        $this->getJson('/api/firmaperu/requisitos-remision/'.$this->dep->id)->assertOk()->assertJsonPath('data.firmados', 0);
-        $this->usuario(Rol::SERVIDOR, $this->dep);
-        $this->firmar('anexo03');
-        $this->getJson('/api/firmaperu/requisitos-remision/'.$this->dep->id)->assertOk()->assertJsonPath('data.firmados', 0);
+        $this->assertDatabaseHas('firmas_anexo', ['firma_sesion_id' => $sesion->id, 'lado' => 'ette']);
+        $this->getJson('/api/firmaperu/requisitos-remision/'.$this->dep->id)->assertOk()->assertJsonPath('data.firmados', 0)
+            ->assertJsonPath('data.documentos.anexo03.ette.en_calidad_de', 'coordinador');
     }
 }

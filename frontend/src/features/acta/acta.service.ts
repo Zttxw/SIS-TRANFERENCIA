@@ -1,13 +1,15 @@
 import { api } from '@/lib/api'
 import { descargarArchivo } from '@/lib/descargas'
 import type { ApiSuccess } from '@/types/api'
-import type { ActaTransferencia, EvidenciaItem, SubirEvidenciaPayload } from '@/types/acta'
+import type {
+  ActaTransferencia,
+  EvidenciaItem,
+  GuardarActaPayload,
+  SubirEvidenciaPayload,
+} from '@/types/acta'
 
 export const actaService = {
-  /**
-   * Obtiene el Acta oficial de Transferencia (Anexo 07) para la dependencia dada.
-   * Devuelve 409 Conflict si la entrega no está en estado CONSOLIDADA.
-   */
+  /** Obtiene (y emite, si corresponde) el Acta 07 del centro de costo. */
   async obtenerActa(dependenciaId: number): Promise<ActaTransferencia> {
     const res = await api.get<ApiSuccess<ActaTransferencia>>('/transferencia/acta', {
       params: { dependencia_id: dependenciaId },
@@ -15,10 +17,16 @@ export const actaService = {
     return res.data.data
   },
 
-  /**
-   * Descarga el PDF oficial del Acta (Anexo 07) generado por el backend. Exige
-   * entrega CONSOLIDADA (el backend responde 409 en otro caso).
-   */
+  /** Las partes completan el acta antes de firmarla (fecha, hora, lugar, condiciones). */
+  async guardar(dependenciaId: number, payload: GuardarActaPayload): Promise<ActaTransferencia> {
+    const res = await api.put<ApiSuccess<ActaTransferencia>>('/transferencia/acta', {
+      dependencia_id: dependenciaId,
+      ...payload,
+    })
+    return res.data.data
+  },
+
+  /** Descarga el PDF oficial del Acta (Anexo 07) generado por el backend. */
   async descargarPdf(dependenciaId: number): Promise<void> {
     await descargarArchivo(
       '/transferencia/acta/pdf',

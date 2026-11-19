@@ -7,13 +7,14 @@ namespace App\Modules\Transferencia\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Transferencia\Services\CronogramaService;
 use App\Support\Enums\EstadoActividadCronograma;
+use App\Support\Enums\OperacionCronograma;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 /**
- * Cronograma del proceso de transferencia (RF-007, C-03). La consulta exige
+ * Cronograma del proceso de transferencia (RF-20, RF-21). La consulta exige
  * anexos.ver; la modificación exige cronograma.gestionar (administrador y ETTS).
  * Los cambios quedan auditados por el trait Auditable del modelo.
  */
@@ -64,15 +65,19 @@ class CronogramaController extends Controller
         $requerido = $parcial ? 'sometimes' : 'required';
 
         return $request->validate([
-            'dependencia_id' => ['nullable', 'integer', 'exists:dependencias,id'],
+            'dependencia_id' => ['nullable', 'integer', 'exists:dependencias,id,es_centro_costo,1'],
             'etapa' => ['nullable', 'string', 'max:120'],
             'nombre' => [$requerido, 'string', 'max:200'],
             'descripcion' => ['nullable', 'string', 'max:1000'],
             'fecha_inicio' => ['nullable', 'date'],
+            // Con plazo CGR, el vencimiento se calcula en días hábiles (RN-03) y
+            // la fecha manual se ignora.
+            'fecha_cgr' => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
+            'dias_habiles_antes' => ['sometimes', 'integer', 'min:0', 'max:30'],
             'fecha_vencimiento' => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
             'hora_vencimiento' => ['nullable', 'date_format:H:i,H:i:s'],
             'estado' => ['nullable', Rule::enum(EstadoActividadCronograma::class)],
-            'operacion' => ['nullable', 'string', 'max:40'],
+            'operacion' => ['sometimes', Rule::enum(OperacionCronograma::class)],
             'orden' => ['nullable', 'integer', 'min:0'],
         ]);
     }

@@ -7,6 +7,8 @@ interface DialogProps {
   title: string
   description?: string
   children: React.ReactNode
+  /** Ancho máximo del contenido (por defecto `max-w-lg`). */
+  anchoClassName?: string
 }
 
 export function Dialog({
@@ -15,6 +17,7 @@ export function Dialog({
   title,
   description,
   children,
+  anchoClassName = 'max-w-lg',
 }: DialogProps) {
   if (!open) return null
 
@@ -26,7 +29,7 @@ export function Dialog({
         onClick={onClose}
       />
       {/* Modal Content */}
-      <div className="relative z-50 w-full max-w-lg rounded-xl border bg-card p-6 shadow-xl transition-all">
+      <div className={`relative z-50 max-h-[90vh] w-full overflow-y-auto rounded-xl border bg-card p-6 shadow-xl transition-all ${anchoClassName}`}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-foreground">

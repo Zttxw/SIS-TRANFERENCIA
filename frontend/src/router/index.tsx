@@ -36,6 +36,7 @@ export const router = createBrowserRouter([
           { path: 'patrimonio', lazy: () => import('@/features/patrimonio/PatrimonioPage').then(({ PatrimonioPage }) => ({ Component: PatrimonioPage })) },
           { path: 'observaciones', lazy: () => import('@/features/observaciones/ObservacionesPage').then(({ ObservacionesPage }) => ({ Component: ObservacionesPage })) },
           { path: 'entregas', lazy: () => import('@/features/entregas/EntregasPage').then(({ EntregasPage }) => ({ Component: EntregasPage })) },
+          { path: 'cadena-etts', lazy: () => import('@/features/cadena/CadenaEttsEttePage').then(({ CadenaEttsEttePage }) => ({ Component: CadenaEttsEttePage })) },
           { path: 'acta', lazy: () => import('@/features/acta/ActaPage').then(({ ActaPage }) => ({ Component: ActaPage })) },
           { path: 'reportes', lazy: () => import('@/features/reportes/ReportesPage').then(({ ReportesPage }) => ({ Component: ReportesPage })) },
           { path: 'usuarios', lazy: () => import('@/features/admin/AdminPage').then(({ AdminPage }) => ({ Component: AdminPage })) },

@@ -7,6 +7,7 @@ import type {
   ReporteConciliacion,
   ReporteMatriz,
   ReporteObservaciones,
+  ReporteVerificacion,
 } from '@/types/reportes'
 
 /** Mapa clave de reporte → payload JSON tipado. */
@@ -14,6 +15,7 @@ interface DatosReporte {
   'matriz-anexos': ReporteMatriz
   'conciliacion-patrimonial': ReporteConciliacion
   observaciones: ReporteObservaciones
+  verificacion: ReporteVerificacion
 }
 
 export const reportesService = {

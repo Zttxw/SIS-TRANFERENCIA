@@ -13,6 +13,7 @@ use App\Modules\Organization\Services\CentrosCostoPdf;
 use App\Modules\Patrimonio\Services\PatrimonioPdf;
 use App\Modules\Personal\Services\PersonalPdf;
 use App\Modules\Transferencia\Models\FirmaBorrador;
+use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Services\ContextoTransferencia;
 use App\Support\Services\PdfService;
 use Illuminate\Support\Facades\DB;
@@ -36,7 +37,7 @@ class FirmaperuPdfService
      * Reutiliza vistas y consultas actuales, incluyendo proceso y marca de borrador.
      * La autorización de dependencia corresponde al endpoint que invoque el servicio.
      */
-    public function generar(string $tipoDocumento, int $dependenciaId, User $usuario): string
+    public function generar(string $tipoDocumento, ?int $dependenciaId, User $usuario): string
     {
         [$vista, $datos, $orientacion] = $this->plantilla($tipoDocumento, $dependenciaId, $usuario);
         $datos['contexto']['es_borrador'] = true;
@@ -49,18 +50,21 @@ class FirmaperuPdfService
      * Mantiene una fila por proceso, dependencia y tipo; los PDF suscritos
      * se custodian por separado en sus sesiones de firma.
      */
-    public function generarBorrador(string $tipoDocumento, int $dependenciaId, User $usuario): FirmaBorrador
+    public function generarBorrador(string $tipoDocumento, ?int $dependenciaId, User $usuario): FirmaBorrador
     {
         $tipo = $tipoDocumento === 'acta' ? 'anexo07' : $tipoDocumento;
         $procesoId = app(ContextoTransferencia::class)->procesoActivoId();
 
         return DB::transaction(function () use ($tipo, $dependenciaId, $usuario, $procesoId): FirmaBorrador {
-            Dependencia::whereKey($dependenciaId)->lockForUpdate()->firstOrFail();
+            // El documento institucional (Anexo 01, sin CC) se serializa por proceso.
+            $dependenciaId === null
+                ? ProcesoTransferencia::whereKey($procesoId)->lockForUpdate()->firstOrFail()
+                : Dependencia::whereKey($dependenciaId)->lockForUpdate()->firstOrFail();
             $rutaAnterior = FirmaBorrador::where('proceso_transferencia_id', $procesoId)
                 ->where('dependencia_id', $dependenciaId)->where('tipo_documento', $tipo)->value('pdf_path');
             $captura = $this->capturar($tipo, $dependenciaId, $usuario);
             $sha256 = hash('sha256', $captura['pdf']);
-            $ruta = 'firmaperu/generados/'.$procesoId.'/'.$dependenciaId.'/'.$tipo.'/'.$sha256.'.pdf';
+            $ruta = 'firmaperu/generados/'.$procesoId.'/'.($dependenciaId ?? 'institucional').'/'.$tipo.'/'.$sha256.'.pdf';
             abort_unless(Storage::disk('local')->put($ruta, $captura['pdf']), 503, 'No se pudo conservar el PDF generado.');
 
             $borrador = FirmaBorrador::updateOrCreate(
@@ -79,7 +83,7 @@ class FirmaperuPdfService
     }
 
     /** Huella del contenido impreso, sin hora de impresión ni estado operativo de entrega. */
-    public function huella(string $tipoDocumento, int $dependenciaId, User $usuario): string
+    public function huella(string $tipoDocumento, ?int $dependenciaId, User $usuario): string
     {
         [$vista, $datos] = $this->plantilla($tipoDocumento, $dependenciaId, $usuario);
 
@@ -87,7 +91,7 @@ class FirmaperuPdfService
     }
 
     /** @return array{pdf: string, huella: string} */
-    public function capturar(string $tipoDocumento, int $dependenciaId, User $usuario): array
+    public function capturar(string $tipoDocumento, ?int $dependenciaId, User $usuario): array
     {
         [$vista, $datos, $orientacion] = $this->plantilla($tipoDocumento, $dependenciaId, $usuario);
         $datos['contexto']['es_borrador'] = false;
@@ -96,7 +100,7 @@ class FirmaperuPdfService
             'huella' => $this->huellaPlantilla($tipoDocumento, $vista, $datos, $dependenciaId, $usuario)];
     }
 
-    public function generadoVigente(?FirmaBorrador $pdf, string $tipo, int $dependenciaId, User $usuario): bool
+    public function generadoVigente(?FirmaBorrador $pdf, string $tipo, ?int $dependenciaId, User $usuario): bool
     {
         if (! $pdf || ! str_starts_with($pdf->pdf_path, 'firmaperu/generados/')
             || ! Storage::disk('local')->exists($pdf->pdf_path)) {
@@ -109,7 +113,7 @@ class FirmaperuPdfService
     }
 
     /** @param array<string, mixed> $datos */
-    private function huellaPlantilla(string $tipoDocumento, string $vista, array $datos, int $dependenciaId, User $usuario): string
+    private function huellaPlantilla(string $tipoDocumento, string $vista, array $datos, ?int $dependenciaId, User $usuario): string
     {
         $datos['contexto']['emitido_en'] = '';
         $datos['contexto']['entrega_estado'] = 'borrador';
@@ -127,8 +131,16 @@ class FirmaperuPdfService
     }
 
     /** @return array{string, array<string, mixed>, string} */
-    private function plantilla(string $tipoDocumento, int $dependenciaId, User $usuario): array
+    private function plantilla(string $tipoDocumento, ?int $dependenciaId, User $usuario): array
     {
+        if ($dependenciaId === null) {
+            if ($tipoDocumento !== 'anexo01') {
+                throw new InvalidArgumentException('Solo el Anexo 01 es un documento institucional sin centro de costo.');
+            }
+
+            return ['pdf.anexo01', $this->centros->datosInstitucionales(), 'portrait'];
+        }
+
         [$vista, $datos, $orientacion] = match ($tipoDocumento) {
             'anexo01' => ['pdf.anexo01', $this->centros->datos($dependenciaId), 'portrait'],
             'anexo02' => ['pdf.anexo02', $this->gestion->datos($dependenciaId), 'portrait'],

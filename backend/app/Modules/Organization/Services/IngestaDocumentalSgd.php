@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Organization\Services;
 
 use App\Modules\Acervo\Models\AcervoDocumental;
+use App\Modules\Acervo\Services\AcervoReferenciaSgd;
 use App\Modules\Documentos\Models\DocumentoPendiente;
-use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Organization\Models\Servidor;
 use App\Modules\Organization\Models\TipoDocumentalSgd;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
@@ -63,7 +63,7 @@ class IngestaDocumentalSgd
      * Ejecuta la ingesta documental para un proceso. El año se toma del proceso
      * (fecha de corte) y acota TODAS las consultas al SGD.
      *
-     * @param  string|null  $soloDependencia  limita a una dependencia (piloto)
+     * @param  string|null  $soloDependencia  limita al CC de esta dependencia del SGD (piloto)
      * @return array{anio: string, acervo: int, pendientes: int}
      */
     public function ejecutar(ProcesoTransferencia $proceso, ?string $soloDependencia = null): array
@@ -71,10 +71,17 @@ class IngestaDocumentalSgd
         $anio = $this->anioProceso($proceso);
         $extraidoEn = Carbon::now();
 
+        // En modo piloto se trae el centro de costo completo: todas las
+        // dependencias del SGD que se graban en el mismo CC (D-11). Si no, el
+        // resumen del CC quedaría con solo una parte de sus documentos.
+        $codigos = $soloDependencia !== null
+            ? app(EquivalenciasCentroCosto::class)->codigosSgdHermanos($proceso->id, $soloDependencia)
+            : null;
+
         // El acervo digital abarca todos los años del SGD (histórico documental).
-        $acervo = $this->ingestarAcervoDigital($proceso, $soloDependencia, $extraidoEn);
+        $acervo = $this->ingestarAcervoDigital($proceso, $codigos, $extraidoEn);
         // Los pendientes sí se acotan al año del proceso: son la bandeja vigente.
-        $pendientes = $this->ingestarDocumentosPendientes($proceso, $anio, $soloDependencia, $extraidoEn);
+        $pendientes = $this->ingestarDocumentosPendientes($proceso, $anio, $codigos, $extraidoEn);
 
         return ['anio' => $anio, 'acervo' => $acervo, 'pendientes' => $pendientes];
     }
@@ -89,9 +96,15 @@ class IngestaDocumentalSgd
      * oficina generó desde que existe el SGD. La vista «Por año» del Anexo 03 ya
      * agrupa por el año de cada fila.
      */
+    /**
+     * Las filas se agrupan por destino (centro de costo): si varias dependencias
+     * del SGD caen en el mismo CC, sus conteos se suman en una sola fila.
+     *
+     * @param  list<string>|null  $codigos  dependencias del SGD (modo piloto)
+     */
     private function ingestarAcervoDigital(
         ProcesoTransferencia $proceso,
-        ?string $soloDependencia,
+        ?array $codigos,
         Carbon $extraidoEn,
     ): int {
         $sql = "SELECT r.NU_ANN AS anio, r.CO_DEP_EMI AS dep, r.CO_TIP_DOC_ADM AS tipo, COUNT(*) AS total
@@ -101,9 +114,9 @@ class IngestaDocumentalSgd
                   AND r.CO_DEP_EMI IS NOT NULL
                   AND r.NU_ANN IS NOT NULL";
         $bindings = [];
-        if ($soloDependencia !== null) {
-            $sql .= ' AND r.CO_DEP_EMI = ?';
-            $bindings[] = $soloDependencia;
+        if ($codigos !== null) {
+            $sql .= ' AND r.CO_DEP_EMI IN ('.$this->marcadores($codigos).')';
+            $bindings = $codigos;
         }
         $sql .= ' GROUP BY r.NU_ANN, r.CO_DEP_EMI, r.CO_TIP_DOC_ADM';
 
@@ -112,50 +125,54 @@ class IngestaDocumentalSgd
         $depPorCodigo = $this->dependenciasPorCodigo($proceso);
         $tiposPorCodigo = TipoDocumentalSgd::query()->pluck('descripcion', 'codigo');
 
-        return DB::transaction(function () use ($filas, $proceso, $depPorCodigo, $tiposPorCodigo, $extraidoEn) {
-            $total = 0;
-            foreach ($filas as $fila) {
-                $depCodigo = $this->texto($fila->dep);
-                $dependenciaId = $depCodigo !== null ? ($depPorCodigo[$depCodigo] ?? null) : null;
-                if ($dependenciaId === null) {
-                    continue; // Dependencia fuera del proceso; se omite (incidencia silenciosa).
-                }
+        /** @var array<string, array{dependencia_id: int, serie: string, anio: string, tipo: ?string, total: int, deps: list<string>}> $grupos */
+        $grupos = [];
+        foreach ($filas as $fila) {
+            $depCodigo = $this->texto($fila->dep);
+            $dependenciaId = $depCodigo !== null ? ($depPorCodigo[$depCodigo] ?? null) : null;
+            $anioFila = $this->texto($fila->anio);
+            if ($dependenciaId === null || $anioFila === null) {
+                continue; // Dependencia fuera del proceso; se omite (incidencia silenciosa).
+            }
 
-                $anioFila = $this->texto($fila->anio);
-                if ($anioFila === null) {
-                    continue;
-                }
-                $anioEntero = (int) $anioFila;
+            $tipoCodigo = $this->texto($fila->tipo);
+            $serie = $tipoCodigo !== null
+                ? (($tiposPorCodigo[$tipoCodigo] ?? "Tipo {$tipoCodigo}"))
+                : 'Sin tipo documental';
 
-                $tipoCodigo = $this->texto($fila->tipo);
-                $serie = $tipoCodigo !== null
-                    ? (($tiposPorCodigo[$tipoCodigo] ?? "Tipo {$tipoCodigo}"))
-                    : 'Sin tipo documental';
+            $clave = "{$dependenciaId}|{$serie}|{$anioFila}";
+            $grupos[$clave] ??= ['dependencia_id' => $dependenciaId, 'serie' => $serie, 'anio' => $anioFila, 'tipo' => $tipoCodigo, 'total' => 0, 'deps' => []];
+            $grupos[$clave]['total'] += (int) $fila->total;
+            $grupos[$clave]['deps'][] = $depCodigo;
+        }
+
+        return DB::transaction(function () use ($grupos, $proceso, $extraidoEn) {
+            foreach ($grupos as $grupo) {
+                $anioEntero = (int) $grupo['anio'];
 
                 AcervoDocumental::updateOrCreate(
                     [
                         'proceso_transferencia_id' => $proceso->id,
-                        'dependencia_id' => $dependenciaId,
+                        'dependencia_id' => $grupo['dependencia_id'],
                         'tipo' => AcervoDocumental::TIPO_DIGITAL,
-                        'serie_documental' => $serie,
-                        'periodo' => $anioFila,
+                        'serie_documental' => $grupo['serie'],
+                        'periodo' => $grupo['anio'],
                     ],
                     [
                         'anio' => $anioEntero,
                         'desde_anio' => $anioEntero,
                         'hasta_anio' => $anioEntero,
-                        'cantidad_unidades' => (int) $fila->total,
+                        'cantidad_unidades' => $grupo['total'],
                         'unidad_conservacion' => 'documento digital (SGD)',
-                        'descripcion' => "Documentos emitidos en {$anioFila} de tipo «{$serie}», según el SGD.",
+                        'descripcion' => "Documentos emitidos en {$grupo['anio']} de tipo «{$grupo['serie']}», según el SGD.",
                         'fuente' => FuenteDato::SGD->value,
-                        'fuente_referencia' => "TDTV_REMITOS CO_DEP_EMI={$depCodigo} CO_TIP_DOC_ADM={$tipoCodigo} NU_ANN={$anioFila}",
+                        'fuente_referencia' => AcervoReferenciaSgd::construir($grupo['deps'], $grupo['tipo'], $grupo['anio']),
                         'extraido_en' => $extraidoEn,
                     ],
                 );
-                $total++;
             }
 
-            return $total;
+            return count($grupos);
         });
     }
 
@@ -164,10 +181,11 @@ class IngestaDocumentalSgd
      * dependencia del proceso. Filtra en SQL Server por las reglas R01–R03 y por
      * estado de recepción no resuelto; trae solo las filas pendientes (acotadas).
      */
+    /** @param  list<string>|null  $codigos  dependencias del SGD (modo piloto) */
     private function ingestarDocumentosPendientes(
         ProcesoTransferencia $proceso,
         string $anio,
-        ?string $soloDependencia,
+        ?array $codigos,
         Carbon $extraidoEn,
     ): int {
         $emisionExcluida = $this->marcadores(self::EMISION_EXCLUIDA);
@@ -188,9 +206,9 @@ class IngestaDocumentalSgd
                   AND (d.ES_DOC_REC IS NULL OR d.ES_DOC_REC NOT IN ({$recepcionResuelta}))
                   AND d.CO_DEP_DES IS NOT NULL";
         $bindings = array_merge([$anio], self::EMISION_EXCLUIDA, self::RECEPCION_RESUELTA);
-        if ($soloDependencia !== null) {
-            $sql .= ' AND d.CO_DEP_DES = ?';
-            $bindings[] = $soloDependencia;
+        if ($codigos !== null) {
+            $sql .= ' AND d.CO_DEP_DES IN ('.$this->marcadores($codigos).')';
+            $bindings = array_merge($bindings, $codigos);
         }
 
         $filas = DB::connection($this->conexionSgd)->select($sql, $bindings);
@@ -200,7 +218,7 @@ class IngestaDocumentalSgd
         $tiposPorCodigo = TipoDocumentalSgd::query()->pluck('descripcion', 'codigo');
 
         return DB::transaction(function () use (
-            $filas, $proceso, $soloDependencia, $depPorCodigo, $servidorPorCodigo, $tiposPorCodigo, $extraidoEn
+            $filas, $proceso, $codigos, $depPorCodigo, $servidorPorCodigo, $tiposPorCodigo, $extraidoEn
         ) {
             /** @var array<int, true> $tocados ids que siguen pendientes en el SGD */
             $tocados = [];
@@ -243,7 +261,7 @@ class IngestaDocumentalSgd
                 $total++;
             }
 
-            $this->podarResueltos($proceso, $soloDependencia, $depPorCodigo, array_keys($tocados));
+            $this->podarResueltos($proceso, $codigos, $depPorCodigo, array_keys($tocados));
 
             return $total;
         });
@@ -254,13 +272,14 @@ class IngestaDocumentalSgd
      * (se atendieron/derivaron en el SGD desde la última ingesta). Solo poda filas
      * de fuente SGD dentro del ámbito ejecutado; nunca toca los registros manuales.
      *
-     * @param  Collection<string, int>  $depPorCodigo
+     * @param  list<string>|null  $codigos
+     * @param  array<string, int>  $depPorCodigo
      * @param  array<int, int>  $idsVigentes
      */
     private function podarResueltos(
         ProcesoTransferencia $proceso,
-        ?string $soloDependencia,
-        $depPorCodigo,
+        ?array $codigos,
+        array $depPorCodigo,
         array $idsVigentes,
     ): void {
         $query = DocumentoPendiente::query()
@@ -268,24 +287,27 @@ class IngestaDocumentalSgd
             ->where('fuente', FuenteDato::SGD->value)
             ->whereNotIn('id', $idsVigentes ?: [0]);
 
-        // Respetar el ámbito: en modo piloto, solo poda la dependencia ingerida.
-        if ($soloDependencia !== null) {
-            $dependenciaId = $depPorCodigo[$soloDependencia] ?? null;
-            if ($dependenciaId === null) {
+        // Respetar el ámbito: en modo piloto, solo poda el CC ingerido.
+        if ($codigos !== null) {
+            $destinos = array_values(array_unique(array_filter(array_map(fn (string $codigo) => $depPorCodigo[$codigo] ?? null, $codigos))));
+            if ($destinos === []) {
                 return;
             }
-            $query->where('dependencia_id', $dependenciaId);
+            $query->whereIn('dependencia_id', $destinos);
         }
 
         $query->delete();
     }
 
-    /** @return Collection<string, int> */
-    private function dependenciasPorCodigo(ProcesoTransferencia $proceso)
+    /**
+     * Código del SGD → dependencia donde se graba (su centro de costo, o la
+     * propia dependencia del SGD mientras no tenga equivalencia).
+     *
+     * @return array<string, int>
+     */
+    private function dependenciasPorCodigo(ProcesoTransferencia $proceso): array
     {
-        return Dependencia::query()
-            ->where('proceso_transferencia_id', $proceso->id)
-            ->pluck('id', 'codigo');
+        return app(EquivalenciasCentroCosto::class)->destinosSgd($proceso->id);
     }
 
     /** @return Collection<string, int> */

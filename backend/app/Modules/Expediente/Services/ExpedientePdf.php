@@ -11,7 +11,6 @@ use App\Modules\Patrimonio\Services\PatrimonioPdf;
 use App\Modules\Personal\Services\PersonalPdf;
 use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Services\TransferenciaService;
-use App\Support\Enums\EstadoEntrega;
 use App\Support\Http\ApiResponse;
 use App\Support\Services\ContextoTransferencia;
 use App\Support\Services\PdfService;
@@ -21,7 +20,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /**
  * Paquete de entrega (F5): un único expediente PDF con todos los anexos (02–06)
  * de una dependencia, listo para la entrega física firmable. Solo se emite con
- * la entrega CONSOLIDADA (409 en otro caso), como el acta. Reutiliza los
+ * la entrega remitida (409 en otro caso), como el acta. Reutiliza los
  * generadores de cada anexo (su método `datos()`) para no duplicar la lógica de
  * armado, y la presencia real de anexos (`presenciaAnexos`) para incluir solo lo
  * que existe.
@@ -50,8 +49,30 @@ class ExpedientePdf
 
     public function descargar(int $dependenciaId): StreamedResponse
     {
-        $this->exigirConsolidada($dependenciaId);
+        $this->exigirRemitida($dependenciaId);
+        $datos = $this->datos($dependenciaId);
 
+        return $this->pdf->descargar('pdf.paquete', $datos, $this->nombreArchivo($datos), 'a4', 'landscape');
+    }
+
+    /**
+     * Copia de consulta del expediente (sin firmas), para incluirla en el
+     * expediente firmado.
+     *
+     * @return array{nombre: string, contenido: string}
+     */
+    public function binario(int $dependenciaId): array
+    {
+        $this->exigirRemitida($dependenciaId);
+        $datos = $this->datos($dependenciaId);
+
+        return ['nombre' => $this->nombreArchivo($datos),
+            'contenido' => $this->pdf->binario('pdf.paquete', $datos, 'a4', 'landscape')];
+    }
+
+    /** @return array<string, mixed> */
+    private function datos(int $dependenciaId): array
+    {
         $contexto = $this->contexto->paraDependencia($dependenciaId);
         $presencia = $this->transferencia->presenciaAnexos($dependenciaId, $contexto['proceso_id']);
 
@@ -74,15 +95,15 @@ class ExpedientePdf
             $datos['anexo06'] = $this->noPatrimonial->datos($dependenciaId);
         }
 
-        $codigo = str_replace('.', '', (string) ($contexto['dependencia']['codigo'] ?? 's-c'));
+        return $datos;
+    }
 
-        return $this->pdf->descargar(
-            'pdf.paquete',
-            $datos,
-            "Expediente-Transferencia-{$codigo}.pdf",
-            'a4',
-            'landscape',
-        );
+    /** @param array<string, mixed> $datos */
+    private function nombreArchivo(array $datos): string
+    {
+        $codigo = str_replace('.', '', (string) ($datos['contexto']['dependencia']['codigo'] ?? 's-c'));
+
+        return "Expediente-Transferencia-{$codigo}.pdf";
     }
 
     /** @param array<string, bool> $presencia @return list<array<string, mixed>> */
@@ -96,7 +117,7 @@ class ExpedientePdf
         return $filas;
     }
 
-    private function exigirConsolidada(int $dependenciaId): void
+    public function exigirRemitida(int $dependenciaId): void
     {
         $procesoId = $this->contexto->procesoActivoId();
         $entrega = Entrega::where('proceso_transferencia_id', $procesoId)
@@ -104,10 +125,10 @@ class ExpedientePdf
             ->latest('id')
             ->first();
 
-        if ($entrega === null || $entrega->estado !== EstadoEntrega::CONSOLIDADA) {
+        if ($entrega === null || ! $entrega->estado->fueRemitida()) {
             throw new HttpResponseException(
                 ApiResponse::error(
-                    'El expediente completo solo puede descargarse cuando la entrega está consolidada.',
+                    'El expediente completo solo puede descargarse cuando la entrega fue remitida.',
                     409,
                 )
             );

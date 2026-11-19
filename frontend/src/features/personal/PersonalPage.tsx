@@ -97,7 +97,7 @@ function PersonalContenido() {
 
   const estadoEntrega = estadoData?.entrega?.estado ?? null
   const esModificable =
-    !estadoEntrega || estadoEntrega === 'borrador' || estadoEntrega === 'observada'
+    !estadoEntrega || estadoEntrega === 'borrador'
 
   const colaboradores = paginado?.data ?? []
 

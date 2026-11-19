@@ -9,17 +9,20 @@ use App\Modules\Documentos\Controllers\DocumentoPendienteController;
 use App\Modules\Expediente\Controllers\ExpedienteController;
 use App\Modules\Gestion\Controllers\GestionController;
 use App\Modules\NoPatrimonial\Controllers\NoPatrimonialController;
+use App\Modules\Organization\Controllers\CentroCostoController;
 use App\Modules\Organization\Controllers\DependenciaController;
 use App\Modules\Patrimonio\Controllers\PatrimonioController;
 use App\Modules\Personal\Controllers\PersonalController;
 use App\Modules\Reportes\Controllers\ReportesController;
-use App\Modules\Transferencia\Controllers\ConstanciaAusenciaController;
+use App\Modules\Transferencia\Controllers\ActaController;
+use App\Modules\Transferencia\Controllers\CadenaEttsEtteController;
 use App\Modules\Transferencia\Controllers\CronogramaController;
+use App\Modules\Transferencia\Controllers\FeriadoController;
+use App\Modules\Transferencia\Controllers\FirmaAnexo01Controller;
 use App\Modules\Transferencia\Controllers\FirmaperuClienteController;
 use App\Modules\Transferencia\Controllers\FirmaperuController;
 use App\Modules\Transferencia\Controllers\ObservacionController;
 use App\Modules\Transferencia\Controllers\TransferenciaController;
-use App\Modules\Transferencia\Controllers\VistoBuenoDelegadoController;
 use App\Support\Http\EvidenciaController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -40,7 +43,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('firmaperu')->group(function () {
         Route::post('/preparar', [FirmaperuController::class, 'preparar'])->middleware('permiso:anexos.registrar,firmas.firmar,actas.generar')->middleware('throttle:10,1,firma-preparar');
         Route::post('/generar-borrador', [FirmaperuController::class, 'generarBorrador'])->middleware('permiso:anexos.registrar,actas.generar')->middleware('throttle:20,1,firma-generar');
-        // Subida manual del delegado ETTE (firma manuscrita como constancia opcional, GAP 1).
+        // Anexo 01 institucional: lo firman el ETTS y un titular ETTE al cierre (fase 6).
+        Route::prefix('anexo01')->middleware('permiso:entregas.remitir_ette,entregas.recibir_ette')->group(function () {
+            Route::get('/estado', [FirmaAnexo01Controller::class, 'estado']);
+            Route::get('/pdf', [FirmaAnexo01Controller::class, 'pdf'])->middleware('throttle:20,1,firma-visualizar');
+            Route::post('/generar', [FirmaAnexo01Controller::class, 'generar'])->middleware('throttle:20,1,firma-generar');
+            Route::post('/preparar', [FirmaAnexo01Controller::class, 'preparar'])->middleware('throttle:10,1,firma-preparar');
+        });
+        // Firma manuscrita del lado ETTE: escaneo del PDF generado (D-06).
         Route::post('/subir-manual', [FirmaperuController::class, 'subirManual'])->middleware('permiso:firmas.firmar')->middleware('throttle:10,1,firma-subir-manual');
         Route::middleware('permiso:anexos.ver')->group(function () {
             Route::get('/previsualizar', [FirmaperuController::class, 'previsualizar'])->middleware('throttle:20,1,firma-visualizar');
@@ -65,6 +75,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dependencias/{id}', [DependenciaController::class, 'show']);
     });
 
+    // Catálogo del Anexo 01 y equivalencias SGD/SIGA → CC (D-11). Administración.
+    Route::prefix('centros-costo')->middleware('permiso:parametros.gestionar')->group(function () {
+        Route::get('/', [CentroCostoController::class, 'index']);
+        Route::get('/equivalencias', [CentroCostoController::class, 'equivalencias']);
+        Route::put('/equivalencias/{id}', [CentroCostoController::class, 'actualizar'])->whereNumber('id');
+    });
+
     // Padrón de servidores y activación de cuentas (plan §7.1). Administración.
     Route::middleware('permiso:usuarios.gestionar')->group(function () {
         Route::get('/servidores', [ActivacionController::class, 'index']);
@@ -83,16 +100,25 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/roles/{asignacion}', [GestionUsuariosController::class, 'revocarRol'])->whereNumber('asignacion');
     });
 
-    // Gestión de delegados ETTE por el comité (RF-008). Alta/designación/
-    // revocación limitadas al equipo (delegados.gestionar), no es administrar
-    // usuarios/roles institucionales.
+    // Gestión de coordinadores ETTE por el comité (RF-13, RF-15, D-10): alta por
+    // web o Excel, reemplazo con constancia y revocación, limitadas al equipo
+    // (delegados.gestionar); no es administrar usuarios/roles institucionales.
     Route::prefix('delegados')->middleware('permiso:delegados.gestionar')->group(function () {
         Route::post('/externos', [DelegadoController::class, 'crearExterno']);
         Route::get('/', [DelegadoController::class, 'index']);
+        Route::get('/historial', [DelegadoController::class, 'historial']);
         Route::get('/candidatos', [DelegadoController::class, 'candidatos']);
+        Route::get('/plantilla', [DelegadoController::class, 'plantilla']);
+        Route::post('/importar', [DelegadoController::class, 'importar'])->middleware('throttle:20,1');
+        Route::get('/relacion/pdf', [DelegadoController::class, 'relacionPdf']);
         Route::post('/', [DelegadoController::class, 'store']);
-        Route::delete('/{id}', [DelegadoController::class, 'destroy']);
+        Route::post('/{id}/reemplazar', [DelegadoController::class, 'reemplazar'])->whereNumber('id');
+        Route::get('/{id}/constancia-reemplazo/pdf', [DelegadoController::class, 'constanciaReemplazoPdf'])->whereNumber('id');
+        Route::delete('/{id}', [DelegadoController::class, 'destroy'])->whereNumber('id');
     });
+
+    // Aviso al responsable del CC: sus coordinadores ETTE y reemplazos recientes (F-12).
+    Route::get('/coordinadores-ette/mis-centros', [DelegadoController::class, 'misCoordinadores']);
 
     // Anexo 01: Reporte de Asuntos Pendientes y Prioritarios (SGD) (plan §7.7).
     Route::prefix('documentos-pendientes')->group(function () {
@@ -157,32 +183,24 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/entregas', [TransferenciaController::class, 'index'])->middleware('permiso:anexos.ver');
         Route::get('/estado', [TransferenciaController::class, 'estado'])->middleware('permiso:anexos.ver');
         Route::post('/remitir', [TransferenciaController::class, 'remitir'])->middleware('permiso:entregas.remitir');
-        Route::post('/revisar', [TransferenciaController::class, 'revisar'])->middleware('permiso:entregas.revisar');
-        Route::get('/acta', [TransferenciaController::class, 'acta'])->middleware('permiso:actas.generar,firmas.firmar');
-        Route::get('/acta/pdf', [TransferenciaController::class, 'actaPdf'])->middleware('permiso:actas.generar,firmas.firmar');
+        Route::post('/presentar', [TransferenciaController::class, 'presentar'])->middleware('permiso:entregas.remitir');
+        Route::post('/verificar', [TransferenciaController::class, 'verificar'])->middleware('permiso:entregas.verificar');
+        Route::get('/acta', [ActaController::class, 'show'])->middleware('permiso:actas.generar,firmas.firmar');
+        Route::put('/acta', [ActaController::class, 'update'])->middleware('permiso:actas.generar,firmas.firmar');
+        Route::get('/acta/pdf', [ActaController::class, 'pdf'])->middleware('permiso:actas.generar,firmas.firmar');
+        // Consolidado del CC padre: su subárbol con autoría (D-08, RF-43).
+        Route::get('/consolidado', [TransferenciaController::class, 'consolidado'])->middleware('permiso:anexos.ver');
+
+        // Cadena ETTS → ETTE (D-12): recepción, envío por lotes con constancia y recepción final.
+        Route::get('/cadena-etts', [CadenaEttsEtteController::class, 'bandeja'])->middleware('permiso:entregas.recibir_etts,entregas.remitir_ette,entregas.recibir_ette');
+        Route::get('/envios-ette', [CadenaEttsEtteController::class, 'envios'])->middleware('permiso:entregas.recibir_etts,entregas.remitir_ette,entregas.recibir_ette');
+        Route::get('/envios-ette/{id}/constancia/pdf', [CadenaEttsEtteController::class, 'constancia'])->whereNumber('id')->middleware('permiso:entregas.recibir_etts,entregas.remitir_ette,entregas.recibir_ette');
+        Route::post('/recibir-etts', [CadenaEttsEtteController::class, 'recibirEtts'])->middleware('permiso:entregas.recibir_etts');
+        Route::post('/enviar-ette', [CadenaEttsEtteController::class, 'enviarEtte'])->middleware('permiso:entregas.remitir_ette');
+        Route::post('/recibir-ette', [CadenaEttsEtteController::class, 'recibirEtte'])->middleware('permiso:entregas.recibir_ette');
     });
 
-    // Visto bueno del delegado ETTE sobre lo remitido (GAP 2 del portal del
-    // delegado). Constancia de conformidad acotada al ámbito del delegado; NO
-    // consolida. La consulta usa anexos.ver; otorgar/retirar exige
-    // delegado.visto_bueno. El controller valida ámbito y rol delegado.
-    Route::prefix('delegado/visto-bueno')->group(function () {
-        Route::get('/{dependenciaId}', [VistoBuenoDelegadoController::class, 'estado'])
-            ->whereNumber('dependenciaId')->middleware('permiso:anexos.ver');
-        Route::post('/', [VistoBuenoDelegadoController::class, 'store'])->middleware('permiso:delegado.visto_bueno');
-        Route::delete('/{dependenciaId}', [VistoBuenoDelegadoController::class, 'destroy'])
-            ->whereNumber('dependenciaId')->middleware('permiso:delegado.visto_bueno');
-    });
-
-    // Constancia de ausencia de firma ETTE + copia digital (RF-004/005, D-12).
-    // Consulta con anexos.ver; el registro lo hace el responsable del centro de
-    // costo (firmas.constancia_ausencia). La ausencia no bloquea el flujo.
-    Route::prefix('firmas')->group(function () {
-        Route::get('/ausencia-ette', [ConstanciaAusenciaController::class, 'index'])->middleware('permiso:anexos.ver');
-        Route::post('/ausencia-ette', [ConstanciaAusenciaController::class, 'store'])->middleware('permiso:firmas.constancia_ausencia');
-    });
-
-    // Cronograma del proceso (RF-007, C-03). Consulta con anexos.ver; la
+    // Cronograma del proceso (RF-20, RF-21). Consulta con anexos.ver; la
     // modificación la reservan administrador y ETTS (cronograma.gestionar).
     Route::prefix('cronograma')->group(function () {
         Route::get('/', [CronogramaController::class, 'index'])->middleware('permiso:anexos.ver,cronograma.gestionar');
@@ -191,8 +209,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}', [CronogramaController::class, 'destroy'])->middleware('permiso:cronograma.gestionar');
     });
 
+    // Feriados del cálculo en días hábiles (RF-22). Se consultan junto al
+    // cronograma; los modifican administrador y ETTS.
+    Route::prefix('feriados')->group(function () {
+        Route::get('/', [FeriadoController::class, 'index'])->middleware('permiso:anexos.ver,cronograma.gestionar');
+        Route::post('/', [FeriadoController::class, 'store'])->middleware('permiso:cronograma.gestionar');
+        Route::put('/{feriado}', [FeriadoController::class, 'update'])->middleware('permiso:cronograma.gestionar');
+        Route::delete('/{feriado}', [FeriadoController::class, 'destroy'])->middleware('permiso:cronograma.gestionar');
+    });
+
     // Expediente de entrega: paquete PDF único con todos los anexos (F5).
     Route::get('/expediente/pdf', [ExpedienteController::class, 'pdf'])->middleware('permiso:expediente.ver');
+    // Expediente firmado (fase 6): ZIP con los PDF finales firmados del CC y su subárbol.
+    Route::get('/expediente/firmado', [ExpedienteController::class, 'firmado'])->middleware('permiso:expediente.ver');
 
     // Reportes consolidados y exportación (plan §7.11, F5). La vista requiere
     // reportes.ver; la descarga Excel/PDF requiere reportes.exportar.
@@ -201,12 +230,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{reporte}/export', [ReportesController::class, 'exportar'])->middleware('permiso:reportes.exportar');
     });
 
-    // Observaciones y subsanaciones sobre los anexos (plan §7.9).
+    // Observaciones del coordinador ETTE: constancia, sin subsanación (D-07).
     Route::prefix('observaciones')->group(function () {
         Route::get('/', [ObservacionController::class, 'index'])->middleware('permiso:anexos.ver');
         Route::post('/', [ObservacionController::class, 'store'])->middleware('permiso:observaciones.registrar');
-        Route::post('/{id}/subsanar', [ObservacionController::class, 'subsanar'])->middleware('permiso:observaciones.subsanar');
-        Route::post('/{id}/desestimar', [ObservacionController::class, 'desestimar'])->middleware('permiso:observaciones.registrar');
+        Route::post('/{id}/retirar', [ObservacionController::class, 'retirar'])->middleware('permiso:observaciones.registrar');
     });
 
     // Storage Seguro de Evidencias Documentales y Fotográficas (plan §9).

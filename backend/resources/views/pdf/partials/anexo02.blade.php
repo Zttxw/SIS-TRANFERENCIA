@@ -71,12 +71,14 @@
     </tbody>
 </table>
 
+{{-- IV. Entrada libre del informe y documentos pendientes del CC (SGD o manuales), D-09. --}}
 <div class="seccion-titulo">IV. Agenda Pendiente y Asuntos que Requieren Atención</div>
 <table>
     <thead>
         <tr>
             <th class="celda-n">N°</th><th>Asunto pendiente / descripción</th><th>Estado situacional y acción requerida</th>
             <th>Documento de referencia / expediente</th><th>Plazo o fecha relevante</th><th>Unidad o responsable competente</th>
+            <th>Origen</th>
         </tr>
     </thead>
     <tbody>
@@ -88,9 +90,10 @@
                 <td>{{ $fila['documento_referencia'] ?? '' }}</td>
                 <td>{{ $fila['plazo'] ?? '' }}</td>
                 <td>{{ $fila['responsable'] ?? '' }}</td>
+                <td>{{ ($fila['origen'] ?? 'manual') === 'sgd' ? 'SGD' : 'Manual' }}</td>
             </tr>
         @empty
-            <tr><td class="celda-n">1</td><td colspan="5" class="vacio">Sin asuntos pendientes registrados</td></tr>
+            <tr><td class="celda-n">1</td><td colspan="6" class="vacio">Sin asuntos pendientes registrados</td></tr>
         @endforelse
     </tbody>
 </table>

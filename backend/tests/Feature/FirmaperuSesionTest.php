@@ -20,11 +20,12 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Sanctum;
 use Mockery\MockInterface;
+use Tests\Concerns\PreparaEntregas;
 use Tests\TestCase;
 
 class FirmaperuSesionTest extends TestCase
 {
-    use RefreshDatabase;
+    use PreparaEntregas, RefreshDatabase;
 
     private const PDF = "%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF\n";
 
@@ -48,10 +49,11 @@ class FirmaperuSesionTest extends TestCase
         });
     }
 
-    private function iniciarUsuario(Rol $rol = Rol::SERVIDOR): Dependencia
+    private function iniciarUsuario(Rol $rol = Rol::RESPONSABLE_CENTRO_COSTO): Dependencia
     {
         $proceso = ProcesoTransferencia::factory()->create();
         $dep = Dependencia::factory()->create(['proceso_transferencia_id' => $proceso->id]);
+        $this->entregaEn($dep);
         $usuario = User::factory()->create(['dni' => '12345678', 'activo' => true]);
         AsignacionRol::factory()->rol($rol)->create(['user_id' => $usuario->id,
             'proceso_transferencia_id' => $proceso->id, 'dependencia_id' => $dep->id]);
@@ -166,10 +168,12 @@ class FirmaperuSesionTest extends TestCase
         $this->getJson('/api/firmaperu/documentos/'.$sesion->id.'/descargar')->assertForbidden();
     }
 
-    public function test_servidor_no_puede_preparar_acta_sin_permiso(): void
+    public function test_el_servidor_no_firma_los_anexos_de_su_oficina(): void
     {
-        $dep = $this->iniciarUsuario();
+        $dep = $this->iniciarUsuario(Rol::SERVIDOR);
+        $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id])->assertCreated();
 
+        $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id])->assertForbidden();
         $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo07', 'dependencia_id' => $dep->id])->assertForbidden();
         $this->assertDatabaseCount('firma_sesiones', 0);
     }
@@ -285,8 +289,8 @@ class FirmaperuSesionTest extends TestCase
         $preparacion = $this->preparar($dep);
         $parametros = $this->emitir($preparacion);
         $sesion = FirmaSesion::findOrFail($preparacion['sesion_id']);
-        // El carácter registrado al preparar ya no coincide con el que corresponde al firmante.
-        $sesion->update(['caracter' => 'opcional']);
+        // El lado registrado al preparar ya no coincide con el que corresponde al firmante.
+        $sesion->update(['lado' => 'ette']);
 
         $this->postJson($this->subir($parametros), ['signed_file' => UploadedFile::fake()->createWithContent('firmado.pdf', self::PDF)])
             ->assertStatus(422);

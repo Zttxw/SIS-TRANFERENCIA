@@ -1,3 +1,4 @@
+import { ETIQUETA_ESTADO_ENTREGA, estaEnFirma, fueRemitida } from '@/types/transferencia'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -6,7 +7,6 @@ import {
   ArrowRight,
   Boxes,
   Building2,
-  Calendar,
   Clock,
   FileCheck2,
   FolderTree,
@@ -25,6 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { useTableroOperativo } from './use-dashboard'
+import { IndicadorPlazo } from '@/features/cronograma/IndicadorPlazo'
 import { DocumentosIndicadorModal } from '@/features/documentos/DocumentosIndicadorModal'
 
 interface TableroOperativoViewProps {
@@ -32,7 +33,7 @@ interface TableroOperativoViewProps {
   perfil?: 'ette' | 'etts' | 'general'
 }
 
-type FiltroEstado = 'todos' | 'consolidada' | 'remitida' | 'observada' | 'borrador'
+type FiltroEstado = 'todos' | 'remitida' | 'verificada' | 'en_revision' | 'borrador'
 
 export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'general' }: TableroOperativoViewProps) {
   const { permisos } = useAuth()
@@ -60,7 +61,10 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
 
       // Filtro de estado de entrega
       const coincideEstado =
-        filtroEstado === 'todos' || dep.estado_entrega === filtroEstado
+        filtroEstado === 'todos' ||
+        dep.estado_entrega === filtroEstado ||
+        (filtroEstado === 'verificada' && estaEnFirma(dep.estado_entrega)) ||
+        (filtroEstado === 'remitida' && fueRemitida(dep.estado_entrega))
 
       // Filtro de nivel
       const coincideNivel =
@@ -89,7 +93,7 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
           No se pudo cargar el tablero operativo
         </h3>
         <p className="text-xs text-muted-foreground mt-1 mb-4">
-          Ocurrió un error al consultar las métricas consolidadas de las dependencias.
+          Ocurrió un error al consultar las métricas de las dependencias.
         </p>
         <Button size="sm" variant="outline" onClick={() => refetch()} className="gap-2">
           <RefreshCw className="h-3.5 w-3.5" />
@@ -102,21 +106,21 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
   const { metricas } = tablero
 
   // Porcentajes para barra semáforo institucional
-  const pctConsolidada =
-    metricas.total_dependencias > 0
-      ? Math.round((metricas.consolidadas / metricas.total_dependencias) * 100)
-      : 0
   const pctRemitida =
     metricas.total_dependencias > 0
       ? Math.round((metricas.remitidas / metricas.total_dependencias) * 100)
       : 0
-  const pctObservada =
+  const pctAceptada =
     metricas.total_dependencias > 0
-      ? Math.round((metricas.observadas / metricas.total_dependencias) * 100)
+      ? Math.round((metricas.verificadas / metricas.total_dependencias) * 100)
+      : 0
+  const pctPorRevisar =
+    metricas.total_dependencias > 0
+      ? Math.round((metricas.en_revision / metricas.total_dependencias) * 100)
       : 0
   const pctBorrador =
     metricas.total_dependencias > 0
-      ? Math.max(0, 100 - pctConsolidada - pctRemitida - pctObservada)
+      ? Math.max(0, 100 - pctRemitida - pctAceptada - pctPorRevisar)
       : 0
 
   return (
@@ -138,20 +142,21 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
           <span className="font-semibold text-foreground">Supervisión Pliego 2026</span>
         </div>
 
-        {/* Píldoras de plazo normativo */}
+        {/* Plazos del cronograma en días hábiles (F-16) */}
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-muted text-foreground font-mono text-nota font-medium border border-border">
-            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+          <span
+            title="Centros de costo cuya siguiente acción tiene el plazo del cronograma vencido"
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-mono text-nota font-semibold border ${
+              metricas.plazos_vencidos > 0
+                ? 'bg-danger-soft text-danger-fg border-danger-border'
+                : 'bg-muted text-foreground border-border'
+            }`}
+          >
+            <Clock className="h-3.5 w-3.5" />
             <span>
-              Fecha de corte: <strong className="text-foreground">31/10/2026</strong>
+              Plazos vencidos: <strong>{metricas.plazos_vencidos}</strong> CC
             </span>
-          </div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-warning-soft text-warning-fg font-mono text-nota font-semibold border border-warning-border">
-            <Clock className="h-3.5 w-3.5 text-warning-fg" />
-            <span>
-              Plazo de entrega: <strong className="text-warning-fg">07/11/2026</strong>
-            </span>
-          </div>
+          </span>
         </div>
       </div>
 
@@ -164,7 +169,7 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
             {perfil === 'ette' ? 'Monitoreo de la transferencia' : perfil === 'etts' ? 'Revisión y consolidación de entregas' : 'Monitoreo Institucional de Transferencia'}
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            {perfil === 'ette' ? 'Avance de las oficinas, entregas pendientes y observaciones del proceso.' : perfil === 'etts' ? 'Priorice las entregas remitidas y observadas para su revisión.' : `Supervisión de ${metricas.total_dependencias} centros de costo y consolidación del pliego.`}
+            {perfil === 'ette' ? 'Avance de las oficinas, entregas pendientes y observaciones del proceso.' : perfil === 'etts' ? 'Siga las entregas presentadas, aceptadas y remitidas de cada centro de costo.' : `Supervisión de ${metricas.total_dependencias} centros de costo y avance de las entregas del pliego.`}
           </p>
         </div>
 
@@ -229,39 +234,39 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFiltroEstado('consolidada')}
+                  onClick={() => setFiltroEstado('remitida')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5 ${
-                    filtroEstado === 'consolidada'
+                    filtroEstado === 'remitida'
                       ? 'bg-success text-white font-semibold'
                       : 'bg-success-soft text-success-fg border border-success-border hover:bg-success-soft'
                   }`}
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                  Consolidadas ({metricas.consolidadas})
+                  Remitidas ({metricas.remitidas})
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFiltroEstado('remitida')}
+                  onClick={() => setFiltroEstado('verificada')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5 ${
-                    filtroEstado === 'remitida'
+                    filtroEstado === 'verificada'
                       ? 'bg-info text-white font-semibold'
                       : 'bg-info-soft text-info-fg border border-info-border hover:bg-info-soft'
                   }`}
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-info" />
-                  Remitidas ({metricas.remitidas})
+                  Aceptadas (a firma) ({metricas.verificadas})
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFiltroEstado('observada')}
+                  onClick={() => setFiltroEstado('en_revision')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5 ${
-                    filtroEstado === 'observada'
+                    filtroEstado === 'en_revision'
                       ? 'bg-warning text-warning-fg font-semibold'
                       : 'bg-warning-soft text-warning-fg border border-warning-border hover:bg-warning-soft'
                   }`}
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-warning" />
-                  Observadas ({metricas.observadas})
+                  Por revisar ({metricas.en_revision})
                 </button>
                 <button
                   type="button"
@@ -314,6 +319,7 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
                   <thead className="bg-muted/40 text-muted-foreground border-b border-border text-nota uppercase font-semibold sticky top-0 bg-muted z-10 shadow-xs">
                     <tr>
                       <th className="py-2.5 px-3">Estado</th>
+                      <th className="py-2.5 px-3">Plazo</th>
                       <th className="py-2.5 px-3">Código</th>
                       <th className="py-2.5 px-3">Centro de Costo</th>
                       <th className="py-2.5 px-3">Responsable Oficial</th>
@@ -325,7 +331,7 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
                   <tbody className="divide-y divide-border">
                     {dependenciasFiltradas.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-muted-foreground text-xs">
+                        <td colSpan={8} className="py-8 text-center text-muted-foreground text-xs">
                           No se encontraron dependencias que coincidan con los filtros aplicados.
                         </td>
                       </tr>
@@ -337,22 +343,23 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
                         >
                           {/* Semáforo de Estado */}
                           <td className="py-2.5 px-3 whitespace-nowrap">
-                            {dep.estado_entrega === 'consolidada' && (
+                            {fueRemitida(dep.estado_entrega) && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-mini font-semibold bg-success-soft text-success-fg border border-success-border">
                                 <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                                Consolidada
+                                {ETIQUETA_ESTADO_ENTREGA[dep.estado_entrega]}
+                                {dep.enviado_tarde && ' · tarde'}
                               </span>
                             )}
-                            {dep.estado_entrega === 'remitida' && (
+                            {estaEnFirma(dep.estado_entrega) && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-mini font-semibold bg-info-soft text-info-fg border border-info-border">
                                 <span className="h-1.5 w-1.5 rounded-full bg-info" />
-                                Remitida
+                                Aceptada
                               </span>
                             )}
-                            {dep.estado_entrega === 'observada' && (
+                            {dep.estado_entrega === 'en_revision' && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-mini font-semibold bg-warning-soft text-warning-fg border border-warning-border">
                                 <span className="h-1.5 w-1.5 rounded-full bg-warning" />
-                                Observada
+                                Por revisar
                               </span>
                             )}
                             {dep.estado_entrega === 'borrador' && (
@@ -361,6 +368,11 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
                                 Borrador
                               </span>
                             )}
+                          </td>
+
+                          {/* Plazo de la siguiente acción (F-16) */}
+                          <td className="py-2.5 px-3 whitespace-nowrap">
+                            <IndicadorPlazo plazo={dep.plazo} />
                           </td>
 
                           {/* Código */}
@@ -418,10 +430,10 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
 
                           {/* Observaciones Abiertas */}
                           <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                            {dep.observaciones_abiertas > 0 ? (
+                            {dep.observaciones > 0 ? (
                               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-mini font-bold bg-destructive/10 text-destructive border border-destructive/20">
                                 <AlertTriangle className="h-3 w-3" />
-                                {dep.observaciones_abiertas}
+                                {dep.observaciones}
                               </span>
                             ) : (
                               <span className="text-muted-foreground text-mini">0</span>
@@ -487,23 +499,23 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
                 <div className="flex justify-between text-nota text-muted-foreground">
                   <span>Ciclo de Entregas MDSJ</span>
                   <span className="font-semibold text-foreground">
-                    {metricas.consolidadas}/{metricas.total_dependencias} Cerradas
+                    {metricas.remitidas}/{metricas.total_dependencias} Remitidas
                   </span>
                 </div>
                 <div className="h-3 w-full rounded-full bg-muted flex overflow-hidden border border-border">
                   <div
-                    style={{ width: `${pctConsolidada}%` }}
-                    title={`Consolidadas: ${metricas.consolidadas}`}
+                    style={{ width: `${pctRemitida}%` }}
+                    title={`Remitidas: ${metricas.remitidas}`}
                     className="bg-success h-full transition-all"
                   />
                   <div
-                    style={{ width: `${pctRemitida}%` }}
-                    title={`Remitidas: ${metricas.remitidas}`}
+                    style={{ width: `${pctAceptada}%` }}
+                    title={`Aceptadas (a firma): ${metricas.verificadas}`}
                     className="bg-info h-full transition-all"
                   />
                   <div
-                    style={{ width: `${pctObservada}%` }}
-                    title={`Observadas: ${metricas.observadas}`}
+                    style={{ width: `${pctPorRevisar}%` }}
+                    title={`Por revisar: ${metricas.en_revision}`}
                     className="bg-warning h-full transition-all"
                   />
                   <div
@@ -519,30 +531,30 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
                 <div className="flex justify-between items-center py-2">
                   <span className="flex items-center gap-1.5 font-medium text-foreground">
                     <span className="h-2 w-2 rounded-full bg-success" />
-                    Consolidadas
+                    Remitidas
                   </span>
                   <span className="font-mono font-bold text-success-fg">
-                    {metricas.consolidadas} ({pctConsolidada}%)
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center py-2">
-                  <span className="flex items-center gap-1.5 font-medium text-foreground">
-                    <span className="h-2 w-2 rounded-full bg-info" />
-                    Remitidas / En Revisión
-                  </span>
-                  <span className="font-mono font-bold text-info-fg">
                     {metricas.remitidas} ({pctRemitida}%)
                   </span>
                 </div>
 
                 <div className="flex justify-between items-center py-2">
                   <span className="flex items-center gap-1.5 font-medium text-foreground">
+                    <span className="h-2 w-2 rounded-full bg-info" />
+                    Aceptadas (a firma)
+                  </span>
+                  <span className="font-mono font-bold text-info-fg">
+                    {metricas.verificadas} ({pctAceptada}%)
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center py-2">
+                  <span className="flex items-center gap-1.5 font-medium text-foreground">
                     <span className="h-2 w-2 rounded-full bg-warning" />
-                    Observadas
+                    Por revisar
                   </span>
                   <span className="font-mono font-bold text-warning-fg">
-                    {metricas.observadas} ({pctObservada}%)
+                    {metricas.en_revision} ({pctPorRevisar}%)
                   </span>
                 </div>
 

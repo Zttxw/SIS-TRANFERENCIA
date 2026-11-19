@@ -216,7 +216,6 @@ export function AnexoCrudPage<T>({
       estadoEntrega={estadoEntrega}
       esModificable={esModificable}
       anexoObservable={anexoObservable}
-      observableId={filas?.[0] ? Number(rowKey(filas[0])) : undefined}
       acciones={
         <>
           {accionesExtra}

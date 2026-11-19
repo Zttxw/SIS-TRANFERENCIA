@@ -11,7 +11,6 @@ use App\Modules\Organization\Services\CentrosCostoPdf;
 use App\Modules\Transferencia\Models\ActaTransferencia;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Modules\Transferencia\Services\FirmaperuPdfService;
-use App\Support\Enums\DeclaracionActa;
 use App\Support\Services\PdfService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
@@ -85,7 +84,6 @@ class FirmaperuPdfTest extends TestCase
 
         $this->assertStringStartsWith('%PDF-', $pdf);
         $acta = ActaTransferencia::where('dependencia_id', $dependencia->id)->firstOrFail();
-        $this->assertSame(DeclaracionActa::SUSCRIPCION_HIJA, $acta->declara);
         $this->assertSame(1, $acta->version);
     }
 

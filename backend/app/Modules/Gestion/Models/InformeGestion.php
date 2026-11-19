@@ -15,7 +15,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * Informe de gestión por centro de costo (Anexo 02).
+ * Informe de gestión por centro de costo (Anexo 02). La sección IV guarda la
+ * entrada libre (`pendientes_items`) y, desde que se presenta la entrega, la
+ * copia congelada de los documentos pendientes del CC (D-09).
  */
 class InformeGestion extends BaseModel
 {
@@ -37,8 +39,18 @@ class InformeGestion extends BaseModel
         'logros_items',
         'dificultades_items',
         'pendientes_items',
+        'pendientes_documentales',
+        'pendientes_congelados_en',
         'estado',
     ];
+
+    /**
+     * La copia congelada se expone ya resuelta en `agenda_documental`
+     * (GestionService::obtenerInforme).
+     *
+     * @var list<string>
+     */
+    protected $hidden = ['pendientes_documentales'];
 
     /** @return array<string, string> */
     protected function casts(): array
@@ -48,6 +60,8 @@ class InformeGestion extends BaseModel
             'logros_items' => 'array',
             'dificultades_items' => 'array',
             'pendientes_items' => 'array',
+            'pendientes_documentales' => 'array',
+            'pendientes_congelados_en' => 'datetime',
         ];
     }
 

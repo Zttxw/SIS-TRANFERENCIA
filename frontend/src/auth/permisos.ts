@@ -27,16 +27,16 @@ export const PERMISOS = {
   VerificarBienes: 'bienes.verificar',
   // Flujo jerárquico.
   RemitirEntrega: 'entregas.remitir',
-  RevisarEntrega: 'entregas.revisar',
-  ConsolidarEntrega: 'entregas.consolidar',
-  // Firma y gestión de delegados ETTE.
+  // Verificación ETTE y cadena ETTS → ETTE (directiva 2026).
+  VerificarEntrega: 'entregas.verificar',
+  RecibirEntregaEtts: 'entregas.recibir_etts',
+  RemitirEntregaEtte: 'entregas.remitir_ette',
+  RecibirEntregaEtte: 'entregas.recibir_ette',
+  // Firma y gestión de coordinadores ETTE.
   FirmarAnexos: 'firmas.firmar',
-  RegistrarConstanciaAusencia: 'firmas.constancia_ausencia',
   GestionarDelegados: 'delegados.gestionar',
-  DarVistoBuenoDelegado: 'delegado.visto_bueno',
   // Observaciones.
   RegistrarObservaciones: 'observaciones.registrar',
-  SubsanarObservaciones: 'observaciones.subsanar',
   // Actas, expediente, reportes.
   GenerarActas: 'actas.generar',
   VerExpediente: 'expediente.ver',
@@ -50,11 +50,11 @@ export type Permiso = (typeof PERMISOS)[keyof typeof PERMISOS]
 export const ROLES = {
   Administrador: 'administrador',
   Servidor: 'servidor',
-  ResponsableEquipo: 'responsable_equipo',
   ResponsableCentroCosto: 'responsable_centro_costo',
-  Coordinador: 'coordinador',
   Etts: 'etts',
+  /** Titular ETTE (comité). */
   Ette: 'ette',
+  /** Coordinador ETTE de un centro de costo (valor interno histórico). */
   DelegadoEtte: 'delegado_ette',
 } as const
 
@@ -81,43 +81,15 @@ const PERMISOS_POR_ROL: Record<RolCodigo, readonly Permiso[]> = {
     PERMISOS.VerAnexos,
     PERMISOS.RegistrarAnexos,
     PERMISOS.VerificarBienes,
-    PERMISOS.SubsanarObservaciones,
     PERMISOS.VerExpediente,
-  ],
-  [ROLES.ResponsableEquipo]: [
-    PERMISOS.AccederPlataforma,
-    PERMISOS.VerAnexos,
-    PERMISOS.RegistrarAnexos,
-    PERMISOS.VerificarBienes,
-    PERMISOS.RevisarEntrega,
-    PERMISOS.ConsolidarEntrega,
-    PERMISOS.RegistrarObservaciones,
-    PERMISOS.SubsanarObservaciones,
-    PERMISOS.RemitirEntrega,
-    PERMISOS.RegistrarConstanciaAusencia,
-    PERMISOS.VerExpediente,
-    PERMISOS.VerReportes,
   ],
   [ROLES.ResponsableCentroCosto]: [
     PERMISOS.AccederPlataforma,
     PERMISOS.VerAnexos,
     PERMISOS.RegistrarAnexos,
     PERMISOS.VerificarBienes,
-    PERMISOS.RevisarEntrega,
-    PERMISOS.ConsolidarEntrega,
-    PERMISOS.RegistrarObservaciones,
-    PERMISOS.SubsanarObservaciones,
     PERMISOS.RemitirEntrega,
-    PERMISOS.RegistrarConstanciaAusencia,
     PERMISOS.GenerarActas,
-    PERMISOS.VerExpediente,
-    PERMISOS.VerReportes,
-    PERMISOS.ExportarReportes,
-  ],
-  [ROLES.Coordinador]: [
-    PERMISOS.AccederPlataforma,
-    PERMISOS.VerAnexos,
-    PERMISOS.RegistrarObservaciones,
     PERMISOS.VerExpediente,
     PERMISOS.VerReportes,
     PERMISOS.ExportarReportes,
@@ -125,8 +97,8 @@ const PERMISOS_POR_ROL: Record<RolCodigo, readonly Permiso[]> = {
   [ROLES.Etts]: [
     PERMISOS.AccederPlataforma,
     PERMISOS.VerAnexos,
-    PERMISOS.RevisarEntrega,
-    PERMISOS.ConsolidarEntrega,
+    PERMISOS.RecibirEntregaEtts,
+    PERMISOS.RemitirEntregaEtte,
     PERMISOS.GenerarActas,
     PERMISOS.GestionarCronograma,
     PERMISOS.VerExpediente,
@@ -139,13 +111,18 @@ const PERMISOS_POR_ROL: Record<RolCodigo, readonly Permiso[]> = {
     PERMISOS.VerExpediente,
     PERMISOS.VerReportes,
     PERMISOS.GestionarDelegados,
+    PERMISOS.FirmarAnexos,
+    PERMISOS.RegistrarObservaciones,
+    PERMISOS.VerificarEntrega,
+    PERMISOS.RecibirEntregaEtte,
   ],
   [ROLES.DelegadoEtte]: [
     PERMISOS.AccederPlataforma,
     PERMISOS.VerAnexos,
     PERMISOS.VerExpediente,
     PERMISOS.FirmarAnexos,
-    PERMISOS.DarVistoBuenoDelegado,
+    PERMISOS.RegistrarObservaciones,
+    PERMISOS.VerificarEntrega,
   ],
 }
 

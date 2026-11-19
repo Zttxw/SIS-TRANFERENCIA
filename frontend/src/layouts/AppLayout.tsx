@@ -25,12 +25,10 @@ function getRolEtiqueta(usuario: {
   if (usuario.servidor?.cargo) return usuario.servidor.cargo
   const rolCodes = new Set(usuario.roles?.map((r) => r.rol) ?? [])
   if (rolCodes.has('administrador')) return 'Administrador'
-  if (rolCodes.has('ette')) return 'Comité ETTE'
+  if (rolCodes.has('ette')) return 'Titular ETTE'
   if (rolCodes.has('etts')) return 'Equipo ETTS'
   if (rolCodes.has('responsable_centro_costo')) return 'Responsable Centro de Costo'
-  if (rolCodes.has('responsable_equipo')) return 'Responsable de Equipo'
-  if (rolCodes.has('coordinador')) return 'Coordinador'
-  if (rolCodes.has('delegado_ette')) return 'Delegado ETTE'
+  if (rolCodes.has('delegado_ette')) return 'Coordinador ETTE'
   return usuario.es_global ? 'Administrador' : 'Servidor Público'
 }
 
@@ -64,8 +62,8 @@ export function AppLayout() {
   const soloEtts = roles.has('etts') && !roles.has('ette') && !roles.has('administrador')
   const soloDelegado =
     roles.has('delegado_ette') && !roles.has('ette') && !roles.has('etts') && !roles.has('administrador')
-  const rutasEtte = new Set(['/', '/organigrama', '/anexos-entidad', '/reportes', '/observaciones', '/delegados'])
-  const rutasEtts = new Set(['/', '/organigrama', '/anexos-entidad', '/entregas', '/observaciones', '/reportes', '/cronograma', '/acta'])
+  const rutasEtte = new Set(['/', '/organigrama', '/anexos-entidad', '/cadena-etts', '/reportes', '/observaciones', '/delegados'])
+  const rutasEtts = new Set(['/', '/organigrama', '/anexos-entidad', '/entregas', '/cadena-etts', '/observaciones', '/reportes', '/cronograma', '/acta'])
   // El portal del delegado («/») ya es el explorador de sus dependencias; su
   // navegación se acota a él más documentos y observaciones.
   const rutasDelegado = new Set(['/', '/documentos', '/observaciones'])
@@ -81,7 +79,7 @@ export function AppLayout() {
   const nav = (
     <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2 text-xs">
       <div className="px-3 pt-2 pb-1.5 text-mini font-bold uppercase tracking-wider text-white/50">
-        {roles.has('ette') ? 'Comité ETTE' : roles.has('etts') ? 'Equipo ETTS' : soloDelegado ? 'Delegado ETTE' : usuario?.es_global ? 'Administración' : 'Servidor Público'}
+        {roles.has('ette') ? 'Comité ETTE' : roles.has('etts') ? 'Equipo ETTS' : soloDelegado ? 'Coordinador ETTE' : usuario?.es_global ? 'Administración' : 'Servidor Público'}
       </div>
       {items.map((item) => {
         const Icono = item.ruta === '/organigrama' ? infoEstructura.icono : item.icono

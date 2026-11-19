@@ -6,9 +6,10 @@ use App\Models\User;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Models\FirmaAnexo;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
-use App\Support\Enums\CaracterFirma;
 use App\Support\Enums\EstadoFirma;
+use App\Support\Enums\LadoFirma;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
 /**
@@ -37,7 +38,7 @@ class FirmaAnexoFactory extends Factory
             'firmante_id' => User::factory(),
             'firmante_nombre' => fake()->name(),
             'firmante_cargo' => fake()->jobTitle(),
-            'caracter' => CaracterFirma::OBLIGATORIA,
+            'lado' => LadoFirma::ENTIDAD,
             'estado' => EstadoFirma::PENDIENTE,
             'firmada_en' => null,
             'hash_pdf' => null,
@@ -47,7 +48,7 @@ class FirmaAnexoFactory extends Factory
     }
 
     /** Apunta la firma a un documento concreto (informe, acta, etc.). */
-    public function para(\Illuminate\Database\Eloquent\Model $documento, int $version = 1): static
+    public function para(Model $documento, int $version = 1): static
     {
         return $this->state(fn (array $attributes) => [
             'firmable_type' => $documento->getMorphClass(),
@@ -56,9 +57,9 @@ class FirmaAnexoFactory extends Factory
         ]);
     }
 
-    public function caracter(CaracterFirma $caracter): static
+    public function lado(LadoFirma $lado): static
     {
-        return $this->state(fn (array $attributes) => ['caracter' => $caracter]);
+        return $this->state(fn (array $attributes) => ['lado' => $lado]);
     }
 
     /** Firma efectivamente realizada (estado FIRMADA con hash y fecha). */
@@ -68,16 +69,6 @@ class FirmaAnexoFactory extends Factory
             'estado' => EstadoFirma::FIRMADA,
             'firmada_en' => Carbon::now(),
             'hash_pdf' => hash('sha256', fake()->uuid()),
-        ]);
-    }
-
-    /** Firma opcional ETTE ausente: constancia y copia digital (C-08). */
-    public function ausente(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'caracter' => CaracterFirma::OPCIONAL,
-            'estado' => EstadoFirma::AUSENTE,
-            'nota' => 'ETTE no firmó; se entrega copia digital.',
         ]);
     }
 }

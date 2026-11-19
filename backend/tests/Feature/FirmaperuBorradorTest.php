@@ -18,11 +18,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Mockery\MockInterface;
+use Tests\Concerns\PreparaEntregas;
 use Tests\TestCase;
 
 class FirmaperuBorradorTest extends TestCase
 {
-    use RefreshDatabase;
+    use PreparaEntregas, RefreshDatabase;
 
     private const PDF = "%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF\n";
 
@@ -126,7 +127,8 @@ class FirmaperuBorradorTest extends TestCase
 
     public function test_firma_el_mismo_pdf_del_borrador_revisado(): void
     {
-        $dep = $this->iniciarUsuario();
+        $dep = $this->iniciarUsuario(Rol::RESPONSABLE_CENTRO_COSTO);
+        $this->entregaEn($dep);
         config(['firmaperu.public_url' => 'https://transferencia.example']);
         $this->mock(FirmaperuAuthService::class, function (MockInterface $mock): void {
             $mock->shouldReceive('obtenerJwtToken')->andReturn('jwt-de-prueba');

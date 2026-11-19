@@ -9,19 +9,14 @@ namespace App\Support\Enums;
  *
  * - PENDIENTE: firma esperada aún no realizada.
  * - FIRMADA: suscripción válida registrada a nombre del firmante efectivo.
- * - CANCELADA: intento cancelado o fallido; NO cuenta como firmada (RF-005).
- * - AUSENTE: firma opcional ETTE que no se realizó; se deja constancia y se
- *   entrega copia digital (C-08). No es una conformidad ni una firma válida.
- *
- * El proveedor real (Firma Perú/RENIEC) y el orden de firmas siguen pendientes
- * (D-02); este enum solo modela los estados ya confirmados por los requisitos.
+ * - CANCELADA: firma que dejó de valer (datos cambiados, nueva versión del acta)
+ *   o intento fallido; NO cuenta como firmada (RF-005).
  */
 enum EstadoFirma: string
 {
     case PENDIENTE = 'pendiente';
     case FIRMADA = 'firmada';
     case CANCELADA = 'cancelada';
-    case AUSENTE = 'ausente';
 
     public function etiqueta(): string
     {
@@ -29,7 +24,6 @@ enum EstadoFirma: string
             self::PENDIENTE => 'Pendiente de firma',
             self::FIRMADA => 'Firmada',
             self::CANCELADA => 'Cancelada o fallida',
-            self::AUSENTE => 'Ausente (constancia y copia digital)',
         };
     }
 

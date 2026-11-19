@@ -75,6 +75,8 @@ export function EstructuraOrganicaPage() {
     return arbolCompleto[0] ?? null
   }, [nodoSeleccionado, dependenciaId, dependencias, arbolCompleto, nodosPorId])
   const puedeOperar = Boolean(nodoEfectivo && permitidas.has(nodoEfectivo.id))
+  // Ruteo del Anexo 01 (D-02): el CC padre, o el ETTS si su padre es él mismo.
+  const padreEfectivo = nodoEfectivo?.parent_id ? nodosPorId.get(nodoEfectivo.parent_id) ?? null : null
 
   const toggleExpandido = (id: number) => {
     setNodosExpandidos((prev) => {
@@ -153,7 +155,7 @@ export function EstructuraOrganicaPage() {
             </Badge>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Centros de costo de la institución. {usuario?.es_global ? 'Seleccione una unidad para consultar sus anexos.' : 'Las unidades a su cargo aparecen resaltadas en verde. El personal se consulta en el Anexo 05.'}
+            Centros de costo del Anexo 01 registrado en CEPLAN. {usuario?.es_global ? 'Seleccione una unidad para consultar sus anexos.' : 'Las unidades a su cargo aparecen resaltadas en verde. El personal se consulta en el Anexo 05.'}
           </p>
         </div>
 
@@ -161,7 +163,7 @@ export function EstructuraOrganicaPage() {
         {/* Aviso de homologación con SGD */}
         <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-warning-soft border border-warning-border text-warning-fg text-xs font-medium">
           <Sparkles className="h-3.5 w-3.5 text-warning-fg shrink-0" />
-          <span>Homologación con SGD activa</span>
+          <span>Anexo 01 — CEPLAN (POI 2026)</span>
         </div>
       </div>
 
@@ -174,7 +176,7 @@ export function EstructuraOrganicaPage() {
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
               <Input
-                placeholder="Buscar por código (ej. 01.03) o nombre de oficina..."
+                placeholder="Buscar por código (ej. 07.05) o nombre del centro de costo..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
                 className="pl-8 text-xs h-8 bg-muted"
@@ -260,7 +262,7 @@ export function EstructuraOrganicaPage() {
                     </h3>
                   </div>
                   <Badge variant="outline" className="text-mini shrink-0 font-semibold bg-background">
-                    Nivel {nodoEfectivo.nivel}
+                    Nivel {nodoEfectivo.nivel} · Anexo 01
                   </Badge>
                 </div>
               </CardHeader>
@@ -288,6 +290,13 @@ export function EstructuraOrganicaPage() {
                   <div className="flex justify-between items-center text-muted-foreground">
                     <span>Identificador interno:</span>
                     <span className="font-mono font-semibold text-foreground">#{nodoEfectivo.id}</span>
+                  </div>
+
+                  <div className="flex justify-between items-start gap-3 text-muted-foreground">
+                    <span className="shrink-0">Envía su entrega a:</span>
+                    <span className="font-semibold text-foreground text-right">
+                      {padreEfectivo ? `[${padreEfectivo.codigo}] ${padreEfectivo.nombre}` : 'ETTS (directo)'}
+                    </span>
                   </div>
 
                   <div className="flex justify-between items-center text-muted-foreground">

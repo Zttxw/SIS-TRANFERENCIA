@@ -15,10 +15,16 @@ class GestionService
 {
     use RespetaEstadoEntrega;
 
+    public function __construct(
+        private readonly AgendaPendiente $agenda,
+    ) {}
+
     /**
-     * Obtiene el informe de gestión de una dependencia para el proceso activo.
+     * Obtiene el informe de gestión de una dependencia para el proceso activo,
+     * con los documentos pendientes del CC que entran a la sección IV
+     * (`agenda_documental`, D-09).
      */
-    public function obtenerInforme(int $dependenciaId, ?int $procesoId = null): ?InformeGestion
+    public function obtenerInforme(int $dependenciaId, ?int $procesoId = null): InformeGestion
     {
         $procesoId = $procesoId ?? $this->resolverProcesoActivoId();
 
@@ -40,6 +46,7 @@ class GestionService
         $informe->nivel_organizacional ??= $cabecera['nivel_organizacional'];
         $informe->cargo_periodo ??= $cabecera['cargo'];
         $informe->setRelation('dependencia', $cabecera['dependencia']);
+        $informe->setAttribute('agenda_documental', $this->agenda->documentales($informe));
 
         return $informe;
     }
@@ -58,7 +65,7 @@ class GestionService
             'responsable' => $responsable,
             'cargo' => $responsable?->cargo,
             'nivel_organizacional' => match ($dependencia->nivel) {
-                1 => 'primer_nivel', 2 => 'segundo_nivel', 3 => 'tercer_nivel', 4 => 'equipo_trabajo',
+                1 => 'primer_nivel', 2 => 'segundo_nivel', 3 => 'tercer_nivel',
                 default => null,
             },
         ];

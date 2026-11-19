@@ -13,7 +13,7 @@ use Illuminate\Support\Carbon;
 /**
  * Contexto común de transferencia reutilizado por los generadores de PDF (F5) y
  * los reportes: resuelve el proceso activo, la dependencia y el estado de su
- * entrega. Centraliza la noción de «borrador» (entrega aún no consolidada), que
+ * entrega. Centraliza la noción de «borrador» (entrega aún no remitida), que
  * decide la marca de agua de los PDF y el estado mostrado en los consolidados.
  */
 class ContextoTransferencia
@@ -40,7 +40,7 @@ class ContextoTransferencia
             ],
             'entrega_estado' => $estado->value,
             'entrega_estado_etiqueta' => $estado->etiqueta(),
-            'es_borrador' => $estado !== EstadoEntrega::CONSOLIDADA && $estado !== EstadoEntrega::CERRADA,
+            'es_borrador' => ! $estado->fueRemitida(),
             'emitido_en' => Carbon::now()->format('d/m/Y H:i'),
         ];
     }

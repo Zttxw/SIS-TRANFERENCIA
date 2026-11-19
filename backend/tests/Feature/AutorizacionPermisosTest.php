@@ -82,7 +82,7 @@ class AutorizacionPermisosTest extends TestCase
 
     public function test_coordinador_puede_registrar_observaciones_pero_no_remitir(): void
     {
-        $this->usuarioConRol(Rol::COORDINADOR);
+        $this->usuarioConRol(Rol::DELEGADO_ETTE);
 
         // Remitir entrega exige entregas.remitir, que el coordinador no tiene.
         $this->postJson('/api/transferencia/remitir', [])->assertForbidden();

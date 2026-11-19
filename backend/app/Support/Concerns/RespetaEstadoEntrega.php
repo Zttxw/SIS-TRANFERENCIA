@@ -10,11 +10,10 @@ use App\Support\Http\ApiResponse;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 /**
- * Integridad del flujo (RN-13): una vez que la entrega de una dependencia ha
- * sido remitida (REMITIDA/EN_REVISION/CONSOLIDADA/CERRADA), sus anexos quedan
- * congelados. El único estado posterior que vuelve a admitir edición es
- * OBSERVADA (camino de subsanación). Mientras no existe entrega, o está en
- * BORRADOR, los anexos son libremente editables.
+ * Integridad del flujo (RN-13, D-07): los anexos solo se editan mientras la
+ * entrega no existe o está en BORRADOR. Desde que el responsable la presenta al
+ * coordinador (EN_REVISION, VERIFICADA, REMITIDA) quedan congelados: no hay
+ * devolución ni subsanación.
  *
  * Es ortogonal a la autorización por ámbito (`AutorizaAmbito`): aquélla decide
  * *quién* y *sobre qué dependencia*; ésta decide *en qué estado del flujo* se
@@ -28,7 +27,7 @@ trait RespetaEstadoEntrega
 {
     /**
      * Exige que la entrega de la dependencia dada admita edición. Lanza 409
-     * (envuelto en ApiResponse) si ya fue remitida y no está OBSERVADA.
+     * (envuelto en ApiResponse) si ya fue presentada al coordinador.
      */
     protected function exigirEntregaModificable(int $dependenciaId, ?int $procesoId = null): void
     {
@@ -39,14 +38,14 @@ trait RespetaEstadoEntrega
             ->latest('id')
             ->first();
 
-        // Sin entrega aún, o en BORRADOR/OBSERVADA → editable.
+        // Sin entrega aún, o en BORRADOR → editable.
         if ($entrega === null || $entrega->esModificable()) {
             return;
         }
 
         throw new HttpResponseException(
             ApiResponse::error(
-                'Los anexos de esta dependencia ya fueron remitidos y no pueden editarse mientras la entrega no esté observada.',
+                'Los anexos de este centro de costo ya fueron presentados al coordinador ETTE y no pueden editarse.',
                 409,
             )
         );

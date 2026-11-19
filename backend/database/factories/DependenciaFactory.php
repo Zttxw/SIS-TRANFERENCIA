@@ -28,8 +28,24 @@ class DependenciaFactory extends Factory
             'tipo' => 'oficina',
             'nivel' => 3,
             'activa' => true,
-            'fuente' => 'sgd',
+            'es_centro_costo' => true,
+            'codigo_ceplan' => fn (array $atributos) => $atributos['codigo'],
+            'fuente' => 'ceplan',
         ];
+    }
+
+    /**
+     * Dependencia de origen del SGD: fuera del flujo, se vincula a un CC por la
+     * tabla de equivalencias.
+     */
+    public function origenSgd(): static
+    {
+        return $this->state(fn () => [
+            'es_centro_costo' => false,
+            'codigo_ceplan' => null,
+            'codigo' => fake()->unique()->numerify('00###'),
+            'fuente' => 'sgd',
+        ]);
     }
 
     /** Hija de la dependencia dada (hereda su proceso). */

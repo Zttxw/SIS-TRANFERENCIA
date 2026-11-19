@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\Acervo\Services;
 
 use App\Modules\Acervo\Models\AcervoDocumental;
-use Illuminate\Http\Exceptions\HttpResponseException;
 use App\Support\Http\ApiResponse;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -47,9 +48,10 @@ class AcervoSgdService
     {
         $ref = $this->referencia($acervo);
 
+        $deps = implode(',', array_fill(0, count($ref['deps']), '?'));
         $where = "r.NU_ANN = ? AND r.ES_ELI = '0' AND r.ES_DOC_EMI NOT IN ('9')
-                  AND r.CO_DEP_EMI = ? AND r.CO_TIP_DOC_ADM = ?";
-        $bindings = [$ref['anio'], $ref['dep'], $ref['tipo']];
+                  AND r.CO_DEP_EMI IN ({$deps}) AND r.CO_TIP_DOC_ADM = ?";
+        $bindings = [$ref['anio'], ...$ref['deps'], $ref['tipo']];
 
         if ($busqueda !== null && $busqueda !== '') {
             $where .= ' AND r.DE_ASU LIKE ?';
@@ -112,13 +114,14 @@ class AcervoSgdService
     {
         $ref = $this->referencia($acervo);
         $conn = DB::connection($this->conexionSgd);
+        $deps = implode(',', array_fill(0, count($ref['deps']), '?'));
 
         $pertenece = $conn->selectOne(
             "SELECT TOP 1 r.NU_EMI
              FROM {$this->esquema}.TDTV_REMITOS r
              WHERE r.NU_ANN = ? AND r.ES_ELI = '0'
-               AND r.CO_DEP_EMI = ? AND r.CO_TIP_DOC_ADM = ? AND r.NU_EMI = ?",
-            [$ref['anio'], $ref['dep'], $ref['tipo'], $emi]
+               AND r.CO_DEP_EMI IN ({$deps}) AND r.CO_TIP_DOC_ADM = ? AND r.NU_EMI = ?",
+            [$ref['anio'], ...$ref['deps'], $ref['tipo'], $emi]
         );
 
         if ($pertenece === null) {
@@ -155,28 +158,23 @@ class AcervoSgdService
     }
 
     /**
-     * Deriva dependencia (código SGD), tipo documental y año desde el
-     * `fuente_referencia` de la fila. Exige que sea una fila digital de origen SGD.
+     * Deriva las dependencias del SGD (una o varias, si el CC las reúne), el tipo
+     * documental y el año desde el `fuente_referencia` de la fila. Exige que sea
+     * una fila digital de origen SGD.
      *
-     * @return array{dep: string, tipo: string, anio: string}
+     * @return array{deps: list<string>, tipo: string, anio: string}
      */
     private function referencia(AcervoDocumental $acervo): array
     {
-        $referencia = (string) ($acervo->getAttribute('fuente_referencia') ?? '');
+        $ref = AcervoReferenciaSgd::leer((string) ($acervo->getAttribute('fuente_referencia') ?? ''));
 
-        $ok = preg_match(
-            '/CO_DEP_EMI=(?<dep>\S+)\s+CO_TIP_DOC_ADM=(?<tipo>\S+)\s+NU_ANN=(?<anio>\d{4})/',
-            $referencia,
-            $m
-        );
-
-        if (! $ok) {
+        if ($ref === null || $ref['deps'] === []) {
             throw new HttpResponseException(
                 ApiResponse::error('Esta serie no proviene del SGD; no tiene documentos digitales consultables.', 422)
             );
         }
 
-        return ['dep' => $m['dep'], 'tipo' => $m['tipo'], 'anio' => $m['anio']];
+        return $ref;
     }
 
     private function fecha(mixed $valor): ?string
@@ -185,7 +183,7 @@ class AcervoSgdService
             return null;
         }
         try {
-            return \Illuminate\Support\Carbon::parse((string) $valor)->toDateString();
+            return Carbon::parse((string) $valor)->toDateString();
         } catch (\Throwable) {
             return null;
         }

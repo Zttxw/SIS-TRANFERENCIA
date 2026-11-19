@@ -5,17 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\Transferencia\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Transferencia\Models\ActaTransferencia;
-use App\Modules\Transferencia\Services\ActaPdf;
-use App\Modules\Transferencia\Services\FirmaperuRegistroService;
+use App\Modules\Organization\Models\Dependencia;
+use App\Modules\Transferencia\Services\ConsolidacionCentroCosto;
+use App\Modules\Transferencia\Services\RevisionEntregaService;
 use App\Modules\Transferencia\Services\TransferenciaService;
 use App\Support\Concerns\AutorizaAmbito;
-use App\Support\Enums\Permiso;
 use App\Support\Http\ApiResponse;
-use App\Support\Services\ContextoTransferencia;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TransferenciaController extends Controller
 {
@@ -23,7 +20,7 @@ class TransferenciaController extends Controller
 
     public function __construct(
         protected TransferenciaService $transferenciaService,
-        protected ActaPdf $actaPdf,
+        protected RevisionEntregaService $revision,
     ) {}
 
     /**
@@ -31,30 +28,12 @@ class TransferenciaController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $usuario = $request->user();
         $filtros = $this->acotarFiltrosAlAmbito(
-            $usuario,
+            $request->user(),
             $request->only(['dependencia_id', 'estado', 'per_page'])
         );
 
-        // Bandeja del revisor: excluye las entregas de las dependencias propias
-        // del usuario (uno no revisa su propia entrega). La lista queda con las de
-        // su subárbol subordinado. `excluir_propias=0` la desactiva (p. ej. para
-        // consultar el estado de la propia remisión).
-        if ($request->boolean('excluir_propias', true) && ! $usuario->tieneAmbitoGlobal()) {
-            $filtros['excluir_dependencia_ids'] = $usuario->idsDependenciasPropias();
-        }
-
         $entregas = $this->transferenciaService->listarEntregas($filtros);
-
-        // Marca en cada entrega si este usuario es el receptor que puede
-        // dictaminarla, para que la UI no ofrezca «Revisar» donde el backend
-        // responderá 403 (p. ej. entregas de nietos dirigidas al padre intermedio).
-        $entregas->getCollection()->transform(function ($entrega) use ($usuario) {
-            $entrega->setAttribute('puede_revisar', $this->transferenciaService->esReceptorDelDestino($usuario, $entrega));
-
-            return $entrega;
-        });
 
         return ApiResponse::paginated($entregas, 'Entregas recuperadas.');
     }
@@ -88,92 +67,83 @@ class TransferenciaController extends Controller
     }
 
     /**
-     * Remite la entrega de la dependencia al superior jerárquico (plan §7.8).
+     * Remite la entrega verificada al CC padre o al ETTS (D-02).
      */
     public function remitir(Request $request): JsonResponse
     {
         $request->validate([
-            'dependencia_id' => ['required', 'integer', 'exists:dependencias,id'],
             'comentario' => ['nullable', 'string', 'max:500'],
+            'confirmar_sin_hijos' => ['sometimes', 'boolean'],
         ]);
-
-        $dependenciaId = (int) $request->input('dependencia_id');
-        $this->autorizarDependencia($request->user(), $dependenciaId);
+        $dependenciaId = $this->dependenciaAutorizada($request);
 
         $entrega = $this->transferenciaService->remitirEntrega(
             dependenciaId: $dependenciaId,
             usuario: $request->user(),
-            comentario: $request->input('comentario')
+            comentario: $request->input('comentario'),
+            confirmarSinHijos: $request->boolean('confirmar_sin_hijos'),
         );
 
-        return ApiResponse::success($entrega, 'Entrega de información remitida con éxito al superior jerárquico.');
+        return ApiResponse::success($entrega, $entrega->esHaciaEtts()
+            ? 'Entrega remitida al ETTS.'
+            : 'Entrega remitida al centro de costo padre.');
     }
 
     /**
-     * Revisa una entrega recibida de una dependencia subordinada: la observa
-     * (devuelve para subsanación) o la consolida (plan §6 Etapa 3-4, §7.8).
+     * El responsable presenta la entrega al coordinador ETTE (D-07).
      */
-    public function revisar(Request $request): JsonResponse
+    public function presentar(Request $request): JsonResponse
+    {
+        $dependenciaId = $this->dependenciaAutorizada($request);
+
+        $entrega = $this->revision->presentar($dependenciaId, $request->user());
+
+        return ApiResponse::success($entrega, 'Entrega presentada al coordinador ETTE.');
+    }
+
+    /**
+     * El coordinador ETTE (o un titular en suplencia) acepta lo entregado y deja
+     * constancia de lo revisado (RF-54, RF-56). Las observaciones no la impiden.
+     */
+    public function verificar(Request $request): JsonResponse
     {
         $datos = $request->validate([
-            'dependencia_id' => ['required', 'integer', 'exists:dependencias,id'],
-            'accion' => ['required', 'in:observar,consolidar'],
-            'comentario' => ['nullable', 'string', 'max:500'],
+            'resultado_verificacion' => ['required', 'string', 'min:10', 'max:5000'],
+            'motivo_suplencia' => ['nullable', 'string', 'max:500'],
         ]);
+        $dependenciaId = $this->dependenciaAutorizada($request);
 
-        $dependenciaId = (int) $datos['dependencia_id'];
-
-        // El revisor opera sobre una dependencia subordinada: debe estar en su
-        // ámbito (dependencia propia + subárbol para consolidadores).
-        $this->autorizarDependencia($request->user(), $dependenciaId);
-
-        $entrega = $this->transferenciaService->revisarEntrega(
+        $entrega = $this->revision->verificar(
             dependenciaId: $dependenciaId,
             usuario: $request->user(),
-            accion: $datos['accion'],
-            comentario: $datos['comentario'] ?? null,
+            resultado: $datos['resultado_verificacion'],
+            motivoSuplencia: $datos['motivo_suplencia'] ?? null,
         );
 
-        return ApiResponse::success($entrega, 'Revisión de la entrega registrada.');
+        return ApiResponse::success($entrega, 'Entrega aceptada por el coordinador ETTE. Ya pueden firmarse los anexos.');
     }
 
     /**
-     * Obtiene el Acta oficial de Transferencia (Anexo 07).
+     * Consolidado del CC: su subárbol con el estado de cada entrega, su autor y
+     * su CC de origen (D-08, RF-43). Solo consulta: el padre no cambia los
+     * datos de sus hijos.
      */
-    public function acta(Request $request): JsonResponse
+    public function consolidado(Request $request, ConsolidacionCentroCosto $consolidacion): JsonResponse
     {
-        $dependenciaId = (int) $request->input('dependencia_id');
-        if (! $dependenciaId) {
-            return ApiResponse::error('Debe especificar dependencia_id.', 422);
-        }
+        $dependenciaId = $this->dependenciaAutorizada($request);
 
-        $this->autorizarDependencia($request->user(), $dependenciaId);
-
-        if ($request->user()->tienePermiso(Permiso::GenerarActas)) {
-            $acta = $this->transferenciaService->obtenerActa($dependenciaId, $request->user());
-        } else {
-            app(FirmaperuRegistroService::class)->caracter($request->user(), 'anexo07', $dependenciaId);
-            $acta = ActaTransferencia::where('proceso_transferencia_id', app(ContextoTransferencia::class)->procesoActivoId())
-                ->where('dependencia_id', $dependenciaId)->firstOrFail()->load(['dependencia', 'evidencias.subidoPor', 'generadaPor']);
-        }
-
-        return ApiResponse::success($acta, 'Acta de transferencia obtenida.');
+        return ApiResponse::success($consolidacion->consolidado(Dependencia::findOrFail($dependenciaId)), 'Consolidado recuperado.');
     }
 
-    /**
-     * Descarga el PDF oficial del Acta (Anexo 07). B3/D-06: el acta se emite
-     * antes de remitir, por lo que el PDF está disponible desde su suscripción de
-     * la hija (pre-remisión) y también tras consolidar.
-     */
-    public function actaPdf(Request $request): StreamedResponse
+    /** Valida el CC del payload y que esté en el ámbito del usuario. */
+    private function dependenciaAutorizada(Request $request): int
     {
+        $request->validate([
+            'dependencia_id' => ['required', 'integer', 'exists:dependencias,id,es_centro_costo,1'],
+        ]);
         $dependenciaId = (int) $request->input('dependencia_id');
-        abort_unless($dependenciaId > 0, 422, 'Debe especificar dependencia_id.');
         $this->autorizarDependencia($request->user(), $dependenciaId);
-        if (! $request->user()->tienePermiso(Permiso::GenerarActas)) {
-            app(FirmaperuRegistroService::class)->caracter($request->user(), 'anexo07', $dependenciaId);
-        }
 
-        return $this->actaPdf->descargar($dependenciaId, $request->user());
+        return $dependenciaId;
     }
 }

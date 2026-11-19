@@ -22,6 +22,7 @@ class InformeGestionPdf
 
     public function __construct(
         private readonly GestionService $gestionService,
+        private readonly AgendaPendiente $agenda,
         private readonly ContextoTransferencia $contexto,
         private readonly PdfService $pdf,
     ) {}
@@ -54,11 +55,13 @@ class InformeGestionPdf
 
     /**
      * Modelo de vista plano para la plantilla Blade. Un informe inexistente aún
-     * produce un PDF en blanco con el formato oficial (útil como borrador físico).
+     * produce un PDF con el formato oficial (útil como borrador físico). La
+     * sección IV incluye los documentos pendientes del CC (D-09), que así entran
+     * en la huella de firma del Anexo 02.
      *
      * @return array<string, mixed>
      */
-    private function modeloDeVista(?InformeGestion $informe): array
+    private function modeloDeVista(InformeGestion $informe): array
     {
         $responsable = $informe?->responsable;
 
@@ -72,7 +75,7 @@ class InformeGestionPdf
             'funciones' => $informe?->funciones ?? [],
             'logros_items' => $informe?->logros_items ?? [],
             'dificultades_items' => $informe?->dificultades_items ?? [],
-            'pendientes_items' => $informe?->pendientes_items ?? [],
+            'pendientes_items' => $this->agenda->filas($informe),
         ];
     }
 

@@ -8,7 +8,7 @@ type Clase = 'completado' | 'registrado' | 'pendiente' | 'sin_registros'
 
 function clasificar(estado: string): Clase {
   const e = estado.toLowerCase()
-  if (e.includes('completado') || e.includes('verificado') || e.includes('consolidada') || e.includes('disponible')) {
+  if (e.includes('completado') || e.includes('verificado') || e.includes('remitida') || e.includes('disponible')) {
     return 'completado'
   }
   if (e.includes('registrado')) return 'registrado'

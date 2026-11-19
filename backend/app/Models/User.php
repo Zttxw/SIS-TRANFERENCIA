@@ -18,7 +18,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['dni', 'name', 'email', 'password', 'activo', 'servidor_id'])]
+#[Fillable(['dni', 'name', 'email', 'celular', 'password', 'activo', 'servidor_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -107,13 +107,11 @@ class User extends Authenticatable
 
     /**
      * Roles consolidadores: su ámbito es la dependencia asignada **y su
-     * subárbol** (plan §6, Etapa 4). El resto de roles (servidor/delegado) solo
+     * subárbol** (plan §6, Etapa 4). El resto de roles (servidor/coordinador ETTE) solo
      * alcanza la dependencia asignada exacta.
      */
     private const ROLES_CON_SUBARBOL = [
         Rol::RESPONSABLE_CENTRO_COSTO,
-        Rol::RESPONSABLE_EQUIPO,
-        Rol::COORDINADOR,
     ];
 
     /**

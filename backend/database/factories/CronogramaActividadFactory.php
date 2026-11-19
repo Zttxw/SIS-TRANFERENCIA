@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Modules\Transferencia\Models\CronogramaActividad;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Enums\EstadoActividadCronograma;
+use App\Support\Enums\OperacionCronograma;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 
@@ -30,7 +31,7 @@ class CronogramaActividadFactory extends Factory
             'fecha_vencimiento' => Carbon::now()->addDays(5)->toDateString(),
             'hora_vencimiento' => null,
             'estado' => EstadoActividadCronograma::EN_CURSO,
-            'operacion' => 'remision',
+            'operacion' => OperacionCronograma::REMISION,
             'orden' => 0,
         ];
     }
@@ -60,7 +61,7 @@ class CronogramaActividadFactory extends Factory
         ]);
     }
 
-    public function paraOperacion(string $operacion): static
+    public function paraOperacion(OperacionCronograma $operacion): static
     {
         return $this->state(fn (array $attributes) => ['operacion' => $operacion]);
     }

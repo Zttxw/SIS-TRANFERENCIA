@@ -11,7 +11,7 @@ class GuardarAcervoRequest extends AnexoFormRequest
     public function rules(): array
     {
         return [
-            'dependencia_id' => ['required', 'integer', 'exists:dependencias,id'],
+            'dependencia_id' => ['required', 'integer', 'exists:dependencias,id,es_centro_costo,1'],
             'tipo' => ['required', 'string', 'in:fisico,digital'],
             'serie_documental' => ['required', 'string', 'max:255'],
             'identificacion_archivador' => ['nullable', 'prohibited_unless:tipo,fisico', 'string', 'max:255'],
