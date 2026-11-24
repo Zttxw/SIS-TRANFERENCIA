@@ -548,26 +548,33 @@ function MatrizView() {
     },
     {
       id: 'patr',
-      header: '% Patrimonio',
+      header: 'Patrimonio',
       align: 'right',
       ocultarEnMovil: true,
       cell: (f) => (
-        <div className="flex items-center justify-end gap-2">
-          <div className="w-16 h-1.5 rounded-full bg-slate-100 overflow-hidden border border-border">
-            <div
-              className={`h-full rounded-full ${
-                f.patrimonio_porcentaje === 100
-                  ? 'bg-emerald-600'
-                  : f.patrimonio_porcentaje > 50
-                  ? 'bg-teal-600'
-                  : 'bg-amber-500'
-              }`}
-              style={{ width: `${f.patrimonio_porcentaje}%` }}
-            />
-          </div>
-          <span className="font-mono text-nota font-semibold w-10 text-right">
-            {f.patrimonio_porcentaje}%
-          </span>
+        <div className="flex items-center justify-end font-mono text-nota whitespace-nowrap">
+          {f.patrimonio_total === 0 ? (
+            <span className="text-muted-foreground text-microdato font-mono">0 / 0</span>
+          ) : (
+            <div className="flex items-baseline gap-1">
+              <span
+                className={cn(
+                  'font-bold',
+                  f.patrimonio_confirmados === f.patrimonio_total
+                    ? 'text-emerald-700'
+                    : f.patrimonio_confirmados > 0
+                    ? 'text-blue-700'
+                    : 'text-foreground',
+                )}
+              >
+                {f.patrimonio_confirmados}
+              </span>
+              <span className="text-muted-foreground">/ {f.patrimonio_total}</span>
+              <span className="text-[10px] font-semibold text-muted-foreground ml-1">
+                ({f.patrimonio_porcentaje}%)
+              </span>
+            </div>
+          )}
         </div>
       ),
     },
