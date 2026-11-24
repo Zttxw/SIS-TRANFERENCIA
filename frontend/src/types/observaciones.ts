@@ -17,7 +17,10 @@ export interface Observacion {
   /** null = observación sobre el anexo completo. */
   observable_type: string | null
   observable_id: number | null
+  /** Coordinador (o titular suplente) presente en la revisión. */
   autor_id: number
+  /** Responsable del CC que la registró en su sesión. */
+  registrada_por_id: number | null
   en_calidad_de: 'coordinador' | 'titular_suplente' | null
   motivo_suplencia: string | null
   descripcion: string
@@ -29,6 +32,10 @@ export interface Observacion {
     name: string
     dni: string
   }
+  registrada_por?: {
+    id: number
+    name: string
+  } | null
   dependencia?: {
     id: number
     codigo: string
@@ -43,8 +50,6 @@ export interface RegistrarObservacionPayload {
   observable_id?: number
   dependencia_id?: number
   descripcion: string
-  /** Obligatorio cuando observa un titular ETTE en suplencia del coordinador. */
-  motivo_suplencia?: string
 }
 
 export interface FiltrosObservaciones {

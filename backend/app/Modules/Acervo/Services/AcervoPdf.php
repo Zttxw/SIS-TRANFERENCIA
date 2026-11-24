@@ -12,8 +12,9 @@ use Illuminate\Support\Collection;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * PDF oficial del Anexo 03 (Acervo Documentario): sección A (digital, SGD) y
- * sección B (física, registrada a mano), cada una con sus bloques por año.
+ * PDF oficial del Anexo 03 (Acervo Documentario): sección A (digital, SGD,
+ * en número de documentos) y sección B (física, registrada a mano, en folios),
+ * cada una con sus bloques por año.
  */
 class AcervoPdf
 {
@@ -55,11 +56,13 @@ class AcervoPdf
                 [
                     'letra' => 'A',
                     'titulo' => 'Acervo digital (Sistema de Gestión Documental)',
+                    'columna_cantidad' => 'N° de Documentos',
                     'grupos' => $this->agruparPorAnio($series->where('tipo', AcervoDocumental::TIPO_DIGITAL)),
                 ],
                 [
                     'letra' => 'B',
                     'titulo' => 'Acervo físico',
+                    'columna_cantidad' => 'Folios',
                     'grupos' => $this->agruparPorAnio($series->where('tipo', AcervoDocumental::TIPO_FISICO)),
                 ],
             ],
@@ -70,7 +73,7 @@ class AcervoPdf
      * Bloques por año, del más reciente al más antiguo; «Sin año» al final.
      *
      * @param  Collection<int, AcervoDocumental>  $series
-     * @return list<array{anio: string, series: list<array{serie_documental: string|null, folios: int|null, unidad_conservacion: string|null, ubicacion: string|null}>}>
+     * @return list<array{anio: string, series: list<array{serie_documental: string|null, cantidad: int|null, unidad_conservacion: string|null, ubicacion: string|null}>}>
      */
     private function agruparPorAnio(Collection $series): array
     {
@@ -87,7 +90,7 @@ class AcervoPdf
                 'anio' => $anio,
                 'series' => $filas->map(fn (AcervoDocumental $serie): array => [
                     'serie_documental' => $serie->serie_documental,
-                    'folios' => $serie->folios,
+                    'cantidad' => $serie->tipo === AcervoDocumental::TIPO_DIGITAL ? $serie->numero_documentos : $serie->folios,
                     'unidad_conservacion' => $serie->unidad_conservacion,
                     'ubicacion' => $serie->ubicacion,
                 ])->values()->all(),

@@ -7,44 +7,73 @@ namespace App\Modules\Auth\Services;
 use App\Models\User;
 use App\Modules\Auth\Models\AsignacionRol;
 use App\Modules\Organization\Models\Dependencia;
+use App\Modules\Transferencia\Models\Entrega;
 use App\Support\Enums\CalidadEtte;
 use App\Support\Enums\Rol;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Collection;
 
 /**
- * Determina en qué calidad actúa un usuario por el lado ETTE de un centro de
- * costo (D-04): el coordinador ETTE asignado a ese CC o un titular ETTE que lo
- * suple. La suplencia exige motivo (ausencia del coordinador) y queda
- * registrada junto a la acción (observación, verificación o firma).
+ * Quién actúa por el lado ETTE de un centro de costo (D-04).
+ *
+ * El coordinador ETTE asignado revisa y firma presencialmente en la sesión del
+ * responsable del CC. Si está ausente, el responsable designa en la entrega a un
+ * titular ETTE que lo suple, con motivo (`titular_suplente_id`). Ese firmante
+ * designado es el único cuyo certificado se admite por el lado ETTE, el autor de
+ * las observaciones y el receptor que figura en el Acta 07.
  */
 class CoordinacionEtte
 {
     /**
-     * @return array{en_calidad_de: CalidadEtte, motivo_suplencia: ?string}|null null si el usuario no actúa por el lado ETTE de ese CC.
+     * Firmante designado del lado ETTE del CC: el titular suplente, si el
+     * responsable lo designó y sigue siendo titular ETTE; si no, el coordinador
+     * vigente. Null si el CC no tiene ninguno.
      *
-     * @throws ValidationException si actúa como titular suplente sin indicar el motivo.
+     * @return array{usuario: User, en_calidad_de: CalidadEtte, motivo_suplencia: ?string}|null
      */
-    public function calidad(User $usuario, int $dependenciaId, ?string $motivoSuplencia = null): ?array
+    public function firmanteDe(int $dependenciaId): ?array
     {
-        if ($this->esCoordinadorDe($usuario, $dependenciaId)) {
-            return ['en_calidad_de' => CalidadEtte::COORDINADOR, 'motivo_suplencia' => null];
+        $procesoId = Dependencia::whereKey($dependenciaId)->value('proceso_transferencia_id');
+        $entrega = Entrega::with('titularSuplente')->where('proceso_transferencia_id', $procesoId)
+            ->where('dependencia_id', $dependenciaId)->first();
+        $titular = $entrega?->titularSuplente;
+        if ($titular !== null && $titular->activo && $titular->tieneRol(Rol::ETTE)) {
+            return ['usuario' => $titular, 'en_calidad_de' => CalidadEtte::TITULAR_SUPLENTE,
+                'motivo_suplencia' => $entrega->motivo_suplencia_ette];
         }
 
-        if (! $usuario->tieneRol(Rol::ETTE)) {
-            return null;
-        }
+        $coordinador = $this->coordinadorDe($dependenciaId);
 
-        $motivo = trim((string) $motivoSuplencia);
-        if ($motivo === '') {
-            throw ValidationException::withMessages([
-                'motivo_suplencia' => 'Como titular ETTE actúa en suplencia del coordinador: indique el motivo (ausencia del coordinador).',
-            ]);
-        }
-
-        return ['en_calidad_de' => CalidadEtte::TITULAR_SUPLENTE, 'motivo_suplencia' => $motivo];
+        return $coordinador !== null
+            ? ['usuario' => $coordinador, 'en_calidad_de' => CalidadEtte::COORDINADOR, 'motivo_suplencia' => null]
+            : null;
     }
 
-    /** ¿Actúa por el lado ETTE del CC (coordinador asignado o titular ETTE)? */
+    /** Coordinador ETTE vigente del CC (las asignaciones revocadas se excluyen por scope global). */
+    public function coordinadorDe(int $dependenciaId): ?User
+    {
+        $procesoId = Dependencia::whereKey($dependenciaId)->value('proceso_transferencia_id');
+
+        return AsignacionRol::query()->with('usuario')
+            ->where('rol', Rol::DELEGADO_ETTE->value)
+            ->where('dependencia_id', $dependenciaId)
+            ->where('proceso_transferencia_id', $procesoId)
+            ->latest('id')->first()?->usuario;
+    }
+
+    /**
+     * Titulares ETTE activos del proceso, candidatos a suplir al coordinador.
+     *
+     * @return Collection<int, User>
+     */
+    public function titulares(int $procesoId): Collection
+    {
+        return User::where('activo', true)
+            ->whereHas('asignacionesRol', fn ($q) => $q->where('rol', Rol::ETTE->value)
+                ->where('proceso_transferencia_id', $procesoId))
+            ->orderBy('name')->get();
+    }
+
+    /** ¿Consulta el CC por el lado ETTE (coordinador asignado o titular ETTE)? */
     public function actuaPorEtte(User $usuario, int $dependenciaId): bool
     {
         return $this->esCoordinadorDe($usuario, $dependenciaId) || $usuario->tieneRol(Rol::ETTE);

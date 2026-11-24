@@ -3,7 +3,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { AlertCircle, Filter, MessageSquareText, RefreshCw, Search } from 'lucide-react'
 
-import { useDependenciaActiva } from '@/auth/hooks'
+import { useDependenciaActiva, useModulo } from '@/auth/hooks'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -24,6 +24,7 @@ import { useObservaciones } from './use-observaciones'
  */
 export function ObservacionesPage() {
   const { dependenciaId } = useDependenciaActiva()
+  const conDocumentosPendientes = useModulo('documentos_pendientes')
 
   const [filtroEstado, setFiltroEstado] = useState<EstadoObservacion | 'todos'>('registrada')
   const [filtroAnexo, setFiltroAnexo] = useState<ClaveAnexoObservable | 'todos'>('todos')
@@ -61,9 +62,9 @@ export function ObservacionesPage() {
             Observaciones del coordinador ETTE
           </h1>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            Constancias que el coordinador deja al revisar la entrega de cada centro de costo. No
-            requieren subsanación: el coordinador acepta lo entregado y las observaciones quedan
-            registradas en el Acta de Transferencia.
+            Constancias que el coordinador deja al revisar presencialmente la entrega de cada centro de
+            costo; el responsable las registra en su sesión. No requieren subsanación: quedan
+            registradas en el Acta de Transferencia y el coordinador aprueba con su firma.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching} className="gap-1.5 self-start text-xs">
@@ -102,7 +103,9 @@ export function ObservacionesPage() {
                 className="rounded-md border border-input bg-background px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="todos">Todos los anexos</option>
-                {Object.values(ANEXOS_OBSERVABLES_CONFIG).map((cfg) => (
+                {Object.values(ANEXOS_OBSERVABLES_CONFIG)
+                  .filter((cfg) => cfg.clave !== 'documento' || conDocumentosPendientes)
+                  .map((cfg) => (
                   <option key={cfg.clave} value={cfg.clave}>
                     {cfg.nombreCorto}
                   </option>

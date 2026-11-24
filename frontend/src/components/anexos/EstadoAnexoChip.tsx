@@ -49,14 +49,13 @@ function resolverEstilo(
       }
     case 'en_revision':
       return {
-        label: 'Presentada al coordinador',
+        label: 'En revisión y firma',
         icono: Lock,
         clases: 'border-info-border bg-info-soft text-info-fg',
       }
-    case 'verificada':
     case 'acta_suscrita':
       return {
-        label: 'Aceptada · a firma',
+        label: 'Acta suscrita',
         icono: CheckCircle2,
         clases: 'border-success-border bg-success-soft text-success-fg',
       }

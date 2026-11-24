@@ -66,7 +66,7 @@ class ReasignacionCentrosCostoTest extends TestCase
 
         $filas = AcervoDocumental::where('dependencia_id', $this->abastecimientoCc->id)->get();
         $this->assertCount(1, $filas);
-        $this->assertSame(15, $filas->first()->folios);
+        $this->assertSame(15, $filas->first()->numero_documentos);
         $this->assertSame('TDTV_REMITOS CO_DEP_EMI=00021,00098 CO_TIP_DOC_ADM=011 NU_ANN=2026', $filas->first()->fuente_referencia);
         $this->assertSame(1, $resultado['acervo_fusionado']);
     }
@@ -160,7 +160,7 @@ class ReasignacionCentrosCostoTest extends TestCase
             'tipo' => AcervoDocumental::TIPO_DIGITAL,
             'serie_documental' => 'Oficio',
             'anio' => 2026,
-            'folios' => $cantidad,
+            'numero_documentos' => $cantidad,
             'fuente' => 'sgd',
             'fuente_referencia' => $referencia,
         ]);

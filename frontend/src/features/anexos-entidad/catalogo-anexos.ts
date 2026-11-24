@@ -19,8 +19,8 @@ export function estaRemitida(estado: EstadoEntrega): boolean {
 }
 
 /**
- * Tono de la carpeta: verde = remitida, ámbar = presentada al coordinador (por
- * revisar o aceptada, a firma), gris = aún en preparación.
+ * Tono de la carpeta: verde = remitida, ámbar = en revisión y firma con el
+ * coordinador (o acta suscrita), gris = aún en preparación.
  */
 export function tonoDeCarpeta(estado: EstadoEntrega): TonoCarpeta {
   if (fueRemitida(estado)) return 'verde'
@@ -118,7 +118,7 @@ export function anexosDeLaDependencia(dep: DependenciaSemaforoItem): AnexoArchiv
       icono: FileCheck2,
       tipoFirma: 'anexo07',
       estado: remitida ? 'listo' : 'pendiente',
-      detalle: remitida ? 'Acta firmada y remitida' : 'Se firma tras la aceptación del coordinador',
+      detalle: remitida ? 'Acta firmada y remitida' : 'Lo firman el responsable y el coordinador ETTE',
     },
   ]
 }

@@ -22,7 +22,7 @@ export function MotivoSuplenciaField({ id, value, onChange }: MotivoSuplenciaFie
         required
       />
       <p className="text-nota text-muted-foreground">
-        Usted actúa como titular ETTE en lugar del coordinador asignado; el motivo queda registrado.
+        El titular ETTE firma en lugar del coordinador asignado; el motivo queda registrado en cada firma y observación.
       </p>
     </div>
   )

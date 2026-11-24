@@ -22,7 +22,7 @@ function volumen(cc: CentroConsolidado): string {
 
 /**
  * Consolidado del CC padre (D-08, RF-43): lo que envían los CC de su subárbol,
- * con quién presentó, aceptó y remitió cada entrega. Es solo consulta: el padre
+ * con quién la cerró para firma y quién la remitió. Es solo consulta: el padre
  * no observa, no devuelve ni cambia los datos de sus hijos.
  */
 export function ConsolidadoSubarbol({ dependenciaId }: { dependenciaId: number }) {
@@ -54,8 +54,8 @@ export function ConsolidadoSubarbol({ dependenciaId }: { dependenciaId: number }
               <tr>
                 <th className="px-3 py-2 font-medium">Centro de costo</th>
                 <th className="px-3 py-2 font-medium">Estado</th>
-                <th className="px-3 py-2 font-medium">Presentó / remitió</th>
-                <th className="px-3 py-2 font-medium">Aceptó (ETTE)</th>
+                <th className="px-3 py-2 font-medium">Cerró / remitió</th>
+                <th className="px-3 py-2 font-medium">Observaciones ETTE</th>
                 <th className="px-3 py-2 font-medium">Anexos</th>
               </tr>
             </thead>
@@ -91,15 +91,7 @@ export function ConsolidadoSubarbol({ dependenciaId }: { dependenciaId: number }
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-2">
-                    {cc.verificada_por ?? '—'}
-                    {cc.verificada_en_calidad_de === 'titular_suplente' && (
-                      <span className="block text-mini text-muted-foreground">Titular ETTE suplente</span>
-                    )}
-                    {cc.observaciones > 0 && (
-                      <span className="block text-mini text-muted-foreground">{cc.observaciones} observación(es)</span>
-                    )}
-                  </td>
+                  <td className="px-3 py-2">{cc.observaciones > 0 ? `${cc.observaciones} observación(es)` : '—'}</td>
                   <td className="whitespace-nowrap px-3 py-2 font-mono text-mini text-muted-foreground">{volumen(cc)}</td>
                 </tr>
               ))}

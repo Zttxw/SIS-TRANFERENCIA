@@ -86,13 +86,13 @@ class ActaTransferenciaService
     }
 
     /**
-     * Se edita (y se recalcula) mientras la entrega no pase de `verificada` y
-     * nadie haya firmado la versión vigente del acta.
+     * Se edita (y se recalcula) mientras la entrega siga en preparación o en
+     * revisión y nadie haya firmado la versión vigente del acta.
      */
     public function editable(ActaTransferencia $acta): bool
     {
         $estado = $this->contexto->entregaDe($acta->dependencia_id, $acta->proceso_transferencia_id)?->estado ?? EstadoEntrega::BORRADOR;
-        if (! in_array($estado, [EstadoEntrega::BORRADOR, EstadoEntrega::EN_REVISION, EstadoEntrega::VERIFICADA], true)) {
+        if (! in_array($estado, [EstadoEntrega::BORRADOR, EstadoEntrega::EN_REVISION], true)) {
             return false;
         }
 
@@ -123,7 +123,7 @@ class ActaTransferenciaService
         $guardados = $acta->intervinientes ?? [];
         $acta->intervinientes = [
             'titular_saliente' => $this->conCorreccionesManuales($guardados['titular_saliente'] ?? null, $this->intervinientes->entrega($dependencia)),
-            'coordinador_ette' => $this->intervinientes->recepcion($dependencia, $this->contexto->entregaDe($dependencia->id, $procesoId)),
+            'coordinador_ette' => $this->intervinientes->recepcion($dependencia),
         ];
         $acta->anexos_entregados = $this->condiciones->componer(
             $acta->anexos_entregados ?? [],

@@ -64,6 +64,12 @@ export const SECCIONES_ACERVO = [
   { value: 'fisico', label: 'B. Acervo físico' },
 ] as const satisfies readonly OpcionCatalogo[]
 
+/** Rótulo de volumen por sección: A (SGD) en documentos; B (física) en folios. */
+export const ETIQUETA_CANTIDAD_ACERVO = {
+  digital: 'N° documentos',
+  fisico: 'Folios',
+} as const satisfies Record<(typeof SECCIONES_ACERVO)[number]['value'], string>
+
 /** Tipos de unidades de conservación del formato oficial del Anexo 03. */
 export const UNIDADES_CONSERVACION = [
   { value: 'Archivadores de Palanca', label: 'Archivadores de Palanca' },

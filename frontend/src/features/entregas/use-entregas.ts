@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 
 import type {
   FiltrosEntregas,
-  VerificarEntregaPayload,
+  SuplenciaEttePayload,
 } from '@/types/transferencia'
 import { entregasService } from './entregas.service'
 
@@ -49,25 +49,37 @@ export function usePresentarEntrega() {
   return useMutation({
     mutationFn: (dependenciaId: number) => entregasService.presentarEntrega(dependenciaId),
     onSuccess: () => {
-      toast.success('Entrega presentada al coordinador ETTE. Los anexos quedan bloqueados para edición.')
+      toast.success('Entrega cerrada para la revisión y firma con el coordinador ETTE. Los anexos quedan bloqueados para edición.')
       invalidarFlujo(queryClient)
       // Al presentar se congelan los documentos pendientes del Anexo 02 (D-09).
       queryClient.invalidateQueries({ queryKey: ['informe-gestion'] })
     },
-    onError: (error: any) => toast.error(mensajeError(error, 'No se pudo presentar la entrega.')),
+    onError: (error: any) => toast.error(mensajeError(error, 'No se pudo cerrar la entrega para firma.')),
   })
 }
 
-export function useVerificarEntrega() {
+export function useTitularesEtte(habilitado: boolean) {
+  return useQuery({
+    queryKey: ['entregas', 'titulares-ette'],
+    queryFn: () => entregasService.titularesEtte(),
+    enabled: habilitado,
+    staleTime: 1000 * 60 * 5,
+  })
+}
+
+export function useSuplenciaEtte() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (payload: VerificarEntregaPayload) => entregasService.verificarEntrega(payload),
-    onSuccess: () => {
-      toast.success('Entrega aceptada. Ya pueden firmarse los anexos.')
+    mutationFn: (payload: SuplenciaEttePayload) => entregasService.designarSuplenciaEtte(payload),
+    onSuccess: (_, payload) => {
+      toast.success(payload.titular_id ? 'Titular ETTE designado en suplencia del coordinador.' : 'Firmará el coordinador ETTE asignado.')
       invalidarFlujo(queryClient)
+      // El firmante ETTE cambia el estado de firma y el receptor del acta.
+      queryClient.invalidateQueries({ queryKey: ['firmaperu'] })
+      queryClient.invalidateQueries({ queryKey: ['acta'] })
     },
-    onError: (error: any) => toast.error(mensajeError(error, 'No se pudo aceptar la entrega.')),
+    onError: (error: any) => toast.error(mensajeError(error, 'No se pudo designar la suplencia.')),
   })
 }
 

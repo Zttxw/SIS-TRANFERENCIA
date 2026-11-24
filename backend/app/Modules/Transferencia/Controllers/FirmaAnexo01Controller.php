@@ -44,7 +44,7 @@ class FirmaAnexo01Controller extends Controller
         $procesoId = $this->contexto->procesoActivoId();
         $cadena = $this->cadena->estado($procesoId, null, self::TIPO, $usuario);
         $generado = $this->cadena->generado($procesoId, null, self::TIPO);
-        $miLado = $this->firmantes->ladoPotencial($usuario, null);
+        $miLado = $this->firmantes->ladoInstitucionalPotencial($usuario);
 
         return ApiResponse::success([
             'firma_habilitada' => $this->suscripcion->firmaHabilitada(null),
@@ -62,7 +62,7 @@ class FirmaAnexo01Controller extends Controller
     public function generar(Request $request): JsonResponse
     {
         $usuario = $request->user();
-        $lado = $this->firmantes->ladoPotencial($usuario, null);
+        $lado = $this->firmantes->ladoInstitucionalPotencial($usuario);
         abort_unless($lado !== null && $lado['lado']->value === 'entidad', 403, 'El Anexo 01 lo genera el ETTS.');
         $this->suscripcion->exigirFirmaHabilitada(null);
 
@@ -102,6 +102,6 @@ class FirmaAnexo01Controller extends Controller
     public static function puedeVerSesion(Request $request, FirmaSesion $sesion): bool
     {
         return $sesion->dependencia_id === null
-            && app(FirmantesDocumento::class)->ladoPotencial($request->user(), null) !== null;
+            && app(FirmantesDocumento::class)->ladoInstitucionalPotencial($request->user()) !== null;
     }
 }

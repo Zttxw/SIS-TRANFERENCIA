@@ -173,7 +173,7 @@ class ReasignacionCentrosCosto
 
                 $fusionadas++;
                 DB::table('acervo_documental')->where('id', $existente->id)->update([
-                    'folios' => (int) $existente->folios + (int) $fila->folios,
+                    'numero_documentos' => (int) $existente->numero_documentos + (int) $fila->numero_documentos,
                     'fuente_referencia' => AcervoReferenciaSgd::fusionar((string) $existente->fuente_referencia, (string) $fila->fuente_referencia),
                     'updated_at' => $ahora,
                 ]);

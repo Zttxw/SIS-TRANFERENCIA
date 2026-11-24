@@ -49,7 +49,6 @@ class TableroOperativoTest extends TestCase
                         'total_dependencias',
                         'borrador',
                         'en_revision',
-                        'verificadas',
                         'remitidas',
                         'porcentaje_avance',
                         'patrimonio' => [

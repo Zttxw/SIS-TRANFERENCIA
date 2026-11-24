@@ -143,6 +143,7 @@ class AnexosExperienciaTest extends TestCase
 
     public function test_documentos_identifica_al_creador_desde_auditoria_sin_exponer_valores_ni_ip(): void
     {
+        config(['modulos.documentos_pendientes' => true]);
         $autor = auth()->user();
         $doc = DocumentoPendiente::create([
             'proceso_transferencia_id' => $this->proceso->id, 'dependencia_id' => $this->dep->id,

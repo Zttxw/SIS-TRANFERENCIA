@@ -82,7 +82,7 @@ class CadenaEttsEtteTest extends TestCase
         $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->raiz->id])
             ->assertConflict()
             ->assertJsonPath('errors.hijos_pendientes.0.codigo', '07.05');
-        $this->assertSame(EstadoEntrega::VERIFICADA, $this->entregaDe($this->raiz)->estado);
+        $this->assertSame(EstadoEntrega::EN_REVISION, $this->entregaDe($this->raiz)->estado);
 
         $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->raiz->id, 'confirmar_sin_hijos' => true])
             ->assertOk();

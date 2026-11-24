@@ -9,7 +9,8 @@ use App\Modules\Gestion\Models\InformeGestion;
 /**
  * Sección IV del Anexo 02 (agenda pendiente, D-09): combina la entrada libre del
  * informe con los documentos pendientes del CC. Usa la copia congelada al
- * presentar la entrega; mientras no exista, lee los documentos en vivo.
+ * presentar la entrega; mientras no exista, lee los documentos en vivo. Con el
+ * módulo de documentos pendientes apagado, solo queda la entrada libre.
  */
 class AgendaPendiente
 {
@@ -46,6 +47,10 @@ class AgendaPendiente
      */
     public function documentales(InformeGestion $informe): array
     {
+        if (! config('modulos.documentos_pendientes')) {
+            return [];
+        }
+
         if ($informe->pendientes_congelados_en !== null) {
             return $informe->pendientes_documentales ?? [];
         }

@@ -24,6 +24,7 @@ Este documento reúne el contexto, las decisiones tomadas y los cambios necesari
 | D-10 | **Alta de coordinadores ETTE por dos vías:** formulario web y **plantilla Excel**. |
 | D-11 | **Vinculación de datos:** una **tabla de equivalencias** relaciona cada dependencia del SGD o del SIGA con un CC del Anexo 01. Varias dependencias pueden apuntar al mismo CC. |
 | D-12 | **Entran en esta etapa:** el envío ETTS → ETTE, el cálculo en días hábiles con el plazo CGR, el reemplazo de coordinador con constancia y el ajuste del Acta 07 (hora, lugar, "No aplica"). |
+| D-13 | **Firma presencial del coordinador** (decisión del 2026-11-24, reemplaza la aceptación de D-07 y el portal operativo del coordinador): el coordinador ETTE revisa y **firma en la sesión del responsable del CC**, con su propio certificado. **Firmar es aprobar**: ya no hay paso «Aceptar entrega». Las observaciones las registra el responsable a nombre del coordinador. Si el coordinador falta, el responsable designa a un titular ETTE en suplencia, con motivo. Se mantiene la firma manuscrita (el responsable sube el escaneo). El coordinador conserva su cuenta solo para consultar. Ver fase 10. |
 
 ---
 
@@ -339,6 +340,20 @@ Es la base de todas las demás fases.
 - Reportes Excel (`MatrizAnexosExport`, `ObservacionesExport`): agregar las columnas de código CEPLAN y estado nuevo.
 - Actualizar `docs/nuevos-requerimientos` o archivarlo, y marcar los estados ✅/🟡/❌ en el consolidado.
 - Hacer un ensayo completo con datos reales en un entorno de prueba antes del despliegue, como el de [despliegue-produccion-2026-11.md](../documentacion-firma/despliegue-produccion-2026-11.md).
+
+### Fase 10 — Firma presencial del coordinador ETTE (D-13)
+
+**Implementación (2026-11-24):**
+- **Flujo:** `borrador → en_revision («Revisión y firma») → acta_suscrita → remitida`. Se retiraron el estado `verificada`, `POST /transferencia/verificar`, el permiso `entregas.verificar` y `AccionPlazo::VERIFICAR`. La actividad 3 del cronograma bloquea solo el cierre («Cerrar y pasar a firma»). La firma se habilita en `en_revision`.
+- **Firmante y operador:** el responsable del CC opera todas las firmas de su CC (`POST /firmaperu/preparar` recibe `lado = entidad | ette`). La sesión del lado ETTE se emite a nombre y DNI del **firmante designado**, así que Firma Perú filtra y valida su certificado. `firma_sesiones.operador_id` guarda quién operaba la sesión. `FirmantesDocumento::firmante()` reemplaza a `lado()`; `exigirFirmanteAsignado()` rechaza la firma si el firmante designado cambió entre preparar y firmar.
+- **Firmante designado** (`CoordinacionEtte::firmanteDe`): el titular ETTE en suplencia, si se designó en la entrega (`entregas.titular_suplente_id` y `motivo_suplencia_ette`, `PUT /transferencia/suplencia-ette`); si no, el coordinador vigente. Solo se cambia mientras no haya firmas vigentes del lado ETTE ni del acta. También figura como receptor en la sección II del Acta 07 y como autor de las observaciones. `GET /transferencia/estado` y `GET /firmaperu/estado` devuelven `firmante_ette`.
+- **Observaciones:** las registra y retira el responsable del CC exacto (no el de un CC padre) mientras la entrega está en revisión y el acta no tiene firmas. `observaciones.registrada_por_id` guarda quién las registró. `observaciones.registrar` pasó al responsable y se retiró del coordinador y del titular.
+- **Manuscrita:** `POST /firmaperu/subir-manual` lo usa el responsable (permiso `entregas.remitir`). La firma se registra a nombre del firmante ETTE y guarda quién subió el escaneo.
+- **Permisos:** se retiró `firmas.firmar` (el Anexo 01 usa sus propias rutas). El coordinador queda con `plataforma.acceder`, `anexos.ver` y `expediente.ver`. El acta la completa solo quien la genera (`actas.generar`); el lado ETTE la consulta. El límite de `preparar` subió a 20 por minuto, porque el responsable opera las 12 firmas.
+- Migración `2026_11_24_180112_firma_presencial_coordinador_ette`: elimina `entregas.verificada_*` y `resultado_verificacion`; las entregas `verificada` pasan a `en_revision`, y una aceptación hecha en suplencia se conserva como designación. Agrega `firma_sesiones.operador_id` y `observaciones.registrada_por_id`.
+- **Frontend:** «PDF y firma» muestra «Firmar como responsable», «Firma del coordinador ETTE» y «Subir escaneo firmado por el coordinador». `EntregaCentroCostoCard` muestra quién firma por el ETTE y permite designar un titular en suplencia o volver al coordinador (`SuplenciaEtteDialog`). El panel de observaciones de cada anexo se habilita para el responsable. «Anexos de la entidad» queda en solo lectura para el coordinador. Se eliminaron `AceptarEntregaDialog`, `MotivoSuplenciaDialog`, `use-titular-suplente` y el `VerificacionExport` sin uso.
+- Tests: `RevisionCoordinadorTest` y `ObservacionesTest` reescritos; `FirmaAmbosLadosTest` rehecho (certificado filtrado por el DNI del coordinador, operador, suplencia, cambio de firmante, CC padre); adaptados `FirmaperuSesionTest`, `FirmaperuFlujoInstitucionalTest`, `FlujoDocumentosFirmadosTest`, `ActaTransferenciaTest`, `CronogramaBloqueoTest` y otros. Suite: **356 pasan**.
+- Ejecutado en local: respaldo `respaldo-antes-firma-presencial-2026-11-24.dump`, migración de esta fase sola (`--path`) y `RolesPermisosSeeder`.
 
 ---
 

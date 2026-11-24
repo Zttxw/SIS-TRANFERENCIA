@@ -41,7 +41,7 @@ Route::prefix('firmaperu')->middleware('throttle:60,1')->group(function () {
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('firmaperu')->group(function () {
-        Route::post('/preparar', [FirmaperuController::class, 'preparar'])->middleware('permiso:anexos.registrar,firmas.firmar,actas.generar')->middleware('throttle:10,1,firma-preparar');
+        Route::post('/preparar', [FirmaperuController::class, 'preparar'])->middleware('permiso:anexos.registrar,actas.generar')->middleware('throttle:20,1,firma-preparar');
         Route::post('/generar-borrador', [FirmaperuController::class, 'generarBorrador'])->middleware('permiso:anexos.registrar,actas.generar')->middleware('throttle:20,1,firma-generar');
         // Anexo 01 institucional: lo firman el ETTS y un titular ETTE al cierre (fase 6).
         Route::prefix('anexo01')->middleware('permiso:entregas.remitir_ette,entregas.recibir_ette')->group(function () {
@@ -51,7 +51,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/preparar', [FirmaAnexo01Controller::class, 'preparar'])->middleware('throttle:10,1,firma-preparar');
         });
         // Firma manuscrita del lado ETTE: escaneo del PDF generado (D-06).
-        Route::post('/subir-manual', [FirmaperuController::class, 'subirManual'])->middleware('permiso:firmas.firmar')->middleware('throttle:10,1,firma-subir-manual');
+        Route::post('/subir-manual', [FirmaperuController::class, 'subirManual'])->middleware('permiso:entregas.remitir')->middleware('throttle:10,1,firma-subir-manual');
         Route::middleware('permiso:anexos.ver')->group(function () {
             Route::get('/previsualizar', [FirmaperuController::class, 'previsualizar'])->middleware('throttle:20,1,firma-visualizar');
             Route::get('/requisitos-remision/{dependenciaId}', [FirmaperuController::class, 'requisitosRemision'])->whereNumber('dependenciaId');
@@ -121,7 +121,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/coordinadores-ette/mis-centros', [DelegadoController::class, 'misCoordinadores']);
 
     // Anexo 01: Reporte de Asuntos Pendientes y Prioritarios (SGD) (plan §7.7).
-    Route::prefix('documentos-pendientes')->group(function () {
+    Route::prefix('documentos-pendientes')->middleware('modulo:documentos_pendientes')->group(function () {
         Route::get('/', [DocumentoPendienteController::class, 'index'])->middleware('permiso:anexos.ver');
         Route::get('/resumen', [DocumentoPendienteController::class, 'resumen'])->middleware('permiso:anexos.ver,reportes.ver');
         Route::get('/drilldown', [DocumentoPendienteController::class, 'drilldown'])->middleware('permiso:anexos.ver,reportes.ver');
@@ -184,10 +184,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/estado', [TransferenciaController::class, 'estado'])->middleware('permiso:anexos.ver');
         Route::post('/remitir', [TransferenciaController::class, 'remitir'])->middleware('permiso:entregas.remitir');
         Route::post('/presentar', [TransferenciaController::class, 'presentar'])->middleware('permiso:entregas.remitir');
-        Route::post('/verificar', [TransferenciaController::class, 'verificar'])->middleware('permiso:entregas.verificar');
-        Route::get('/acta', [ActaController::class, 'show'])->middleware('permiso:actas.generar,firmas.firmar');
-        Route::put('/acta', [ActaController::class, 'update'])->middleware('permiso:actas.generar,firmas.firmar');
-        Route::get('/acta/pdf', [ActaController::class, 'pdf'])->middleware('permiso:actas.generar,firmas.firmar');
+        // Revisión y firma presencial del coordinador ETTE en la sesión del responsable.
+        Route::put('/suplencia-ette', [TransferenciaController::class, 'suplenciaEtte'])->middleware('permiso:entregas.remitir');
+        Route::get('/titulares-ette', [TransferenciaController::class, 'titularesEtte'])->middleware('permiso:entregas.remitir');
+        Route::get('/acta', [ActaController::class, 'show'])->middleware('permiso:actas.generar,anexos.ver');
+        Route::put('/acta', [ActaController::class, 'update'])->middleware('permiso:actas.generar');
+        Route::get('/acta/pdf', [ActaController::class, 'pdf'])->middleware('permiso:actas.generar,anexos.ver');
         // Consolidado del CC padre: su subárbol con autoría (D-08, RF-43).
         Route::get('/consolidado', [TransferenciaController::class, 'consolidado'])->middleware('permiso:anexos.ver');
 

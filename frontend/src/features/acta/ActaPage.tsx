@@ -158,7 +158,7 @@ export function ActaPage() {
           <CardContent className="space-y-5 text-sm">
             <p className="text-muted-foreground leading-relaxed text-xs sm:text-sm">
               El <strong>Acta de Transferencia (Anexo 07)</strong> la emite el responsable del centro de costo y
-              se firma después de que el coordinador ETTE acepta la entrega.
+              se firma con la entrega cerrada para revisión, junto con el coordinador ETTE presente.
             </p>
 
             <div className="rounded-lg border bg-background/80 p-4">

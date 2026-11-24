@@ -5,6 +5,7 @@ import { AsyncBoundary } from '@/components/ui/async-boundary'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { agruparAcervoPorSeccion } from './agrupar-por-anio'
+import { ETIQUETA_CANTIDAD_ACERVO } from '@/lib/catalogos'
 import { AcervoCabecera, AcervoRegistro } from './AcervoRegistro'
 import type { AcervoDocumental } from '@/types/acervo'
 
@@ -101,7 +102,7 @@ export function AcervoPorAnio({
 
                     {abierto && (
                       <table className="w-full table-fixed border-collapse text-left text-xs">
-                        <AcervoCabecera />
+                        <AcervoCabecera etiquetaCantidad={ETIQUETA_CANTIDAD_ACERVO[seccion.tipo]} />
                         <tbody className="divide-y">
                         {grupo.series.map((registro) => (
                           <AcervoRegistro

@@ -7,7 +7,6 @@ namespace App\Modules\Transferencia\Models;
 use App\Models\User;
 use App\Modules\Organization\Models\Dependencia;
 use App\Support\Concerns\Auditable;
-use App\Support\Enums\CalidadEtte;
 use App\Support\Enums\EstadoEntrega;
 use App\Support\Models\BaseModel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,13 +14,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Entrega de un centro de costo en el proceso (plan §3.1): una por CC y proceso.
- * Registra la presentación a revisión, la verificación del lado ETTE y la
- * remisión al CC padre o al ETTS y, para las que llegan al ETTS, la cadena
- * institucional ETTS → ETTE (D-12). `receptor_id`, `revisada_en` y
- * `consolidada_en` son historial de solo lectura del flujo anterior.
+ * Registra el cierre para revisión y firma, el titular ETTE designado si suple
+ * al coordinador (`titular_suplente_id`, con motivo), la remisión al CC padre o
+ * al ETTS y, para las que llegan al ETTS, la cadena institucional ETTS → ETTE
+ * (D-12). `receptor_id`, `revisada_en` y `consolidada_en` son historial de
+ * solo lectura del flujo anterior.
  *
  * @property EstadoEntrega $estado
- * @property CalidadEtte|null $verificada_en_calidad_de
  */
 class Entrega extends BaseModel
 {
@@ -37,11 +36,8 @@ class Entrega extends BaseModel
         'estado',
         'presentada_en',
         'presentada_por_id',
-        'verificada_en',
-        'verificada_por_id',
-        'verificada_en_calidad_de',
-        'motivo_suplencia_verificacion',
-        'resultado_verificacion',
+        'titular_suplente_id',
+        'motivo_suplencia_ette',
         'remitida_en',
         'comentario',
         'hijos_pendientes_al_remitir',
@@ -58,9 +54,7 @@ class Entrega extends BaseModel
     {
         return [
             'estado' => EstadoEntrega::class,
-            'verificada_en_calidad_de' => CalidadEtte::class,
             'presentada_en' => 'datetime',
-            'verificada_en' => 'datetime',
             'remitida_en' => 'datetime',
             'recibida_etts_en' => 'datetime',
             'remitida_ette_en' => 'datetime',
@@ -96,9 +90,9 @@ class Entrega extends BaseModel
     }
 
     /** @return BelongsTo<User, $this> */
-    public function verificadaPor(): BelongsTo
+    public function titularSuplente(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'verificada_por_id');
+        return $this->belongsTo(User::class, 'titular_suplente_id');
     }
 
     /** @return BelongsTo<User, $this> */

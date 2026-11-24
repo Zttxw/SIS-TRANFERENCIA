@@ -78,7 +78,7 @@ export function RemitirModal({
           </div>
         )}
         <div className="rounded-lg border border-warning-border bg-warning-soft p-3 text-xs text-warning-fg">
-          La entrega fue aceptada por el coordinador ETTE. Al remitirla, pasa al {haciaEtts ? 'ETTS' : 'centro de costo padre'}, que solo la consolida.
+          Los anexos 02 al 07 tienen la firma del responsable y del coordinador ETTE. Al remitirla, pasa al {haciaEtts ? 'ETTS' : 'centro de costo padre'}, que solo la consolida.
         </div>
 
         {faltanHijos && (

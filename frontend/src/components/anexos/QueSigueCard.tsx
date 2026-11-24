@@ -24,7 +24,7 @@ interface QueSigueCardProps {
   /** El usuario puede editar/llenar (borrador). */
   esEditable: boolean
   anexos: AnexoPendiente[]
-  /** Ruta del acta (Anexo 07), que se firma tras la aceptación del coordinador. */
+  /** Ruta del acta (Anexo 07), que se firma con la entrega cerrada para revisión. */
   rutaActa?: string
   className?: string
   dependenciaId: number
@@ -53,7 +53,7 @@ export function QueSigueCard({
 }: QueSigueCardProps) {
   const { tiene, permisos } = useAuth()
   const { data: requisitos } = useRequisitosRemision(dependenciaId, tiene('entregas.remitir'))
-  const puedeFirmar = tiene('anexos.registrar') || tiene('actas.generar') || tiene('firmas.firmar')
+  const puedeFirmar = tiene('anexos.registrar') || tiene('actas.generar')
   const [oculto, setOculto] = useState(false)
   const tipos: TipoDocumentoFirma[] = ['anexo02', 'anexo03', 'anexo04', 'anexo05', 'anexo06']
   if (puedeConsultarActa(permisos)) tipos.push('anexo07')
@@ -124,19 +124,19 @@ function resolverSugerencia(
   puedeEmitirActa: boolean,
   puedeRemitir: boolean,
 ): Sugerencia | null {
-  // Presentada al coordinador o ya remitida: el responsable no tiene acción pendiente.
-  if (estado === 'en_revision' || estado === 'remitida') {
+  // Ya remitida: el responsable no tiene acción pendiente.
+  if (estado === 'remitida') {
     return null
   }
 
-  // Aceptada por el coordinador: firmar los anexos 02–07 y remitir.
+  // Cerrada para firma: con el coordinador presente, firmar los anexos 02–07 y remitir.
   if (estaEnFirma(estado)) {
     if (hayFirmaPendiente) {
       return {
         titulo: 'Firme los documentos de la entrega',
         descripcion: puedeEmitirActa
-          ? 'El coordinador ETTE aceptó la entrega. Genere el Acta (Anexo 07) y firme los anexos en «PDF y firma».'
-          : 'El coordinador ETTE aceptó la entrega. Genere y firme los anexos en «PDF y firma».',
+          ? 'Con el coordinador ETTE presente, complete el Acta (Anexo 07) y firmen ambos los anexos en «PDF y firma».'
+          : 'Con el coordinador ETTE presente, generen y firmen ambos los anexos en «PDF y firma».',
         ruta: puedeEmitirActa ? rutaActa : '/pdf-firma',
         cta: puedeEmitirActa ? 'Ir al Acta' : 'Ir a PDF y firma',
       }

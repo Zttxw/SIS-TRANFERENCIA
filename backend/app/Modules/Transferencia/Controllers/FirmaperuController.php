@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Transferencia\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Auth\Services\CoordinacionEtte;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Models\FirmaBorrador;
 use App\Modules\Transferencia\Models\FirmaSesion;
@@ -16,12 +17,14 @@ use App\Modules\Transferencia\Services\FirmaperuRegistroService;
 use App\Modules\Transferencia\Services\FirmaperuSesionService;
 use App\Modules\Transferencia\Services\SuscripcionEntrega;
 use App\Support\Concerns\AutorizaAmbito;
+use App\Support\Enums\LadoFirma;
 use App\Support\Http\ApiResponse;
 use App\Support\Services\ContextoTransferencia;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FirmaperuController extends Controller
@@ -44,7 +47,7 @@ class FirmaperuController extends Controller
             'tipo_documento' => 'required|string|in:'.self::TIPOS,
             'dependencia_id' => 'required|integer|exists:dependencias,id,es_centro_costo,1',
             'documento_previo_id' => 'nullable|uuid',
-            'motivo_suplencia' => 'nullable|string|max:500',
+            'lado' => ['required', Rule::enum(LadoFirma::class)],
         ]);
         $dependenciaId = (int) $datos['dependencia_id'];
         $usuario = $request->user();
@@ -55,7 +58,7 @@ class FirmaperuController extends Controller
             409, 'La dependencia no pertenece al proceso activo.');
 
         return ApiResponse::success($this->sesiones->preparar($usuario, $tipo, $dependenciaId,
-            $datos['documento_previo_id'] ?? null, $datos['motivo_suplencia'] ?? null), 'Sesión de firma preparada.', 201);
+            LadoFirma::from($datos['lado']), $datos['documento_previo_id'] ?? null), 'Sesión de firma preparada.', 201);
     }
 
     public function previsualizar(Request $request, FirmaperuPdfService $pdf): Response
@@ -167,16 +170,15 @@ class FirmaperuController extends Controller
     }
 
     /**
-     * Firma manuscrita del lado ETTE (D-06 a): escaneo del PDF generado firmado
-     * a mano. Queda como base de la cadena; el responsable firma digitalmente
-     * encima.
+     * Firma manuscrita del lado ETTE (D-06 a): el responsable sube el escaneo
+     * del PDF generado que el coordinador firmó a mano. Queda como base de la
+     * cadena; el responsable firma digitalmente encima.
      */
     public function subirManual(Request $request, FirmaManuscritaService $manuscrita): JsonResponse
     {
         $datos = $request->validate([
             'tipo_documento' => 'required|string|in:'.self::TIPOS,
             'dependencia_id' => 'required|integer|exists:dependencias,id,es_centro_costo,1',
-            'motivo_suplencia' => 'nullable|string|max:500',
             'signed_file' => ['required', 'file', 'mimes:pdf', 'max:'.(int) config('firmaperu.max_upload_kb', 20480)],
         ]);
         $dependenciaId = (int) $datos['dependencia_id'];
@@ -186,8 +188,7 @@ class FirmaperuController extends Controller
             ->where('proceso_transferencia_id', app(ContextoTransferencia::class)->procesoActivoId())->exists(),
             409, 'La dependencia no pertenece al proceso activo.');
 
-        $sesion = $manuscrita->recibir($request->user(), $tipo, $dependenciaId, $request->file('signed_file'),
-            $datos['motivo_suplencia'] ?? null);
+        $sesion = $manuscrita->recibir($request->user(), $tipo, $dependenciaId, $request->file('signed_file'));
 
         return ApiResponse::success(['sesion_id' => $sesion->id, 'estado' => $sesion->estado],
             'Firma manuscrita del lado ETTE registrada.', 201);
@@ -211,7 +212,8 @@ class FirmaperuController extends Controller
 
     /**
      * Estado de firma del documento: la cadena vigente con la firma de cada
-     * lado, el lado por el que firmaría el usuario y si la firma está habilitada.
+     * lado, si el usuario opera las firmas (responsable del CC), quién firma por
+     * el lado ETTE y si la firma está habilitada.
      */
     public function estado(Request $request, string $tipo, int $dependenciaId): JsonResponse
     {
@@ -230,7 +232,7 @@ class FirmaperuController extends Controller
                 ->orderByDesc('documento_firma_id')->latest('firmado_en')->latest('created_at')->orderByDesc('id')->first();
         $pendiente = (clone $sesiones)->where('estado', 'pendiente_validacion')->latest('created_at')->orderByDesc('id')->first();
         $borrador = $this->cadena->generado($procesoId, $dependenciaId, $tipo);
-        $miLado = $this->firmantes->ladoPotencial($usuario, $dependenciaId);
+        $ette = app(CoordinacionEtte::class)->firmanteDe($dependenciaId);
 
         // ¿El usuario ya suscribió este documento? Se compara con el DNI del
         // certificado verificado (firmante_dni), que es el hecho de firma real.
@@ -245,7 +247,9 @@ class FirmaperuController extends Controller
             'entidad' => $cadena['entidad'],
             'ette' => $cadena['ette'],
             'hay_firma_digital' => $cadena['hay_firma_digital'],
-            'mi_lado' => $miLado ? ['lado' => $miLado['lado']->value, 'en_calidad_de' => $miLado['en_calidad_de']?->value] : null,
+            'opera_firmas' => $this->firmantes->opera($usuario, $dependenciaId),
+            'firmante_ette' => $ette ? ['nombre' => $ette['usuario']->name, 'dni' => $ette['usuario']->dni,
+                'en_calidad_de' => $ette['en_calidad_de']->value, 'motivo_suplencia' => $ette['motivo_suplencia']] : null,
             'firma_habilitada' => $this->suscripcion->firmaHabilitada($dependenciaId),
             'firmado_en' => $sesion?->firmado_en?->toIso8601String(),
             'pendiente_validacion' => $pendiente !== null, 'sesion_pendiente_id' => $pendiente?->id,

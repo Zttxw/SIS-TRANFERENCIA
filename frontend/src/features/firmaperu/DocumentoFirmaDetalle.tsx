@@ -3,10 +3,12 @@ import { CheckCircle2, Circle, Clock3, FileText, Loader2, Lock } from 'lucide-re
 
 import { BotonFirmaPeru } from './BotonFirmaPeru'
 import { BotonGenerarPdf } from './BotonGenerarPdf'
+import { FirmaManuscritaEtte } from './FirmaManuscritaEtte'
 import { PrevisualizarAnexo } from './PrevisualizarAnexo'
 import { BotonDescargarPdf } from '@/components/anexos/BotonDescargarPdf'
 import { firmaperuService } from './firmaperu.service'
 import { cn } from '@/lib/utils'
+import { ETAPAS, etapaDocumento, type TonoEtapa } from './etapa-documento'
 import type { EstadoFirma, FirmaLado, TipoDocumentoFirma } from './firmaperu.types'
 
 interface Props {
@@ -22,8 +24,10 @@ interface Props {
  * Panel de documento + firma del anexo, mostrado al expandir su fila en la tabla
  * «Mi entrega» (plan 07, F3-3). Reúne el estado del PDF/firma (query
  * ['firmaperu', tipo, dep]) y las acciones secundarias — previsualizar, generar
- * y firmar — reusando BotonGenerarPdf + BotonFirmaPeru. Muestra la firma de
- * cada lado (responsable y coordinador ETTE, D-05) en la cadena vigente.
+ * y firmar — reusando BotonGenerarPdf + BotonFirmaPeru. El responsable firma
+ * por la entidad y, en su sesión, el coordinador ETTE presente firma con su
+ * certificado (o a mano, con el escaneo). Muestra la firma de cada lado (D-05)
+ * en la cadena vigente.
  */
 export function DocumentoFirmaDetalle({ tipoDocumento, dependenciaId, bloqueado = false, notaBloqueo, soloLectura = false }: Props) {
   const { data: estado, isLoading, isError, refetch } = useQuery<EstadoFirma>({
@@ -79,7 +83,11 @@ export function DocumentoFirmaDetalle({ tipoDocumento, dependenciaId, bloqueado 
             />
             <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
           </>}
-          <BotonFirmaPeru tipoDocumento={tipoDocumento} dependenciaId={dependenciaId} />
+          <BotonFirmaPeru tipoDocumento={tipoDocumento} dependenciaId={dependenciaId} lado="entidad" />
+          {tipoDocumento !== 'anexo01' && <>
+            <BotonFirmaPeru tipoDocumento={tipoDocumento} dependenciaId={dependenciaId} lado="ette" />
+            <FirmaManuscritaEtte tipoDocumento={tipoDocumento} dependenciaId={dependenciaId} />
+          </>}
           </>}
         </div>
       )}
@@ -91,22 +99,25 @@ export function DocumentoFirmaDetalle({ tipoDocumento, dependenciaId, bloqueado 
 
 /** Casillas de firma por lado: responsable (entidad) y coordinador ETTE. */
 function LadosFirma({ estado }: { estado: EstadoFirma }) {
+  const pendienteEtte = estado.firmante_ette
+    ? `Pendiente · ${estado.firmante_ette.nombre}${estado.firmante_ette.en_calidad_de === 'titular_suplente' ? ' (titular suplente)' : ''}`
+    : 'Sin coordinador asignado'
   return (
     <div className="flex flex-wrap gap-1.5">
       <CasillaLado titulo="Responsable del CC" firma={estado.entidad} />
-      <CasillaLado titulo="Coordinador ETTE" firma={estado.ette} />
+      <CasillaLado titulo="Coordinador ETTE" firma={estado.ette} pendiente={pendienteEtte} />
     </div>
   )
 }
 
-function CasillaLado({ titulo, firma }: { titulo: string; firma: FirmaLado | null }) {
+function CasillaLado({ titulo, firma, pendiente = 'Pendiente' }: { titulo: string; firma: FirmaLado | null; pendiente?: string }) {
   const detalle = firma
     ? [
         firma.firmante,
         firma.en_calidad_de === 'titular_suplente' ? 'titular suplente' : null,
         firma.origen === 'manuscrita' ? 'manuscrita' : 'digital',
       ].filter(Boolean).join(' · ')
-    : 'Pendiente'
+    : pendiente
   return (
     <span
       title={firma?.motivo_suplencia ? `Motivo de suplencia: ${firma.motivo_suplencia}` : undefined}
@@ -121,6 +132,13 @@ function CasillaLado({ titulo, firma }: { titulo: string; firma: FirmaLado | nul
   )
 }
 
+const ICONO_TONO: Record<TonoEtapa, { icono: typeof FileText; clase: string }> = {
+  neutro: { icono: FileText, clase: 'text-muted-foreground' },
+  aviso: { icono: Clock3, clase: 'text-warning-fg' },
+  info: { icono: FileText, clase: 'text-info-fg' },
+  exito: { icono: CheckCircle2, clase: 'font-medium text-success-fg' },
+}
+
 function EstadoDocumento({ estado, bloqueado, notaBloqueo }: { estado?: EstadoFirma; bloqueado: boolean; notaBloqueo?: string }) {
   if (bloqueado) {
     return (
@@ -129,48 +147,14 @@ function EstadoDocumento({ estado, bloqueado, notaBloqueo }: { estado?: EstadoFi
       </span>
     )
   }
-  if (estado?.completo) {
-    const fecha = estado.firmado_en ? ` · ${new Date(estado.firmado_en).toLocaleDateString('es-PE')}` : ''
-    return (
-      <span className="inline-flex items-center gap-1.5 font-medium text-success-fg">
-        <CheckCircle2 className="h-3.5 w-3.5" /> Firmado por ambos lados{estado.version ? ` v${estado.version}` : ''}{fecha}
-      </span>
-    )
-  }
-  if (estado?.vigente) {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-warning-fg">
-        <Clock3 className="h-3.5 w-3.5" /> Falta la firma {estado.entidad ? 'del coordinador ETTE' : 'del responsable'}
-      </span>
-    )
-  }
-  if (estado?.firmado) {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-warning-fg">
-        <Clock3 className="h-3.5 w-3.5" /> Firma anterior · los datos cambiaron, vuelva a firmar
-      </span>
-    )
-  }
-  if (estado?.pendiente_validacion) {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-warning-fg">
-        <Clock3 className="h-3.5 w-3.5" /> PDF recibido · verificación pendiente
-      </span>
-    )
-  }
-  if (estado?.borrador_generado && estado.pdf_generado_vigente === false) {
-    return <span className="text-warning-fg">Los datos cambiaron · regenere el PDF</span>
-  }
-  if (estado?.borrador_generado) {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-info-fg">
-        <FileText className="h-3.5 w-3.5" /> PDF generado · pendiente de firma
-      </span>
-    )
-  }
+  const etapa = etapaDocumento(estado)
+  const { etiqueta, tono } = ETAPAS[etapa]
+  const { icono: Icono, clase } = ICONO_TONO[tono]
+  const fecha = etapa === 'completo' && estado?.firmado_en ? ` · ${new Date(estado.firmado_en).toLocaleDateString('es-PE')}` : ''
+  const version = etapa === 'completo' && estado?.version ? ` v${estado.version}` : ''
   return (
-    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-      <FileText className="h-3.5 w-3.5" /> PDF no generado
+    <span className={cn('inline-flex items-center gap-1.5', clase)}>
+      <Icono className="h-3.5 w-3.5" /> {etiqueta}{version}{fecha}
     </span>
   )
 }

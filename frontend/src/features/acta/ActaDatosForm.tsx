@@ -169,7 +169,7 @@ export function ActaDatosForm({ acta, dependenciaId }: { acta: ActaTransferencia
           <CardHeader>
             <CardTitle className="text-sm">I y II. Intervinientes</CardTitle>
             <CardDescription className="text-xs">
-              Los define el sistema: el responsable del centro de costo y quien acepta la entrega por el ETTE.
+              Los define el sistema: el responsable del centro de costo y quien firma por el ETTE (coordinador o titular suplente).
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 text-xs sm:grid-cols-2">

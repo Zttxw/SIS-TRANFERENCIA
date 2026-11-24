@@ -6,7 +6,7 @@ import type { FiltrosPersonal, GuardarPersonalPayload } from '@/types/personal'
 import { personalService } from './personal.service'
 
 const CONFLICTO =
-  'No se puede modificar: la entrega de este centro de costo está bloqueada (ya fue presentada al coordinador).'
+  'No se puede modificar: la entrega de este centro de costo está bloqueada (ya se cerró para revisión y firma).'
 
 export function usePersonal(filtros: FiltrosPersonal = {}) {
   return useQuery({
@@ -43,7 +43,7 @@ export function useEliminarPersonal() {
     },
     onError: (error) =>
       notificarError(error, {
-        conflicto: 'No se puede eliminar: la entrega está bloqueada (ya fue presentada al coordinador).',
+        conflicto: 'No se puede eliminar: la entrega está bloqueada (ya se cerró para revisión y firma).',
       }),
   })
 }

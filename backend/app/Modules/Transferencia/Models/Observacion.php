@@ -21,6 +21,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * Observación del coordinador ETTE sobre un anexo de un centro de costo (D-07).
  * Es una constancia: no se subsana ni devuelve la entrega. Se formula sobre una
  * fila del anexo (`observable`) o sobre el anexo completo (sin observable).
+ * `autor_id` es el coordinador (o titular suplente) presente en la revisión;
+ * `registrada_por_id`, el responsable del CC que la registró en su sesión.
  *
  * @property EstadoObservacion $estado
  */
@@ -37,6 +39,7 @@ class Observacion extends BaseModel
         'observable_type',
         'observable_id',
         'autor_id',
+        'registrada_por_id',
         'en_calidad_de',
         'motivo_suplencia',
         'descripcion',
@@ -95,6 +98,12 @@ class Observacion extends BaseModel
     public function autor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'autor_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function registradaPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'registrada_por_id');
     }
 
     /**

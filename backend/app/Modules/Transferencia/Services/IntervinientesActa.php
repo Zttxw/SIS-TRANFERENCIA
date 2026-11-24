@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Transferencia\Services;
 
 use App\Models\User;
-use App\Modules\Auth\Models\AsignacionRol;
+use App\Modules\Auth\Services\CoordinacionEtte;
 use App\Modules\Organization\Models\Dependencia;
-use App\Modules\Transferencia\Models\Entrega;
 use App\Support\Enums\CalidadEtte;
 use App\Support\Enums\Rol;
 
@@ -15,12 +14,14 @@ use App\Support\Enums\Rol;
  * Quiénes figuran en las secciones I y II del Acta 07 (RF-61, RF-64, D-03):
  *
  * - Entrega: el responsable del centro de costo.
- * - Recepción y verificación: quien aceptó la entrega por el lado ETTE (el
- *   coordinador o un titular ETTE en suplencia); antes de la aceptación, el
- *   coordinador ETTE acreditado para el CC. Ya no existe el "CC receptor".
+ * - Recepción y verificación: el firmante designado del lado ETTE (el
+ *   coordinador vigente o el titular ETTE que lo suple), el mismo que firma
+ *   presencialmente. Ya no existe el "CC receptor".
  */
 class IntervinientesActa
 {
+    public function __construct(private readonly CoordinacionEtte $coordinacion) {}
+
     /** @return array{nombre: string, dni: string, cargo: string} */
     public function entrega(Dependencia $dependencia): array
     {
@@ -40,21 +41,12 @@ class IntervinientesActa
     }
 
     /** @return array{nombre: string, dni: string, cargo: string, calidad: string} */
-    public function recepcion(Dependencia $dependencia, ?Entrega $entrega): array
+    public function recepcion(Dependencia $dependencia): array
     {
-        $verificador = $entrega?->verificada_por_id ? User::find($entrega->verificada_por_id) : null;
-        if ($verificador !== null) {
-            return $this->identidad($verificador, $entrega->verificada_en_calidad_de ?? CalidadEtte::COORDINADOR);
-        }
+        $ette = $this->coordinacion->firmanteDe($dependencia->id);
 
-        $coordinador = AsignacionRol::query()->with('usuario.servidor')
-            ->where('rol', Rol::DELEGADO_ETTE->value)
-            ->where('proceso_transferencia_id', $dependencia->proceso_transferencia_id)
-            ->where('dependencia_id', $dependencia->id)
-            ->latest('id')->first()?->usuario;
-
-        return $coordinador !== null
-            ? $this->identidad($coordinador, CalidadEtte::COORDINADOR)
+        return $ette !== null
+            ? $this->identidad($ette['usuario'], $ette['en_calidad_de'])
             : ['nombre' => '', 'dni' => '', 'cargo' => '', 'calidad' => self::calidad(CalidadEtte::COORDINADOR)];
     }
 

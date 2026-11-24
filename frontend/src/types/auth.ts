@@ -35,6 +35,13 @@ export interface Servidor {
   dependencia?: Dependencia | null
 }
 
+/** Módulos que el backend puede apagar (`config/modulos.php`). */
+export interface ModulosHabilitados {
+  documentos_pendientes: boolean
+}
+
+export type ModuloConfigurable = keyof ModulosHabilitados
+
 export interface Usuario {
   id: number
   dni: string
@@ -43,6 +50,7 @@ export interface Usuario {
   activo: boolean
   es_global?: boolean
   dependencias_ambito?: number[] | null
+  modulos?: ModulosHabilitados
   roles: AsignacionRol[]
   servidor: Servidor | null
 }

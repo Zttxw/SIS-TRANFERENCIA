@@ -23,7 +23,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /**
  * Acta de Transferencia Administrativa y Entrega de Cargo (Anexo 07). La emite
  * el personal de la entidad (actas.generar); el lado ETTE la consulta una vez
- * emitida. Ambas partes completan sus datos antes de firmarla.
+ * emitida. Los datos se completan en la sesión del responsable, con el
+ * coordinador ETTE presente, antes de firmarla.
  */
 class ActaController extends Controller
 {
@@ -36,6 +37,7 @@ class ActaController extends Controller
 
     public function show(Request $request): JsonResponse
     {
+        $this->firmantes->exigirConsultaDeActas($request->user());
         $dependenciaId = $this->dependenciaAutorizada($request);
 
         if ($request->user()->tienePermiso(Permiso::GenerarActas)) {
@@ -54,7 +56,7 @@ class ActaController extends Controller
     public function update(Request $request): JsonResponse
     {
         $dependenciaId = $this->dependenciaAutorizada($request);
-        $this->firmantes->exigirIntervieneEnActa($request->user(), $dependenciaId);
+        $this->firmantes->exigirPuedeGenerar($request->user(), 'anexo07', $dependenciaId);
 
         $datos = $request->validate([
             'fecha_acta' => ['sometimes', 'required', 'date'],
@@ -76,6 +78,7 @@ class ActaController extends Controller
     /** PDF oficial del Acta, que se emite y suscribe antes de remitir. */
     public function pdf(Request $request, ActaPdf $actaPdf): StreamedResponse
     {
+        $this->firmantes->exigirConsultaDeActas($request->user());
         $dependenciaId = $this->dependenciaAutorizada($request);
         if (! $request->user()->tienePermiso(Permiso::GenerarActas)) {
             $this->firmantes->exigirIntervieneEnActa($request->user(), $dependenciaId);

@@ -116,7 +116,7 @@ export function AcervoPage() {
       aviso={
         <aside className="space-y-1 rounded-lg border border-info-border bg-info-soft p-4 text-sm text-info-fg">
           <p className="font-semibold">A. Acervo digital · B. Acervo físico</p>
-          <p>La sección A se precarga del SGD (disponible desde septiembre de 2025): una serie por tipo de documento, separada en emitidos y recibidos, con los folios registrados en el SGD. No se edita aquí.</p>
+          <p>La sección A se precarga del SGD (disponible desde septiembre de 2025): una serie por tipo de documento, separada en emitidos y recibidos, con su número de documentos. No se edita aquí.</p>
           <p>Use «Nueva Serie Física» para la sección B: registre sus archivadores, paquetes, empastados o cajas con la serie, el año, los folios, el tipo de unidad y su ubicación. Incluya la documentación anterior a septiembre de 2025 que esté bajo su custodia.</p>
         </aside>
       }

@@ -1,15 +1,15 @@
 /**
  * Tipos de transferencia y estado de entregas (directiva 2026, plan §3.1).
  *
- * borrador → en_revision (presentada al coordinador) → verificada (aceptada) →
- * remitida. Sin devolución ni subsanación (D-07). La entrega que llega al ETTS
+ * borrador → en_revision (cerrada para la revisión y firma presencial con el
+ * coordinador ETTE) → acta_suscrita → remitida. Firmar es aprobar; sin
+ * devolución ni subsanación (D-07). La entrega que llega al ETTS
  * sigue la cadena recibida_etts → remitida_ette → recibida_ette (D-12).
  */
 
 export type EstadoEntrega =
   | 'borrador'
   | 'en_revision'
-  | 'verificada'
   | 'acta_suscrita'
   | 'remitida'
   | 'recibida_etts'
@@ -18,8 +18,7 @@ export type EstadoEntrega =
 
 export const ETIQUETA_ESTADO_ENTREGA: Record<EstadoEntrega, string> = {
   borrador: 'Borrador',
-  en_revision: 'Presentada al coordinador',
-  verificada: 'Aceptada por el coordinador',
+  en_revision: 'En revisión y firma',
   acta_suscrita: 'Acta suscrita',
   remitida: 'Remitida',
   recibida_etts: 'Recibida por el ETTS',
@@ -42,9 +41,20 @@ export interface HijoPendiente {
   estado: EstadoEntrega
 }
 
-/** Aceptada por el coordinador y en firma (con o sin el acta ya suscrita por ambos lados). */
+/** Cerrada para la revisión y firma (con o sin el acta ya suscrita por ambos lados). */
 export function estaEnFirma(estado?: EstadoEntrega | string | null): boolean {
-  return estado === 'verificada' || estado === 'acta_suscrita'
+  return estado === 'en_revision' || estado === 'acta_suscrita'
+}
+
+export type CalidadEtte = 'coordinador' | 'titular_suplente'
+
+/** Quién revisa y firma presencialmente por el lado ETTE del CC. */
+export interface FirmanteEtte {
+  id: number
+  nombre: string
+  dni: string | null
+  en_calidad_de: CalidadEtte
+  motivo_suplencia: string | null
 }
 
 export interface EntregaDetalle {
@@ -54,10 +64,6 @@ export interface EntregaDetalle {
   hacia_etts: boolean
   presentada_en: string | null
   presentada_por: string | null
-  verificada_en: string | null
-  verificada_por: string | null
-  verificada_en_calidad_de: 'coordinador' | 'titular_suplente' | null
-  resultado_verificacion: string | null
   remitida_en: string | null
   comentario: string | null
   hijos_pendientes_al_remitir: HijoPendiente[]
@@ -108,6 +114,8 @@ export interface EstadoEntregaResponse {
   entrega: EntregaDetalle | null
   /** Hijos directos que aún no envían su entrega. */
   hijos_pendientes: HijoPendiente[]
+  /** Coordinador vigente o titular ETTE designado en suplencia; null si no hay. */
+  firmante_ette: FirmanteEtte | null
 }
 
 export interface ResumenDocumentosResponse {
@@ -123,11 +131,17 @@ export interface RemitirEntregaPayload {
   confirmar_sin_hijos?: boolean
 }
 
-export interface VerificarEntregaPayload {
+/** Designación del titular ETTE que suple al coordinador ausente (null = firma el coordinador). */
+export interface SuplenciaEttePayload {
   dependencia_id: number
-  resultado_verificacion: string
-  /** Obligatorio cuando acepta un titular ETTE en suplencia del coordinador. */
+  titular_id: number | null
   motivo_suplencia?: string
+}
+
+export interface TitularEtte {
+  id: number
+  nombre: string
+  dni: string | null
 }
 
 export interface EntregaItem {
@@ -138,7 +152,6 @@ export interface EntregaItem {
   emisor_id: number | null
   estado: EstadoEntrega
   presentada_en: string | null
-  verificada_en: string | null
   remitida_en: string | null
   comentario: string | null
   created_at: string
@@ -177,7 +190,6 @@ export interface DependenciaSemaforoItem {
   patrimonio_confirmados: number
   patrimonio_porcentaje: number
   presentada_en: string | null
-  verificada_en: string | null
   remitida_en: string | null
   /** El CC remitió después de que su padre ya había remitido (D-08). */
   enviado_tarde: boolean
@@ -187,7 +199,7 @@ export interface DependenciaSemaforoItem {
 
 /** Situación del plazo de la siguiente acción de un CC (días hábiles). */
 export interface PlazoCentroCosto {
-  accion: 'presentar' | 'verificar' | 'firmar' | 'remitir'
+  accion: 'presentar' | 'firmar' | 'remitir'
   accion_etiqueta: string
   actividad: string
   fecha_vencimiento: string
@@ -199,9 +211,9 @@ export interface PlazoCentroCosto {
 export interface MetricasTablero {
   total_dependencias: number
   borrador: number
+  /** Cerradas para la revisión y firma con el coordinador ETTE, aún sin suscribir. */
   en_revision: number
-  verificadas: number
-  /** Subtotal de `verificadas` con el acta suscrita por ambos lados. */
+  /** Con el acta suscrita por ambos lados, listas para remitir. */
   acta_suscrita: number
   /** Remitidas, incluidas las que siguen la cadena ETTS → ETTE. */
   remitidas: number
@@ -237,8 +249,6 @@ export interface CentroConsolidado {
   estado_etiqueta: string
   presentada_por: string | null
   presentada_en: string | null
-  verificada_por: string | null
-  verificada_en_calidad_de: 'coordinador' | 'titular_suplente' | null
   remitida_por: string | null
   remitida_en: string | null
   enviado_tarde: boolean

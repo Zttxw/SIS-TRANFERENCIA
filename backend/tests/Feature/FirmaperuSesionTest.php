@@ -68,7 +68,7 @@ class FirmaperuSesionTest extends TestCase
             $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id])->assertCreated();
         }
 
-        return $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo03',
+        return $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'anexo03',
             'dependencia_id' => $dep->id, 'documento_previo_id' => $previo])->assertCreated()->json('data');
     }
 
@@ -162,7 +162,7 @@ class FirmaperuSesionTest extends TestCase
         $sesion = FirmaSesion::factory()->create(['proceso_transferencia_id' => $dep->proceso_transferencia_id,
             'dependencia_id' => $ajena->id, 'estado' => 'firmada']);
 
-        $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo03', 'dependencia_id' => $ajena->id])->assertForbidden();
+        $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'anexo03', 'dependencia_id' => $ajena->id])->assertForbidden();
         $this->getJson('/api/firmaperu/sesiones/'.$sesion->id)->assertForbidden();
         $this->getJson('/api/firmaperu/estado/anexo03/'.$ajena->id)->assertForbidden();
         $this->getJson('/api/firmaperu/documentos/'.$sesion->id.'/descargar')->assertForbidden();
@@ -173,8 +173,8 @@ class FirmaperuSesionTest extends TestCase
         $dep = $this->iniciarUsuario(Rol::SERVIDOR);
         $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id])->assertCreated();
 
-        $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id])->assertForbidden();
-        $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo07', 'dependencia_id' => $dep->id])->assertForbidden();
+        $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id])->assertForbidden();
+        $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'anexo07', 'dependencia_id' => $dep->id])->assertForbidden();
         $this->assertDatabaseCount('firma_sesiones', 0);
     }
 
@@ -182,14 +182,14 @@ class FirmaperuSesionTest extends TestCase
     {
         $dep = $this->iniciarUsuario(Rol::ADMINISTRADOR);
 
-        $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id])->assertForbidden();
+        $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id])->assertForbidden();
         $this->assertDatabaseCount('firma_sesiones', 0);
     }
 
     public function test_valida_tipo_de_documento_y_archivo_antes_de_procesarlos(): void
     {
         $dep = $this->iniciarUsuario();
-        $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'inexistente', 'dependencia_id' => $dep->id])
+        $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'inexistente', 'dependencia_id' => $dep->id])
             ->assertUnprocessable()->assertJsonValidationErrors('tipo_documento');
         $preparacion = $this->preparar($dep);
         $parametros = $this->emitir($preparacion);
@@ -289,8 +289,8 @@ class FirmaperuSesionTest extends TestCase
         $preparacion = $this->preparar($dep);
         $parametros = $this->emitir($preparacion);
         $sesion = FirmaSesion::findOrFail($preparacion['sesion_id']);
-        // El lado registrado al preparar ya no coincide con el que corresponde al firmante.
-        $sesion->update(['lado' => 'ette']);
+        // La calidad registrada al preparar ya no coincide con la del firmante.
+        $sesion->update(['en_calidad_de' => 'coordinador']);
 
         $this->postJson($this->subir($parametros), ['signed_file' => UploadedFile::fake()->createWithContent('firmado.pdf', self::PDF)])
             ->assertStatus(422);

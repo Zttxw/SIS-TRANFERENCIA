@@ -95,8 +95,8 @@ class IngestaDocumentalSgd
 
     /**
      * Acervo digital (sección A del Anexo 03): una serie por centro de costo,
-     * tipo documental, sentido (emitidos/recibidos) y AÑO, con la suma de folios
-     * que el SGD registra en sus documentos. Todo se agrega en SQL Server.
+     * tipo documental, sentido (emitidos/recibidos) y AÑO, con su número de
+     * documentos. Todo se agrega en SQL Server.
      *
      * Abarca todos los años del SGD (que arrancó en sep-2025), no solo el del
      * proceso. Si varias dependencias del SGD caen en el mismo CC, sus series se
@@ -112,7 +112,7 @@ class IngestaDocumentalSgd
         $depPorCodigo = $this->dependenciasPorCodigo($proceso);
         $tiposPorCodigo = TipoDocumentalSgd::query()->pluck('descripcion', 'codigo');
 
-        /** @var array<string, array{dependencia_id: int, serie: string, anio: string, sentido: string, tipo: ?string, folios: int, deps: list<string>}> $grupos */
+        /** @var array<string, array{dependencia_id: int, serie: string, anio: string, sentido: string, tipo: ?string, documentos: int, deps: list<string>}> $grupos */
         $grupos = [];
         $filasPorSentido = [
             AcervoReferenciaSgd::EMITIDOS => $this->seriesEmitidas($codigos),
@@ -132,8 +132,8 @@ class IngestaDocumentalSgd
                 $serie = $this->nombreSerie($tipoCodigo !== null ? ($tiposPorCodigo[$tipoCodigo] ?? "Tipo {$tipoCodigo}") : null, $sentido);
 
                 $clave = "{$dependenciaId}|{$serie}|{$anioFila}";
-                $grupos[$clave] ??= ['dependencia_id' => $dependenciaId, 'serie' => $serie, 'anio' => $anioFila, 'sentido' => $sentido, 'tipo' => $tipoCodigo, 'folios' => 0, 'deps' => []];
-                $grupos[$clave]['folios'] += (int) $fila->folios;
+                $grupos[$clave] ??= ['dependencia_id' => $dependenciaId, 'serie' => $serie, 'anio' => $anioFila, 'sentido' => $sentido, 'tipo' => $tipoCodigo, 'documentos' => 0, 'deps' => []];
+                $grupos[$clave]['documentos'] += (int) $fila->documentos;
                 $grupos[$clave]['deps'][] = $depCodigo;
             }
         }
@@ -154,7 +154,7 @@ class IngestaDocumentalSgd
                         'anio' => (int) $grupo['anio'],
                     ],
                     [
-                        'folios' => $grupo['folios'],
+                        'numero_documentos' => $grupo['documentos'],
                         'unidad_conservacion' => AcervoDocumental::UNIDAD_ARCHIVO_DIGITAL,
                         'fuente' => FuenteDato::SGD->value,
                         'fuente_referencia' => AcervoReferenciaSgd::construir($grupo['sentido'], $grupo['deps'], $grupo['tipo'], $grupo['anio']),
@@ -182,8 +182,7 @@ class IngestaDocumentalSgd
      */
     private function seriesEmitidas(?array $codigos): array
     {
-        $sql = "SELECT r.NU_ANN AS anio, r.CO_DEP_EMI AS dep, r.CO_TIP_DOC_ADM AS tipo,
-                       SUM(CAST(r.NU_FOLIOS AS BIGINT)) AS folios
+        $sql = "SELECT r.NU_ANN AS anio, r.CO_DEP_EMI AS dep, r.CO_TIP_DOC_ADM AS tipo, COUNT(*) AS documentos
                 FROM {$this->esquema}.TDTV_REMITOS r
                 WHERE r.ES_ELI = '0'
                   AND r.ES_DOC_EMI NOT IN ('9')
@@ -213,7 +212,7 @@ class IngestaDocumentalSgd
         $noRecibida = $this->marcadores(self::RECEPCION_NO_RECIBIDA);
 
         $sql = "SELECT DISTINCT d.NU_ANN AS anio, d.NU_EMI AS emi, d.CO_DEP_DES AS dep,
-                       r.CO_TIP_DOC_ADM AS tipo, r.NU_FOLIOS AS folios
+                       r.CO_TIP_DOC_ADM AS tipo
                 FROM {$this->esquema}.TDTV_DESTINOS d
                 INNER JOIN {$this->esquema}.TDTV_REMITOS r
                         ON r.NU_ANN = d.NU_ANN AND r.NU_EMI = d.NU_EMI
@@ -231,7 +230,7 @@ class IngestaDocumentalSgd
         }
 
         return DB::connection($this->conexionSgd)->select(
-            "SELECT x.anio, x.dep, x.tipo, SUM(CAST(x.folios AS BIGINT)) AS folios
+            "SELECT x.anio, x.dep, x.tipo, COUNT(*) AS documentos
              FROM ({$sql}) x
              GROUP BY x.anio, x.dep, x.tipo",
             $bindings,

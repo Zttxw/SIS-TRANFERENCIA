@@ -17,6 +17,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * con firma manuscrita del lado ETTE (`origen = manual`). `documento_previo_id`
  * enlaza la sesión con la firma sobre la que se agrega (cadena, D-06).
  *
+ * `usuario_id` y `firmante_dni` son del firmante (el certificado debe ser
+ * suyo); `operador_id`, de quien operaba la sesión: el responsable del CC
+ * cuando firma presencialmente el coordinador ETTE o el titular suplente.
+ *
  * @property LadoFirma $lado
  * @property ?CalidadEtte $en_calidad_de
  * @property ?string $motivo_suplencia

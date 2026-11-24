@@ -62,7 +62,7 @@ class AcervoManualTest extends TestCase
             'tipo' => AcervoDocumental::TIPO_DIGITAL,
             'serie_documental' => 'Informe recibidos',
             'anio' => 2026,
-            'folios' => 40,
+            'numero_documentos' => 40,
             'unidad_conservacion' => AcervoDocumental::UNIDAD_ARCHIVO_DIGITAL,
             'fuente' => 'sgd',
             'fuente_referencia' => 'TDTV_DESTINOS CO_DEP_DES=00025 CO_TIP_DOC_ADM=011 NU_ANN=2026',
@@ -124,10 +124,10 @@ class AcervoManualTest extends TestCase
             ->assertJsonPath('message', 'Las series del SGD se actualizan desde el SGD y no pueden modificarse.');
         $this->deleteJson('/api/acervo/'.$serie->id)->assertUnprocessable();
 
-        $this->assertDatabaseHas('acervo_documental', ['id' => $serie->id, 'folios' => 40, 'deleted_at' => null]);
+        $this->assertDatabaseHas('acervo_documental', ['id' => $serie->id, 'numero_documentos' => 40, 'folios' => null, 'deleted_at' => null]);
     }
 
-    public function test_pdf_separa_la_seccion_digital_de_la_fisica_y_agrupa_por_anio_descendente(): void
+    public function test_pdf_mide_la_seccion_digital_en_documentos_y_la_fisica_en_folios_por_anio_descendente(): void
     {
         $this->serieSgd();
         $this->serieSgd(['serie_documental' => 'Informe emitidos', 'anio' => 2025]);
@@ -137,13 +137,16 @@ class AcervoManualTest extends TestCase
 
         [$digital, $fisica] = $pdf['secciones'];
         $this->assertSame(['A', 'B'], [$digital['letra'], $fisica['letra']]);
+        $this->assertSame(['N° de Documentos', 'Folios'], [$digital['columna_cantidad'], $fisica['columna_cantidad']]);
         $this->assertSame(['2026', '2025'], array_column($digital['grupos'], 'anio'));
         $this->assertSame([
-            'serie_documental' => 'Informe recibidos', 'folios' => 40,
+            'serie_documental' => 'Informe recibidos', 'cantidad' => 40,
             'unidad_conservacion' => 'Archivo Digital', 'ubicacion' => 'Sistema de Gestión Documental (SGD)',
         ], $digital['grupos'][0]['series'][0]);
         $this->assertSame(['2024'], array_column($fisica['grupos'], 'anio'));
-        $this->assertSame('Oficios emitidos', $fisica['grupos'][0]['series'][0]['serie_documental']);
+        $this->assertSame(['serie_documental' => 'Oficios emitidos', 'cantidad' => 250], array_intersect_key(
+            $fisica['grupos'][0]['series'][0], ['serie_documental' => true, 'cantidad' => true],
+        ));
     }
 
     public function test_la_busqueda_encuentra_por_anio_y_ubicacion_solo_en_el_proceso_activo(): void

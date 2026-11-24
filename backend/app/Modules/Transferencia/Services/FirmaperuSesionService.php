@@ -7,6 +7,7 @@ namespace App\Modules\Transferencia\Services;
 use App\Models\User;
 use App\Modules\Transferencia\Models\FirmaSesion;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Support\Enums\LadoFirma;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -32,15 +33,19 @@ class FirmaperuSesionService
      * firma se agrega sobre la cadena vigente del documento, si la hay, para que
      * ambos lados queden en un único PDF (D-06); si no, firma el PDF generado.
      *
+     * La sesión se emite a nombre y DNI del firmante (en el lado ETTE de un CC,
+     * el coordinador o titular designado, que firma presencialmente en la
+     * sesión del operador): Firma Perú solo admite su certificado.
+     *
      * @return array<string, mixed>
      */
-    public function preparar(User $usuario, string $tipo, ?int $dependenciaId, ?string $previoId = null, ?string $motivoSuplencia = null): array
+    public function preparar(User $usuario, string $tipo, ?int $dependenciaId, ?LadoFirma $lado = null, ?string $previoId = null): array
     {
-        abort_unless(preg_match('/^\d{8}$/', (string) $usuario->dni), 422, 'La cuenta debe tener un DNI válido para firmar.');
         $this->jwt();
         $procesoId = ProcesoTransferencia::where('estado', 'abierto')->value('id');
         abort_unless($procesoId, 409, 'No existe un proceso de transferencia abierto.');
-        $firmante = $this->firmantes->lado($usuario, $tipo, $dependenciaId, $motivoSuplencia);
+        $firmante = $this->firmantes->firmante($usuario, $tipo, $dependenciaId, $lado);
+        self::exigirDniFirmante($firmante['firmante']);
         $this->suscripcion->exigirFirmaHabilitada($dependenciaId);
         $documento = $this->registro->documento($usuario, $tipo, $dependenciaId);
         $previoId ??= $this->cadena->estado($procesoId, $dependenciaId, $tipo, $usuario)['sesion_final_id'];
@@ -83,8 +88,9 @@ class FirmaperuSesionService
                 'id' => $id,
                 'proceso_transferencia_id' => $procesoId,
                 'dependencia_id' => $dependenciaId,
-                'usuario_id' => $usuario->id,
-                'firmante_dni' => $usuario->dni,
+                'usuario_id' => $firmante['firmante']->id,
+                'operador_id' => $usuario->id,
+                'firmante_dni' => $firmante['firmante']->dni,
                 'documento_previo_id' => $previo?->id,
                 'tipo_documento' => $tipo,
                 'documento_firma_id' => $documento->id,
@@ -104,6 +110,13 @@ class FirmaperuSesionService
 
         return ['sesion_id' => $id, 'param_token' => $token, 'param_url' => $paramUrl,
             'document_extension' => 'pdf', 'expires_at' => $sesion->expires_at->toIso8601String()];
+    }
+
+    /** El certificado se filtra y se comprueba contra el DNI del firmante. */
+    public static function exigirDniFirmante(User $firmante): void
+    {
+        abort_unless($firmante->activo && preg_match('/^\d{8}$/', (string) $firmante->dni), 422,
+            'El firmante ('.$firmante->name.') debe tener una cuenta activa con un DNI válido para firmar.');
     }
 
     public function parametros(string $token): string
@@ -160,9 +173,9 @@ class FirmaperuSesionService
             $original = Storage::disk('local')->get($sesion->pdf_path);
             abort_unless(hash_equals($sesion->original_sha256, hash('sha256', $original)), 409, 'El original conservado no coincide con su huella.');
             $firmado = $archivo->getContent();
-            $usuario = User::findOrFail($sesion->usuario_id);
-            abort_unless($usuario->activo, 403, 'La cuenta que inició la firma está inactiva.');
-            $this->firmantes->lado($usuario, $sesion->tipo_documento, $sesion->dependencia_id, $sesion->motivo_suplencia);
+            $operador = User::findOrFail($sesion->operador_id ?? $sesion->usuario_id);
+            abort_unless($operador->activo, 403, 'La cuenta que inició la firma está inactiva.');
+            $this->firmantes->firmante($operador, $sesion->tipo_documento, $sesion->dependencia_id, $sesion->lado);
             if (! $this->validador->tieneConfiguracion()) {
                 abort_unless(Storage::disk('local')->put($ruta, $firmado), 503, 'No se pudo conservar el PDF recibido.');
                 $sesion->update(['estado' => 'pendiente_validacion', 'firmado_path' => $ruta,

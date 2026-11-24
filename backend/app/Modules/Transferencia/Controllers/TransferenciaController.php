@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Modules\Transferencia\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Modules\Auth\Services\CoordinacionEtte;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Services\ConsolidacionCentroCosto;
 use App\Modules\Transferencia\Services\RevisionEntregaService;
 use App\Modules\Transferencia\Services\TransferenciaService;
 use App\Support\Concerns\AutorizaAmbito;
 use App\Support\Http\ApiResponse;
+use App\Support\Services\ContextoTransferencia;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -67,7 +70,7 @@ class TransferenciaController extends Controller
     }
 
     /**
-     * Remite la entrega verificada al CC padre o al ETTS (D-02).
+     * Remite la entrega suscrita al CC padre o al ETTS (D-02).
      */
     public function remitir(Request $request): JsonResponse
     {
@@ -90,7 +93,8 @@ class TransferenciaController extends Controller
     }
 
     /**
-     * El responsable presenta la entrega al coordinador ETTE (D-07).
+     * El responsable cierra la entrega y la pasa a revisión y firma con el
+     * coordinador ETTE (D-07).
      */
     public function presentar(Request $request): JsonResponse
     {
@@ -98,29 +102,37 @@ class TransferenciaController extends Controller
 
         $entrega = $this->revision->presentar($dependenciaId, $request->user());
 
-        return ApiResponse::success($entrega, 'Entrega presentada al coordinador ETTE.');
+        return ApiResponse::success($entrega, 'Entrega cerrada para la revisión y firma con el coordinador ETTE.');
     }
 
     /**
-     * El coordinador ETTE (o un titular en suplencia) acepta lo entregado y deja
-     * constancia de lo revisado (RF-54, RF-56). Las observaciones no la impiden.
+     * Designa (o retira) al titular ETTE que suple al coordinador ausente en la
+     * revisión y firma presencial.
      */
-    public function verificar(Request $request): JsonResponse
+    public function suplenciaEtte(Request $request): JsonResponse
     {
         $datos = $request->validate([
-            'resultado_verificacion' => ['required', 'string', 'min:10', 'max:5000'],
-            'motivo_suplencia' => ['nullable', 'string', 'max:500'],
+            'titular_id' => ['nullable', 'integer'],
+            'motivo_suplencia' => ['nullable', 'required_with:titular_id', 'string', 'max:500'],
         ]);
         $dependenciaId = $this->dependenciaAutorizada($request);
 
-        $entrega = $this->revision->verificar(
-            dependenciaId: $dependenciaId,
-            usuario: $request->user(),
-            resultado: $datos['resultado_verificacion'],
-            motivoSuplencia: $datos['motivo_suplencia'] ?? null,
-        );
+        $entrega = $this->revision->designarSuplencia($dependenciaId, $request->user(),
+            isset($datos['titular_id']) ? (int) $datos['titular_id'] : null, $datos['motivo_suplencia'] ?? null);
 
-        return ApiResponse::success($entrega, 'Entrega aceptada por el coordinador ETTE. Ya pueden firmarse los anexos.');
+        return ApiResponse::success($entrega, $entrega->titular_suplente_id
+            ? 'Titular ETTE designado en suplencia del coordinador.'
+            : 'Firma el coordinador ETTE asignado.');
+    }
+
+    /** Titulares ETTE activos que pueden suplir al coordinador. */
+    public function titularesEtte(CoordinacionEtte $coordinacion, ContextoTransferencia $contexto): JsonResponse
+    {
+        $titulares = $coordinacion->titulares($contexto->procesoActivoId())
+            ->map(fn (User $titular): array => ['id' => $titular->id, 'nombre' => $titular->name, 'dni' => $titular->dni])
+            ->values();
+
+        return ApiResponse::success($titulares, 'Titulares ETTE recuperados.');
     }
 
     /**

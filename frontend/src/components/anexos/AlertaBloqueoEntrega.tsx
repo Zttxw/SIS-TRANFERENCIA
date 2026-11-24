@@ -9,17 +9,11 @@ interface AlertaBloqueoEntregaProps {
 
 const AVISOS: Record<Exclude<EstadoEntrega, 'borrador'>, { titulo: string; texto: string; icono: typeof Lock; clases: string }> = {
   en_revision: {
-    titulo: 'Entrega presentada al coordinador ETTE',
+    titulo: 'Entrega en revisión y firma con el coordinador ETTE',
     texto:
-      'Los anexos están bloqueados mientras el coordinador revisa la entrega. Si advierte algo lo registrará como observación en el acta; no hay devolución para corregir.',
+      'Los anexos están bloqueados. Con el coordinador presente, registre lo que advierta como observación (constancia en el acta) y firmen ambos los anexos 02 al 07: su firma es la aprobación. No hay devolución para corregir.',
     icono: Lock,
     clases: 'border-info-border bg-info-soft text-info-fg',
-  },
-  verificada: {
-    titulo: 'Entrega aceptada por el coordinador ETTE',
-    texto: 'Los anexos están bloqueados. Corresponde generar los anexos 02 al 07 y firmarlos el responsable y el coordinador ETTE; luego se remite la entrega.',
-    icono: CheckCircle,
-    clases: 'border-success-border bg-success-soft text-success-fg',
   },
   acta_suscrita: {
     titulo: 'Acta suscrita por ambos lados',

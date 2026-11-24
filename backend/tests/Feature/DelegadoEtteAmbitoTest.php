@@ -70,16 +70,15 @@ class DelegadoEtteAmbitoTest extends TestCase
         $this->assertFalse($delegado->puedeAccederDependencia($this->hija->id));
     }
 
-    public function test_el_delegado_puede_consultar_y_firmar_pero_no_editar_ni_remitir(): void
+    public function test_el_delegado_solo_consulta_desde_su_cuenta(): void
     {
         $delegado = $this->delegadoEn($this->padre);
 
-        // Coordinador ETTE: consulta, observa, verifica y firma el lado ETTE.
+        // Coordinador ETTE: consulta. Observa y firma presencialmente en la
+        // sesión del responsable del CC, no desde su cuenta.
         $this->assertTrue($delegado->tienePermiso(Permiso::VerAnexos));
         $this->assertTrue($delegado->tienePermiso(Permiso::VerExpediente));
-        $this->assertTrue($delegado->tienePermiso(Permiso::FirmarAnexos));
-        $this->assertTrue($delegado->tienePermiso(Permiso::RegistrarObservaciones));
-        $this->assertTrue($delegado->tienePermiso(Permiso::VerificarEntrega));
+        $this->assertFalse($delegado->tienePermiso(Permiso::RegistrarObservaciones));
 
         // No puede editar datos, remitir ni gestionar coordinadores.
         $this->assertFalse($delegado->tienePermiso(Permiso::RegistrarAnexos));
@@ -99,10 +98,9 @@ class DelegadoEtteAmbitoTest extends TestCase
 
         // El comité conserva su visión institucional (seguimiento).
         $this->assertTrue($comite->tieneAmbitoGlobal());
-        // Firma, observa y verifica solo en suplencia del coordinador (D-04).
-        $this->assertTrue($comite->tienePermiso(Permiso::FirmarAnexos));
-        $this->assertTrue($comite->tienePermiso(Permiso::RegistrarObservaciones));
-        $this->assertTrue($comite->tienePermiso(Permiso::VerificarEntrega));
+        // Suple al coordinador firmando en la sesión del responsable (D-04);
+        // desde su cuenta no observa.
+        $this->assertFalse($comite->tienePermiso(Permiso::RegistrarObservaciones));
         $this->assertTrue($comite->tienePermiso(Permiso::RecibirEntregaEtte));
         // El comité sí gestiona su equipo (D2).
         $this->assertTrue($comite->tienePermiso(Permiso::GestionarDelegados));

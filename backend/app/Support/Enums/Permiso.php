@@ -32,17 +32,10 @@ enum Permiso: string
     // Entrega del CC: el responsable la presenta a revisión y la remite.
     case RemitirEntrega = 'entregas.remitir';
 
-    // Directiva 2026 (D-07, D-12): verificación del coordinador ETTE (o del
-    // titular ETTE en suplencia) y cadena ETTS → ETTE de la entrega.
-    case VerificarEntrega = 'entregas.verificar';
+    // Directiva 2026 (D-12): cadena ETTS → ETTE de la entrega.
     case RecibirEntregaEtts = 'entregas.recibir_etts';
     case RemitirEntregaEtte = 'entregas.remitir_ette';
     case RecibirEntregaEtte = 'entregas.recibir_ette';
-
-    // Firma de anexos 02–07 (RF-004/005). La capacidad del delegado ETTE se
-    // restringe a las dependencias/documentos para los que está designado
-    // (acotado por asignación, no por la sola pertenencia al comité).
-    case FirmarAnexos = 'firmas.firmar';
 
     // Gestión de coordinadores ETTE (RF-13, RF-15, D-10): alta por web o Excel,
     // designación, reemplazo y revocación por el comité, limitada a su equipo;
@@ -50,6 +43,7 @@ enum Permiso: string
     case GestionarDelegados = 'delegados.gestionar';
 
     // Observaciones del coordinador ETTE: constancia, sin subsanación (D-07).
+    // Las registra el responsable del CC a nombre del coordinador presente.
     case RegistrarObservaciones = 'observaciones.registrar';
 
     // Actas, expediente y reportes.
@@ -71,11 +65,9 @@ enum Permiso: string
             self::RegistrarAnexos => 'Registrar y complementar anexos',
             self::VerificarBienes => 'Verificar bienes patrimoniales',
             self::RemitirEntrega => 'Presentar a revisión y remitir la entrega del centro de costo',
-            self::VerificarEntrega => 'Verificar la entrega del centro de costo (lado ETTE)',
             self::RecibirEntregaEtts => 'Registrar la recepción de entregas en el ETTS',
             self::RemitirEntregaEtte => 'Enviar entregas del ETTS al ETTE',
             self::RecibirEntregaEtte => 'Registrar la recepción de entregas en el ETTE',
-            self::FirmarAnexos => 'Firmar anexos (según designación)',
             self::GestionarDelegados => 'Gestionar coordinadores ETTE',
             self::RegistrarObservaciones => 'Registrar observaciones',
             self::GenerarActas => 'Generar actas de transferencia',
@@ -115,15 +107,17 @@ enum Permiso: string
                 self::VerificarBienes,
                 self::VerExpediente,
             ],
-            // Responsable de centro de costo: prepara, presenta al coordinador y remite
-            // la entrega de su CC. Ve lo que envían sus CC hijos, pero solo lo
-            // consolida: no lo observa ni lo devuelve (D-08).
+            // Responsable de centro de costo: prepara la entrega de su CC, la cierra
+            // para firma y, en su sesión, el coordinador ETTE presente registra sus
+            // observaciones y firma; luego remite. Ve lo que envían sus CC hijos,
+            // pero solo lo consolida: no lo observa ni lo devuelve (D-08).
             Rol::RESPONSABLE_CENTRO_COSTO => [
                 self::AccederPlataforma,
                 self::VerAnexos,
                 self::RegistrarAnexos,
                 self::VerificarBienes,
                 self::RemitirEntrega,
+                self::RegistrarObservaciones,
                 self::GenerarActas,
                 self::VerExpediente,
                 self::VerReportes,
@@ -143,30 +137,26 @@ enum Permiso: string
                 self::ExportarReportes,
             ],
             // Titular ETTE (comité): seguimiento institucional (ámbito global),
-            // gestión de los coordinadores y recepción final de la entrega. Firma,
-            // observa y verifica solo **en suplencia** del coordinador ausente,
-            // indicando el motivo (D-04; ver CoordinacionEtte).
+            // gestión de los coordinadores, recepción final y firma del Anexo 01.
+            // En suplencia del coordinador firma los anexos de un CC en la sesión
+            // del responsable, con su certificado (D-04; ver CoordinacionEtte).
+            // Las firmas de los CC no dependen de un permiso: las opera el
+            // responsable y el certificado identifica al firmante.
             Rol::ETTE => [
                 self::AccederPlataforma,
                 self::VerAnexos,
                 self::VerExpediente,
                 self::VerReportes,
                 self::GestionarDelegados,
-                self::FirmarAnexos,
-                self::RegistrarObservaciones,
-                self::VerificarEntrega,
                 self::RecibirEntregaEtte,
             ],
-            // Coordinador ETTE: revisa, observa, verifica y firma el lado ETTE de
-            // los CC que tiene asignados (ámbito exacto por asignación, no
-            // global). No edita datos ni remite.
+            // Coordinador ETTE: consulta los CC que tiene asignados (ámbito
+            // exacto por asignación). Revisa y firma presencialmente en la
+            // sesión del responsable del CC; desde su cuenta no opera.
             Rol::DELEGADO_ETTE => [
                 self::AccederPlataforma,
                 self::VerAnexos,
                 self::VerExpediente,
-                self::FirmarAnexos,
-                self::RegistrarObservaciones,
-                self::VerificarEntrega,
             ],
         };
     }

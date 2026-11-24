@@ -1,8 +1,9 @@
 export type TipoAcervo = 'fisico' | 'digital'
 
 /**
- * Serie del Anexo 03. `digital` = sección A (precargada del SGD, solo lectura);
- * `fisico` = sección B (registrada a mano).
+ * Serie del Anexo 03. `digital` = sección A (precargada del SGD, solo lectura,
+ * medida en `numero_documentos`); `fisico` = sección B (registrada a mano,
+ * medida en `folios`).
  */
 export interface AcervoDocumental {
   id: number
@@ -14,6 +15,7 @@ export interface AcervoDocumental {
   serie_documental: string
   anio: number | null
   folios: number | null
+  numero_documentos: number | null
   unidad_conservacion: string
   ubicacion: string | null
   fuente: string

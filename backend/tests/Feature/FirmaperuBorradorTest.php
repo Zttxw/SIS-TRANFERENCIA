@@ -135,12 +135,12 @@ class FirmaperuBorradorTest extends TestCase
         });
         $datos = ['tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id];
         $this->postJson('/api/firmaperu/generar-borrador', $datos)->assertCreated();
-        $this->postJson('/api/firmaperu/preparar', $datos)->assertCreated();
+        $this->postJson('/api/firmaperu/preparar', [...$datos, 'lado' => 'entidad'])->assertCreated();
         $sesion = FirmaSesion::firstOrFail();
         $this->assertSame(self::PDF, Storage::disk('local')->get($sesion->pdf_path));
 
         $this->huella = 'contenido-corregido';
-        $this->postJson('/api/firmaperu/preparar', $datos)->assertConflict();
+        $this->postJson('/api/firmaperu/preparar', [...$datos, 'lado' => 'entidad'])->assertConflict();
         $this->assertDatabaseCount('firma_sesiones', 1);
     }
 }

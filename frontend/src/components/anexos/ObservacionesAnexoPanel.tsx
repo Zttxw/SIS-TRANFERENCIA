@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp, MessageSquareText, Plus } from 'lucide-react'
 
-import { Can } from '@/auth/Can'
+import { useAuth } from '@/auth/hooks'
+import { esResponsableDe } from '@/auth/permisos'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useConfirm } from '@/components/ui/confirm-dialog'
@@ -17,12 +18,14 @@ interface ObservacionesAnexoPanelProps {
 
 /**
  * Observaciones del coordinador ETTE sobre un anexo del CC (D-07). Son
- * constancia: no se subsanan ni devuelven la entrega. El coordinador (o un
- * titular en suplencia) las registra o retira mientras la entrega está
- * presentada y aún no la acepta.
+ * constancia: no se subsanan ni devuelven la entrega. Durante la revisión
+ * presencial, el responsable del CC las registra o retira en su sesión, a
+ * nombre del coordinador (o del titular que lo suple), mientras la entrega
+ * está en revisión.
  */
 export function ObservacionesAnexoPanel({ anexo, dependenciaId }: ObservacionesAnexoPanelProps) {
   const confirmar = useConfirm()
+  const { usuario } = useAuth()
   const [expandido, setExpandido] = useState(true)
   const [modalAbierto, setModalAbierto] = useState(false)
 
@@ -34,7 +37,8 @@ export function ObservacionesAnexoPanel({ anexo, dependenciaId }: ObservacionesA
   const retirarMut = useRetirarObservacion()
 
   const observaciones = resp?.data ?? []
-  const enRevision = estado?.entrega?.estado === 'en_revision'
+  // Solo el responsable de este CC opera la revisión; el backend además exige que el acta no tenga firmas.
+  const puedeRegistrar = estado?.entrega?.estado === 'en_revision' && esResponsableDe(usuario?.roles ?? [], dependenciaId)
 
   return (
     <Card className="border shadow-sm">
@@ -60,13 +64,11 @@ export function ObservacionesAnexoPanel({ anexo, dependenciaId }: ObservacionesA
           </div>
 
           <div className="flex items-center gap-2">
-            {enRevision && (
-              <Can permiso="observaciones.registrar">
-                <Button size="sm" variant="outline" onClick={() => setModalAbierto(true)} className="gap-1.5 text-xs">
-                  <Plus className="h-3.5 w-3.5" />
-                  Registrar observación
-                </Button>
-              </Can>
+            {puedeRegistrar && (
+              <Button size="sm" variant="outline" onClick={() => setModalAbierto(true)} className="gap-1.5 text-xs">
+                <Plus className="h-3.5 w-3.5" />
+                Registrar observación
+              </Button>
             )}
             <Button
               variant="ghost"
@@ -97,15 +99,14 @@ export function ObservacionesAnexoPanel({ anexo, dependenciaId }: ObservacionesA
                     <span className="rounded bg-muted px-1.5 py-0.5 font-medium text-foreground">
                       {formatearDetalleObservable(obs)}
                     </span>
-                    <span>
+                    <span title={obs.registrada_por ? `Registrada por ${obs.registrada_por.name}` : undefined}>
                       {obs.autor?.name}
                       {obs.en_calidad_de === 'titular_suplente' ? ' (titular ETTE, suplente)' : ''} ·{' '}
                       {new Date(obs.created_at).toLocaleDateString('es-PE')}
                     </span>
                   </div>
                   <p className="mt-2 whitespace-pre-wrap leading-relaxed text-foreground">{obs.descripcion}</p>
-                  {enRevision && (
-                    <Can permiso="observaciones.registrar">
+                  {puedeRegistrar && (
                       <div className="mt-2 flex justify-end border-t pt-2">
                         <Button
                           size="sm"
@@ -115,7 +116,7 @@ export function ObservacionesAnexoPanel({ anexo, dependenciaId }: ObservacionesA
                           onClick={async () => {
                             const ok = await confirmar({
                               title: 'Retirar observación',
-                              description: 'La observación dejará de figurar en el acta. Solo puede hacerse antes de aceptar la entrega.',
+                              description: 'La observación dejará de figurar en el acta. Solo puede hacerse antes de que se firme el acta.',
                               confirmText: 'Retirar',
                               variant: 'destructive',
                             })
@@ -125,7 +126,6 @@ export function ObservacionesAnexoPanel({ anexo, dependenciaId }: ObservacionesA
                           Retirar
                         </Button>
                       </div>
-                    </Can>
                   )}
                 </li>
               ))}

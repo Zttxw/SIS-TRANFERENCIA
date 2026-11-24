@@ -16,7 +16,7 @@ interface PendientesDocumentalesTablaProps {
  * Documentos pendientes del CC que entran a la sección IV del Anexo 02 (D-09):
  * los ingeridos del SGD y los registrados a mano en "Documentos pendientes". Son
  * de solo lectura aquí; se corrigen desde su propia pantalla. Antes de presentar
- * se leen en vivo; al presentar al coordinador quedan congelados.
+ * se leen en vivo; al cerrar la entrega para firma quedan congelados.
  */
 export function PendientesDocumentalesTabla({ filas, congeladosEn }: PendientesDocumentalesTablaProps) {
   return (

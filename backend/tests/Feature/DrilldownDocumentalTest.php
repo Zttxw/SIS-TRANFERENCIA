@@ -34,6 +34,7 @@ class DrilldownDocumentalTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['modulos.documentos_pendientes' => true]);
         $this->seed(RolesPermisosSeeder::class);
         $this->proceso = ProcesoTransferencia::factory()->create();
         $this->depA = Dependencia::factory()->create([

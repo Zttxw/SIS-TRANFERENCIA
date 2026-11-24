@@ -57,7 +57,7 @@ export function useVerificarBien() {
     onError: (error) =>
       notificarError(error, {
         conflicto:
-          'No se puede verificar: la entrega de esta dependencia ya fue presentada al coordinador.',
+          'No se puede verificar: la entrega de esta dependencia ya se cerró para revisión y firma.',
       }),
   })
 }

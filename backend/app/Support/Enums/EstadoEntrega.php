@@ -7,10 +7,11 @@ namespace App\Support\Enums;
 /**
  * Estado de la entrega de un centro de costo (directiva 2026, plan §3.1).
  *
- * borrador → en_revision → verificada → acta_suscrita → remitida. El
- * responsable presenta; el coordinador ETTE (o un titular suplente) acepta lo
- * entregado, con o sin observaciones de constancia (D-07); ambos lados firman
- * los anexos 02 al 07 (D-05) y el responsable remite al CC padre o al ETTS.
+ * borrador → en_revision → acta_suscrita → remitida. El responsable cierra la
+ * entrega y la pasa a firma; en su sesión, el coordinador ETTE (o un titular
+ * suplente) revisa, deja observaciones de constancia (D-07) y firma con su
+ * certificado: firmar es aprobar. Con ambos lados firmados en los anexos 02 al
+ * 07 (D-05) el responsable remite al CC padre o al ETTS.
  *
  * Solo la entrega dirigida al ETTS sigue la cadena institucional (D-12):
  * recibida_etts → remitida_ette → recibida_ette (estado final). La del CC hijo
@@ -20,7 +21,6 @@ enum EstadoEntrega: string
 {
     case BORRADOR = 'borrador';
     case EN_REVISION = 'en_revision';
-    case VERIFICADA = 'verificada';
     case ACTA_SUSCRITA = 'acta_suscrita';
     case REMITIDA = 'remitida';
     case RECIBIDA_ETTS = 'recibida_etts';
@@ -31,8 +31,7 @@ enum EstadoEntrega: string
     {
         return match ($this) {
             self::BORRADOR => 'Borrador',
-            self::EN_REVISION => 'En revisión',
-            self::VERIFICADA => 'Aceptada por el coordinador',
+            self::EN_REVISION => 'En revisión y firma',
             self::ACTA_SUSCRITA => 'Acta suscrita',
             self::REMITIDA => 'Remitida',
             self::RECIBIDA_ETTS => 'Recibida por el ETTS',
@@ -48,13 +47,13 @@ enum EstadoEntrega: string
     }
 
     /**
-     * Los anexos 02 al 07 se firman tras la aceptación del coordinador. En
+     * Los anexos 02 al 07 se firman con la entrega cerrada para revisión. En
      * `acta_suscrita` se admite volver a firmar si un cambio de datos invalidó
      * las firmas.
      */
     public function admiteFirma(): bool
     {
-        return $this === self::VERIFICADA || $this === self::ACTA_SUSCRITA;
+        return $this === self::EN_REVISION || $this === self::ACTA_SUSCRITA;
     }
 
     /** ¿La entrega ya salió del centro de costo hacia su CC padre o el ETTS? */

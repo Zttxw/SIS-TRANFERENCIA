@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ModuloHabilitado;
 use App\Http\Middleware\VerificarPermiso;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Autorización por permiso (plan §5). Combinar siempre con auth:sanctum.
         $middleware->alias([
             'permiso' => VerificarPermiso::class,
+            'modulo' => ModuloHabilitado::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

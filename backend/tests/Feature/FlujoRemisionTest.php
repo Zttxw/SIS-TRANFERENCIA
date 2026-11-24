@@ -21,8 +21,8 @@ use Tests\TestCase;
 
 /**
  * Remisión de la entrega del CC (plan §3.1, D-02, D-08): el responsable remite
- * al CC padre solo lo que el coordinador ETTE verificó; el CC padre no revisa ni
- * devuelve lo que envían sus hijos.
+ * al CC padre solo lo que se cerró para firma y firmaron ambos lados; el CC
+ * padre no revisa ni devuelve lo que envían sus hijos.
  */
 class FlujoRemisionTest extends TestCase
 {
@@ -69,10 +69,10 @@ class FlujoRemisionTest extends TestCase
 
         $this->postJson('/api/transferencia/remitir', ['dependencia_id' => $this->hija->id])->assertForbidden();
 
-        $this->assertSame(EstadoEntrega::VERIFICADA, Entrega::where('dependencia_id', $this->hija->id)->value('estado'));
+        $this->assertSame(EstadoEntrega::EN_REVISION, Entrega::where('dependencia_id', $this->hija->id)->value('estado'));
     }
 
-    public function test_responsable_remite_la_entrega_verificada_al_cc_padre(): void
+    public function test_responsable_remite_la_entrega_firmada_al_cc_padre(): void
     {
         $this->entregaEn($this->hija);
         $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
@@ -89,18 +89,17 @@ class FlujoRemisionTest extends TestCase
     }
 
     /** @return array<string, array{0: ?EstadoEntrega}> */
-    public static function estadosSinVerificar(): array
+    public static function estadosNoRemitibles(): array
     {
         return [
             'sin entrega' => [null],
             'borrador' => [EstadoEntrega::BORRADOR],
-            'en revisión' => [EstadoEntrega::EN_REVISION],
             'ya remitida' => [EstadoEntrega::REMITIDA],
         ];
     }
 
-    #[DataProvider('estadosSinVerificar')]
-    public function test_solo_se_remite_una_entrega_verificada(?EstadoEntrega $estado): void
+    #[DataProvider('estadosNoRemitibles')]
+    public function test_solo_se_remite_una_entrega_cerrada_para_firma(?EstadoEntrega $estado): void
     {
         if ($estado !== null) {
             $this->entregaEn($this->hija, $estado);

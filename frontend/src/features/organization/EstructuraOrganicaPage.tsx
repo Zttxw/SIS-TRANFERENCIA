@@ -19,7 +19,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { useAuth, useDependenciaActiva } from '@/auth/hooks'
+import { useAuth, useDependenciaActiva, useModulo } from '@/auth/hooks'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -32,6 +32,7 @@ import { PrevisualizarAnexo } from '@/features/firmaperu/PrevisualizarAnexo'
 
 export function EstructuraOrganicaPage() {
   const { usuario } = useAuth()
+  const conDocumentosPendientes = useModulo('documentos_pendientes')
   const navigate = useNavigate()
   const { dependenciaId, setDependenciaId } = useDependenciaActiva()
   const { data: dependencias, isLoading, isError, refetch } = useQuery({
@@ -362,7 +363,7 @@ export function EstructuraOrganicaPage() {
                       <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
                     </Button>
 
-                    <Button
+                    {conDocumentosPendientes && <Button
                       variant="outline"
                       size="sm"
                       onClick={() => {
@@ -374,7 +375,7 @@ export function EstructuraOrganicaPage() {
                       <FileText className="h-3.5 w-3.5 text-primary" />
                       <span>Ver Asuntos Pendientes (SGD)</span>
                       <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
-                    </Button>
+                    </Button>}
                   </div>
                 </div>}
               </CardContent>

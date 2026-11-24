@@ -9,38 +9,36 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
 import { useConfirm } from '@/components/ui/confirm-dialog'
-import { Tooltip } from '@/components/ui/tooltip'
 import { firmaperuService } from './firmaperu.service'
 import { firmarConCliente } from './firmaperu-runtime'
 import { comprobarServicioFirma } from './equipo-firmaperu'
-import { MotivoSuplenciaDialog } from './MotivoSuplenciaDialog'
 import { PrepararEquipoFirma } from './PrepararEquipoFirma'
-import type { TipoDocumentoFirma } from './firmaperu.types'
+import type { LadoFirma, TipoDocumentoFirma } from './firmaperu.types'
 
 interface PropsFirma {
   tipoDocumento: TipoDocumentoFirma
   dependenciaId: number | null
-  /** Icono-solo (acción primaria + menú), para filas densas del Dashboard. */
-  compacto?: boolean
+  /** Lado que se firma: el responsable (entidad) o el coordinador ETTE presente. */
+  lado: LadoFirma
 }
 
 export function BotonFirmaPeru(props: PropsFirma) {
-  return <ControlFirma key={`${props.tipoDocumento}-${props.dependenciaId}`} {...props} />
+  return <ControlFirma key={`${props.tipoDocumento}-${props.dependenciaId}-${props.lado}`} {...props} />
 }
 
 /**
- * Firma digital con Firma Perú del lado que corresponde al usuario (D-05):
- * el responsable del CC o el coordinador ETTE (o el titular suplente, que
- * indica el motivo). Si ya hay una firma vigente, el backend agrega la nueva
- * sobre ese PDF, de modo que ambas quedan en un único documento (D-06).
+ * Firma digital con Firma Perú de un lado del documento (D-05), operada desde
+ * la sesión del responsable del CC: por la entidad firma él; por el ETTE, el
+ * coordinador presente (o el titular designado en suplencia) con su propio
+ * certificado, porque la sesión se emite a su DNI. Firmar es aprobar. Si ya
+ * hay una firma vigente, la nueva se agrega sobre ese PDF (D-06).
  */
-function ControlFirma({ tipoDocumento, dependenciaId, compacto = false }: PropsFirma) {
+function ControlFirma({ tipoDocumento, dependenciaId, lado }: PropsFirma) {
   const confirmar = useConfirm()
   const cliente = useQueryClient()
   const [mensaje, setMensaje] = useState<string | null>(null)
   const [descargando, setDescargando] = useState(false)
-  const [equipo, setEquipo] = useState<{ motivo?: string } | null>(null)
-  const [pedirMotivo, setPedirMotivo] = useState(false)
+  const [equipo, setEquipo] = useState(false)
   const operacion = useRef<AbortController | null>(null)
   const clave = ['firmaperu', tipoDocumento, dependenciaId]
   const { data: estado } = useQuery({
@@ -56,38 +54,36 @@ function ControlFirma({ tipoDocumento, dependenciaId, compacto = false }: PropsF
 
   if (!dependenciaId) return null
 
-  const miLado = estado?.mi_lado ?? null
-  const esSuplente = miLado?.en_calidad_de === 'titular_suplente'
-  // Firma quien tiene un lado en el CC, con la entrega aceptada y su lado aún sin firmar.
-  const puedeFirmar = Boolean(estado?.firma_habilitada && miLado && !estado[miLado.lado])
+  const esEtte = lado === 'ette'
+  const firmanteEtte = estado?.firmante_ette ?? null
+  // Lo opera el responsable del CC, con la entrega cerrada para firma y ese lado aún sin firmar.
+  const puedeFirmar = Boolean(estado?.firma_habilitada && estado.opera_firmas && !estado[lado] && (!esEtte || firmanteEtte))
+  const etiqueta = esEtte ? 'Firma del coordinador ETTE' : 'Firmar como responsable'
 
-  const iniciar = () => {
-    if (esSuplente) setPedirMotivo(true)
-    else void firmar()
-  }
-
-  const firmar = async (motivo?: string) => {
+  const firmar = async () => {
     if (operacion.current) return
     const scope = new AbortController()
     operacion.current = scope
     try {
       setMensaje('Comprobando Firma Perú en este equipo…')
       if (!await comprobarServicioFirma(scope.signal)) {
-        if (!scope.signal.aborted) setEquipo({ motivo })
+        if (!scope.signal.aborted) setEquipo(true)
         return
       }
       setMensaje(null)
       const sobreFirmado = Boolean(estado?.vigente)
       const aceptar = await confirmar({
-        title: sobreFirmado ? 'Agregar su firma al PDF firmado' : 'Firmar el PDF guardado',
-        description: sobreFirmado
-          ? 'Se abrirá el PDF que ya tiene la firma del otro lado para agregar la suya. Ambas firmas quedan en el mismo documento.'
-          : 'Se firmará el PDF generado y guardado que acaba de revisar. Use el certificado correspondiente a su DNI de acceso.',
+        title: esEtte ? 'Firma presencial del lado ETTE' : sobreFirmado ? 'Agregar su firma al PDF firmado' : 'Firmar el PDF guardado',
+        description: esEtte
+          ? `Firma ${firmanteEtte?.nombre ?? 'el coordinador ETTE'} (DNI ${firmanteEtte?.dni ?? '—'}) con su propio certificado en este equipo; Firma Perú no admitirá otro. Su firma es la aprobación del documento.`
+          : sobreFirmado
+            ? 'Se abrirá el PDF que ya tiene la firma del coordinador para agregar la suya. Ambas firmas quedan en el mismo documento.'
+            : 'Se firmará el PDF generado y guardado que acaba de revisar. Use el certificado correspondiente a su DNI de acceso.',
         confirmText: 'Abrir Firma Perú',
       })
       if (!aceptar || scope.signal.aborted) return
       const resultado = await firmarConCliente({
-        preparar: () => firmaperuService.preparar(tipoDocumento, dependenciaId, scope.signal, motivo),
+        preparar: () => firmaperuService.preparar(tipoDocumento, dependenciaId, lado, scope.signal),
         consultar: firmaperuService.sesion,
         signal: scope.signal,
         onMensaje: (texto) => { if (!scope.signal.aborted) setMensaje(texto) },
@@ -102,7 +98,7 @@ function ControlFirma({ tipoDocumento, dependenciaId, compacto = false }: PropsF
         } else if (resultado.vigente === false) {
           toast.info('PDF verificado conservado como histórico. Los datos cambiaron; firme la versión actual antes de remitir.')
         } else {
-          toast.success('PDF firmado recibido. Puede descargarlo.')
+          toast.success(esEtte ? 'Firma del coordinador ETTE registrada.' : 'PDF firmado recibido. Puede descargarlo.')
         }
       }
     } catch (error) {
@@ -127,34 +123,20 @@ function ControlFirma({ tipoDocumento, dependenciaId, compacto = false }: PropsF
     finally { setDescargando(false) }
   }
 
-  // Un solo botón sólido a la vez: «Firmar» si su lado falta; si no, «Descargar».
+  // Un solo botón sólido a la vez: «Firmar» si su lado falta; si no, «Descargar» (solo en el lado entidad).
   const requiereGenerar = estado?.pdf_generado_vigente !== true
-  const hayMenu = puedeFirmar || Boolean(estado?.pendiente_validacion)
-
-  const primarioCompacto = puedeFirmar ? (
-    <Tooltip content={mensaje ? 'Firmando…' : 'Firmar con Firma Perú'}>
-      <Button size="icon" onClick={iniciar} disabled={Boolean(mensaje) || requiereGenerar} aria-label="Firmar con Firma Perú"
-        className="h-8 w-8 border border-indigo-700 bg-indigo-700 text-white shadow-sm hover:bg-indigo-800 focus-visible:ring-indigo-500">
-        {mensaje ? <Loader2 className="h-4 w-4 animate-spin" /> : <PenLine className="h-4 w-4" />}
-      </Button>
-    </Tooltip>
-  ) : estado?.firmado ? (
-    <Tooltip content={estado.vigente === false ? 'Descargar PDF firmado anterior' : 'Descargar PDF firmado'}>
-      <Button size="icon" variant="outline" onClick={() => void descargar()} disabled={descargando} aria-label="Descargar PDF firmado"
-        className="h-8 w-8">
-        <Download className="h-4 w-4" />
-      </Button>
-    </Tooltip>
-  ) : null
+  const hayMenu = puedeFirmar || (!esEtte && Boolean(estado?.pendiente_validacion))
 
   return (
-    <div className={compacto ? 'flex items-center gap-1' : 'flex flex-wrap items-center gap-2'}>
-      {compacto ? primarioCompacto : puedeFirmar ? (
-        <Button size="sm" onClick={iniciar} disabled={Boolean(mensaje) || requiereGenerar} title={requiereGenerar ? 'Primero genere y revise el PDF actualizado' : undefined} className="gap-2 bg-primary text-primary-foreground hover:bg-primary-hover">
+    <div className="flex flex-wrap items-center gap-2">
+      {puedeFirmar ? (
+        <Button size="sm" variant={esEtte ? 'outline' : 'default'} onClick={() => void firmar()} disabled={Boolean(mensaje) || requiereGenerar}
+          title={requiereGenerar ? 'Primero genere y revise el PDF actualizado' : undefined}
+          className={esEtte ? 'gap-2' : 'gap-2 bg-primary text-primary-foreground hover:bg-primary-hover'}>
           {mensaje ? <Loader2 className="h-4 w-4 animate-spin" /> : <PenLine className="h-4 w-4" />}
-          {mensaje ? 'Firmando…' : 'Firmar con Firma Perú'}
+          {mensaje ? 'Firmando…' : etiqueta}
         </Button>
-      ) : estado?.firmado ? (
+      ) : !esEtte && estado?.firmado ? (
         <Button size="sm" variant="outline" onClick={() => void descargar()} disabled={descargando} className="gap-2"
           title={estado.firmado_en ? `PDF conservado el ${new Date(estado.firmado_en).toLocaleString('es-PE')}` : undefined}>
           <Download className="h-4 w-4" /> {estado.vigente === false ? 'PDF firmado anterior' : 'Descargar PDF firmado'}
@@ -171,11 +153,11 @@ function ControlFirma({ tipoDocumento, dependenciaId, compacto = false }: PropsF
           }
         >
           {puedeFirmar && (
-            <DropdownMenuItem icon={<Settings2 className="h-4 w-4" />} disabled={Boolean(mensaje)} onSelect={() => setEquipo({})}>
+            <DropdownMenuItem icon={<Settings2 className="h-4 w-4" />} disabled={Boolean(mensaje)} onSelect={() => setEquipo(true)}>
               Opciones de firma
             </DropdownMenuItem>
           )}
-          {estado?.pendiente_validacion && (
+          {!esEtte && estado?.pendiente_validacion && (
             <DropdownMenuItem icon={<FileWarning className="h-4 w-4" />} disabled={descargando} onSelect={() => void descargar(true)}>
               Descargar PDF recibido · sin verificar
             </DropdownMenuItem>
@@ -183,22 +165,12 @@ function ControlFirma({ tipoDocumento, dependenciaId, compacto = false }: PropsF
         </DropdownMenu>
       )}
 
-      {mensaje && !compacto && <span role="status" className="text-xs text-muted-foreground">{mensaje}</span>}
+      {mensaje && <span role="status" className="text-xs text-muted-foreground">{mensaje}</span>}
 
-      {equipo && <PrepararEquipoFirma onCerrar={() => setEquipo(null)} onContinuar={() => {
-        const motivo = equipo.motivo
-        setEquipo(null)
-        if (esSuplente && !motivo) setPedirMotivo(true)
-        else void firmar(motivo)
+      {equipo && <PrepararEquipoFirma onCerrar={() => setEquipo(false)} onContinuar={() => {
+        setEquipo(false)
+        void firmar()
       }} />}
-      <MotivoSuplenciaDialog
-        open={pedirMotivo}
-        onClose={() => setPedirMotivo(false)}
-        onConfirmar={(motivo) => {
-          setPedirMotivo(false)
-          void firmar(motivo)
-        }}
-      />
     </div>
   )
 }

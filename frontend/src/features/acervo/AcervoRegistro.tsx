@@ -18,13 +18,18 @@ interface Props {
 
 const COLUMNAS = 7
 
-export function AcervoCabecera() {
+interface CabeceraProps {
+  /** Rótulo de la columna de volumen; en la lista mixta se usa uno genérico. */
+  etiquetaCantidad?: string
+}
+
+export function AcervoCabecera({ etiquetaCantidad = 'Cantidad' }: CabeceraProps) {
   return (
     <thead className="border-b bg-muted/40 text-left text-xs font-medium text-muted-foreground">
       <tr>
         <th className="p-3">Serie documental</th>
         <th className="hidden w-16 p-3 sm:table-cell">Año</th>
-        <th className="w-20 p-3 text-right">Folios</th>
+        <th className="w-24 p-3 text-right">{etiquetaCantidad}</th>
         <th className="hidden w-[18%] p-3 md:table-cell">Tipo de unidad</th>
         <th className="hidden w-[20%] p-3 lg:table-cell">Ubicación</th>
         <th className="hidden w-[16%] p-3 xl:table-cell">Registrado por</th>
@@ -43,6 +48,7 @@ export function AcervoRegistro({ registro, esModificable, eliminando, onEditar, 
   const delSgd = registro.fuente === 'sgd'
   const Icono = delSgd ? HardDrive : FolderArchive
   const detalleId = `acervo-detalle-${registro.id}`
+  const cantidad = delSgd ? registro.numero_documentos : registro.folios
 
   return (
     <Fragment>
@@ -64,7 +70,10 @@ export function AcervoRegistro({ registro, esModificable, eliminando, onEditar, 
           </p>
         </td>
         <td className="hidden p-3 text-xs text-muted-foreground sm:table-cell">{registro.anio ?? '—'}</td>
-        <td className="p-3 text-right font-mono text-xs font-medium text-muted-foreground">{registro.folios ?? '—'}</td>
+        <td className="p-3 text-right text-xs">
+          <span className="font-mono font-medium text-muted-foreground">{cantidad ?? '—'}</span>
+          <span className="block text-mini text-muted-foreground">{delSgd ? 'documentos' : 'folios'}</span>
+        </td>
         <td className="hidden p-3 text-xs text-muted-foreground [overflow-wrap:anywhere] md:table-cell">{registro.unidad_conservacion}</td>
         <td className="hidden p-3 text-xs text-muted-foreground [overflow-wrap:anywhere] lg:table-cell">{registro.ubicacion || '—'}</td>
         <td className="hidden p-3 [overflow-wrap:anywhere] xl:table-cell">

@@ -6,7 +6,7 @@ import type { FiltrosNoPatrimonial, GuardarBienNoPatrimonialPayload } from '@/ty
 import { noPatrimonialService } from './nopatrimonial.service'
 
 const CONFLICTO =
-  'No se puede guardar: la entrega de este centro de costo está bloqueada (ya fue presentada al coordinador).'
+  'No se puede guardar: la entrega de este centro de costo está bloqueada (ya se cerró para revisión y firma).'
 
 export function useNoPatrimonial(filtros: FiltrosNoPatrimonial = {}) {
   return useQuery({
@@ -59,7 +59,7 @@ export function useEliminarBienNoPatrimonial() {
     },
     onError: (error) =>
       notificarError(error, {
-        conflicto: 'No se puede eliminar: la entrega está bloqueada (ya fue presentada al coordinador).',
+        conflicto: 'No se puede eliminar: la entrega está bloqueada (ya se cerró para revisión y firma).',
       }),
   })
 }

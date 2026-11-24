@@ -68,7 +68,7 @@ class ExpedientePdfTest extends TestCase
     public function test_expediente_exige_entrega_remitida(): void
     {
         $this->servidor();
-        $this->entrega(EstadoEntrega::VERIFICADA);
+        $this->entrega(EstadoEntrega::ACTA_SUSCRITA);
 
         $this->get("/api/expediente/pdf?dependencia_id={$this->dep->id}")
             ->assertStatus(409);

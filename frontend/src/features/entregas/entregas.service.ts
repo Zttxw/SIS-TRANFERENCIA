@@ -9,7 +9,8 @@ import type {
   EntregaItem,
   EstadoEntregaResponse,
   FiltrosEntregas,
-  VerificarEntregaPayload,
+  SuplenciaEttePayload,
+  TitularEtte,
 } from '@/types/transferencia'
 
 export const entregasService = {
@@ -31,14 +32,19 @@ export const entregasService = {
     return res.data.data
   },
 
-  /** El responsable presenta la entrega al coordinador ETTE (D-07). */
+  /** El responsable cierra la entrega para la revisión y firma con el coordinador ETTE (D-07). */
   async presentarEntrega(dependenciaId: number): Promise<void> {
     await api.post('/transferencia/presentar', { dependencia_id: dependenciaId })
   },
 
-  /** El coordinador ETTE (o titular suplente) acepta lo entregado. */
-  async verificarEntrega(payload: VerificarEntregaPayload): Promise<void> {
-    await api.post('/transferencia/verificar', payload)
+  /** Designa al titular ETTE que suple al coordinador ausente, o la retira (`titular_id` null). */
+  async designarSuplenciaEtte(payload: SuplenciaEttePayload): Promise<void> {
+    await api.put('/transferencia/suplencia-ette', payload)
+  },
+
+  async titularesEtte(): Promise<TitularEtte[]> {
+    const res = await api.get<ApiSuccess<TitularEtte[]>>('/transferencia/titulares-ette')
+    return res.data.data
   },
 
   /** Subárbol del CC con autoría de cada entrega (D-08, RF-43). */

@@ -154,7 +154,7 @@ class ActaTransferenciaTest extends TestCase
             ->assertJsonPath('data.anexos_entregados.anexo_02.condicion', 'no_entregado');
     }
 
-    public function test_la_recepcion_es_del_coordinador_o_del_titular_que_acepto_en_suplencia(): void
+    public function test_la_recepcion_es_del_coordinador_o_del_titular_designado_en_suplencia(): void
     {
         $this->usuario(Rol::DELEGADO_ETTE, 'Coordinadora Asignada');
         $this->assertSame('Coordinadora Asignada', $this->datosPdf()['recepcion']['nombre']);
@@ -162,8 +162,8 @@ class ActaTransferenciaTest extends TestCase
 
         $titular = $this->usuario(Rol::ETTE, 'Titular Suplente');
         $this->entregaEn($this->dep)->update([
-            'verificada_por_id' => $titular->id,
-            'verificada_en_calidad_de' => CalidadEtte::TITULAR_SUPLENTE,
+            'titular_suplente_id' => $titular->id,
+            'motivo_suplencia_ette' => 'Coordinadora con licencia.',
         ]);
 
         $recepcion = $this->datosPdf()['recepcion'];
@@ -192,12 +192,13 @@ class ActaTransferenciaTest extends TestCase
         $this->getJson($this->url())->assertOk()->assertJsonCount(1, 'data.observaciones_registradas');
     }
 
-    public function test_el_coordinador_completa_el_acta_ya_emitida(): void
+    public function test_el_coordinador_consulta_el_acta_pero_la_completa_el_responsable(): void
     {
         $this->getJson($this->url())->assertOk();
         $this->usuario(Rol::DELEGADO_ETTE, 'Coordinadora');
 
-        $this->guardar(['hora' => '16:00'])->assertOk()->assertJsonPath('data.hora', '16:00');
+        $this->getJson($this->url())->assertOk();
+        $this->guardar(['hora' => '16:00'])->assertForbidden();
     }
 
     public function test_suscrita_el_acta_queda_fija(): void

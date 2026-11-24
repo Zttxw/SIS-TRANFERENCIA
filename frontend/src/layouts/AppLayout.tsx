@@ -72,6 +72,7 @@ export function AppLayout() {
       (!soloEtte || (item.ruta !== undefined && rutasEtte.has(item.ruta))) &&
       (!soloEtts || (item.ruta !== undefined && rutasEtts.has(item.ruta))) &&
       (!soloDelegado || (item.ruta !== undefined && rutasDelegado.has(item.ruta))) &&
+      (!item.modulo || usuario?.modulos?.[item.modulo] === true) &&
       (permisos.has(item.permiso) ||
       item.permisosAlternativos?.some((permiso) => permisos.has(permiso))),
   )

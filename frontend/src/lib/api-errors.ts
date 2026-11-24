@@ -45,7 +45,7 @@ export function mensajeDeError(error: unknown, opciones: OpcionesMensajeError = 
     if (error.esConflictoFlujo) {
       // RN-13: el 409 es información accionable, nunca se oculta.
       return conflicto ?? error.message ??
-        'La entrega ya fue presentada al coordinador ETTE y no puede editarse.'
+        'La entrega ya se cerró para la revisión y firma con el coordinador ETTE y no puede editarse.'
     }
     if (error.esValidacion) {
       return error.message || 'Hay datos inválidos en el formulario. Revise los campos marcados.'

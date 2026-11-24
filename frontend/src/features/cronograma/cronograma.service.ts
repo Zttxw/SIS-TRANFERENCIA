@@ -13,7 +13,7 @@ export const ETIQUETA_OPERACION: Record<OperacionCronograma, string> = {
 
 export const BLOQUEA_OPERACION: Record<OperacionCronograma, string> = {
   ninguna: 'No bloquea ninguna acción.',
-  verificacion: 'Al vencer bloquea presentar al coordinador y aceptar la entrega.',
+  verificacion: 'Al vencer bloquea cerrar la entrega para revisión y firma.',
   acta: 'Al vencer bloquea firmar los anexos y remitir la entrega.',
   remision: 'Al vencer bloquea remitir la entrega.',
 }

@@ -20,91 +20,103 @@ use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 /**
  * Quién suscribe cada documento 02–07 y por qué lado (D-04, D-05).
  *
- * - Lado entidad: el responsable del centro de costo.
- * - Lado ETTE: el coordinador ETTE asignado al CC o un titular ETTE en su
- *   suplencia (con motivo).
+ * Las firmas de un CC se operan siempre desde la sesión de su responsable:
+ *
+ * - Lado entidad: el propio responsable del centro de costo.
+ * - Lado ETTE: el firmante designado (coordinador ETTE vigente o titular ETTE
+ *   en suplencia), que firma presencialmente con su certificado. La sesión de
+ *   firma se emite a su nombre y DNI, así que Firma Perú solo acepta su firma.
  *
  * El Anexo 01 es institucional (sin CC, `dependencia_id` NULL) y se firma al
- * cierre del proceso: lado entidad el ETTS y lado ETTE un titular ETTE.
+ * cierre del proceso, cada uno con su cuenta: lado entidad el ETTS y lado ETTE
+ * un titular ETTE.
  */
 class FirmantesDocumento
 {
     public function __construct(private readonly CoordinacionEtte $coordinacion) {}
 
     /**
-     * Lado y calidad con que el usuario firma este documento.
+     * Firmante, lado y calidad de una firma que el operador inicia. En un CC, el
+     * operador debe ser su responsable y elige el lado; en el Anexo 01, firma su
+     * propio lado.
      *
-     * @return array{lado: LadoFirma, en_calidad_de: ?CalidadEtte, motivo_suplencia: ?string}
-     *
-     * @throws ValidationException si actúa como titular suplente sin motivo.
+     * @return array{lado: LadoFirma, firmante: User, en_calidad_de: ?CalidadEtte, motivo_suplencia: ?string}
      */
-    public function lado(User $usuario, string $tipo, ?int $dependenciaId, ?string $motivoSuplencia = null): array
+    public function firmante(User $operador, string $tipo, ?int $dependenciaId, ?LadoFirma $lado = null): array
     {
         if ($tipo === 'anexo01' || $dependenciaId === null) {
-            return $this->ladoInstitucional($usuario, $tipo, $dependenciaId);
+            $institucional = $this->ladoInstitucional($operador, $tipo, $dependenciaId);
+            abort_if($lado !== null && $lado !== $institucional['lado'], 403, 'Solo puede firmar su propio lado del Anexo 01.');
+
+            return [...$institucional, 'firmante' => $operador];
         }
-        abort_unless($usuario->activo && $usuario->puedeAccederDependencia($dependenciaId), 403);
+        abort_if($lado === null, 422, 'Indique el lado que firma: entidad o ETTE.');
+        $this->exigirOperador($operador, $dependenciaId);
 
-        if ($usuario->tieneRol(Rol::RESPONSABLE_CENTRO_COSTO, $dependenciaId)) {
-            abort_if($tipo === 'anexo07' && ! $usuario->tienePermiso(Permiso::GenerarActas), 403, 'No tiene permiso para suscribir el acta.');
+        if ($lado === LadoFirma::ENTIDAD) {
+            abort_if($tipo === 'anexo07' && ! $operador->tienePermiso(Permiso::GenerarActas), 403, 'No tiene permiso para suscribir el acta.');
 
-            return ['lado' => LadoFirma::ENTIDAD, 'en_calidad_de' => null, 'motivo_suplencia' => null];
+            return ['lado' => LadoFirma::ENTIDAD, 'firmante' => $operador, 'en_calidad_de' => null, 'motivo_suplencia' => null];
         }
 
-        abort_unless($usuario->tienePermiso(Permiso::FirmarAnexos)
-            && $this->coordinacion->actuaPorEtte($usuario, $dependenciaId), 403,
-            'Solo firman el responsable del centro de costo y su coordinador ETTE (o un titular ETTE en suplencia).');
-        $calidad = $this->coordinacion->calidad($usuario, $dependenciaId, $motivoSuplencia);
+        $ette = $this->coordinacion->firmanteDe($dependenciaId);
+        abort_if($ette === null, 409, 'El centro de costo no tiene coordinador ETTE vigente ni un titular ETTE designado en suplencia.');
         abort_if($tipo === 'anexo07' && ! $this->actaEmitida($dependenciaId), 409,
-            'El responsable debe emitir el acta antes de que firme el lado ETTE.');
+            'Emita el acta antes de que firme el lado ETTE.');
 
-        return ['lado' => LadoFirma::ETTE, ...$calidad];
+        return ['lado' => LadoFirma::ETTE, 'firmante' => $ette['usuario'],
+            'en_calidad_de' => $ette['en_calidad_de'], 'motivo_suplencia' => $ette['motivo_suplencia']];
     }
 
     /**
-     * Lado por el que el usuario firmaría en el CC, sin exigir el motivo de
-     * suplencia (para que la interfaz sepa qué ofrecer).
+     * Solo el responsable del CC opera la revisión y la firma presencial con el
+     * coordinador ETTE (no el responsable de un CC padre, D-08).
+     */
+    public function exigirOperador(User $usuario, int $dependenciaId): void
+    {
+        abort_unless($this->opera($usuario, $dependenciaId), 403,
+            'Solo el responsable del centro de costo opera la revisión y la firma con el coordinador ETTE.');
+    }
+
+    public function opera(User $usuario, int $dependenciaId): bool
+    {
+        return $usuario->activo && $usuario->tieneRol(Rol::RESPONSABLE_CENTRO_COSTO, $dependenciaId);
+    }
+
+    /**
+     * Lado por el que el usuario firmaría el Anexo 01 institucional, para que la
+     * interfaz sepa qué ofrecer.
      *
      * @return array{lado: LadoFirma, en_calidad_de: ?CalidadEtte}|null
      */
-    public function ladoPotencial(User $usuario, ?int $dependenciaId): ?array
+    public function ladoInstitucionalPotencial(User $usuario): ?array
     {
-        if ($dependenciaId === null) {
-            return $this->ladoInstitucionalPotencial($usuario);
-        }
-        if ($usuario->tieneRol(Rol::RESPONSABLE_CENTRO_COSTO, $dependenciaId)) {
-            return ['lado' => LadoFirma::ENTIDAD, 'en_calidad_de' => null];
-        }
-        if (! $usuario->tienePermiso(Permiso::FirmarAnexos)) {
-            return null;
-        }
-        if ($this->coordinacion->esCoordinadorDe($usuario, $dependenciaId)) {
-            return ['lado' => LadoFirma::ETTE, 'en_calidad_de' => CalidadEtte::COORDINADOR];
-        }
-
-        return $usuario->tieneRol(Rol::ETTE)
-            ? ['lado' => LadoFirma::ETTE, 'en_calidad_de' => CalidadEtte::TITULAR_SUPLENTE]
-            : null;
+        return match (true) {
+            $usuario->tieneRol(Rol::ETTS) => ['lado' => LadoFirma::ENTIDAD, 'en_calidad_de' => null],
+            $usuario->tieneRol(Rol::ETTE) => ['lado' => LadoFirma::ETTE, 'en_calidad_de' => CalidadEtte::TITULAR],
+            default => null,
+        };
     }
 
     /**
-     * Al recibir la firma, confirma que el firmante conserva el mismo lado y
-     * calidad con que preparó la sesión: detecta revocaciones ocurridas entre
-     * la preparación y la firma.
+     * Al recibir la firma, confirma que el operador sigue habilitado y que el
+     * firmante y su calidad son los mismos con que se preparó la sesión: detecta
+     * revocaciones, reemplazos o cambios de suplencia entre la preparación y la
+     * firma.
      */
     public function exigirFirmanteAsignado(FirmaSesion $sesion): void
     {
-        $usuario = User::findOrFail($sesion->usuario_id);
+        $operador = User::findOrFail($sesion->operador_id ?? $sesion->usuario_id);
         try {
-            $actual = $this->lado($usuario, $sesion->tipo_documento, $sesion->dependencia_id, $sesion->motivo_suplencia);
+            $actual = $this->firmante($operador, $sesion->tipo_documento, $sesion->dependencia_id, $sesion->lado);
         } catch (HttpExceptionInterface|ValidationException) {
             throw ValidationException::withMessages(['signed_file' => [
                 'El firmante ya no tiene una asignación de rol vigente que lo habilite a suscribir este documento.',
             ]]);
         }
-        if ($actual['lado'] !== $sesion->lado || $actual['en_calidad_de'] !== $sesion->en_calidad_de) {
+        if ($actual['firmante']->id !== $sesion->usuario_id || $actual['en_calidad_de'] !== $sesion->en_calidad_de) {
             throw ValidationException::withMessages(['signed_file' => [
-                'La responsabilidad del firmante cambió entre la preparación y la firma del documento.',
+                'El firmante designado cambió entre la preparación y la firma del documento.',
             ]]);
         }
     }
@@ -144,6 +156,13 @@ class FirmantesDocumento
         abort_if($tipo === 'anexo07' && ! $usuario->tienePermiso(Permiso::GenerarActas), 403, 'No tiene permiso para generar el acta.');
     }
 
+    /** Consultan actas quienes las generan y el lado ETTE (coordinador o titular). */
+    public function exigirConsultaDeActas(User $usuario): void
+    {
+        abort_unless($usuario->tienePermiso(Permiso::GenerarActas)
+            || $usuario->tieneRol(Rol::DELEGADO_ETTE) || $usuario->tieneRol(Rol::ETTE), 403);
+    }
+
     /** Consulta del acta: quien la genera o el lado ETTE del CC, una vez emitida. */
     public function exigirIntervieneEnActa(User $usuario, int $dependenciaId): void
     {
@@ -171,16 +190,6 @@ class FirmantesDocumento
         abort_if($lado === null, 403, 'El Anexo 01 lo firman el ETTS y un titular ETTE.');
 
         return [...$lado, 'motivo_suplencia' => null];
-    }
-
-    /** @return array{lado: LadoFirma, en_calidad_de: ?CalidadEtte}|null */
-    private function ladoInstitucionalPotencial(User $usuario): ?array
-    {
-        return match (true) {
-            $usuario->tieneRol(Rol::ETTS) => ['lado' => LadoFirma::ENTIDAD, 'en_calidad_de' => null],
-            $usuario->tieneRol(Rol::ETTE) => ['lado' => LadoFirma::ETTE, 'en_calidad_de' => CalidadEtte::TITULAR],
-            default => null,
-        };
     }
 
     private function actaEmitida(int $dependenciaId): bool

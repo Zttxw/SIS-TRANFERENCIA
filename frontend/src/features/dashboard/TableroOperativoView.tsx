@@ -1,4 +1,4 @@
-import { ETIQUETA_ESTADO_ENTREGA, estaEnFirma, fueRemitida } from '@/types/transferencia'
+import { ETIQUETA_ESTADO_ENTREGA, fueRemitida } from '@/types/transferencia'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
-import { useAuth } from '@/auth/hooks'
+import { useAuth, useModulo } from '@/auth/hooks'
 import { puedeConsultarActa } from '@/auth/sesion-runtime'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -33,10 +33,11 @@ interface TableroOperativoViewProps {
   perfil?: 'ette' | 'etts' | 'general'
 }
 
-type FiltroEstado = 'todos' | 'remitida' | 'verificada' | 'en_revision' | 'borrador'
+type FiltroEstado = 'todos' | 'remitida' | 'acta_suscrita' | 'en_revision' | 'borrador'
 
 export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'general' }: TableroOperativoViewProps) {
   const { permisos } = useAuth()
+  const conDocumentosPendientes = useModulo('documentos_pendientes')
   const { data: tablero, isLoading, error, refetch, isFetching } = useTableroOperativo()
 
   const [busqueda, setBusqueda] = useState('')
@@ -63,7 +64,6 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
       const coincideEstado =
         filtroEstado === 'todos' ||
         dep.estado_entrega === filtroEstado ||
-        (filtroEstado === 'verificada' && estaEnFirma(dep.estado_entrega)) ||
         (filtroEstado === 'remitida' && fueRemitida(dep.estado_entrega))
 
       // Filtro de nivel
@@ -112,7 +112,7 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
       : 0
   const pctAceptada =
     metricas.total_dependencias > 0
-      ? Math.round((metricas.verificadas / metricas.total_dependencias) * 100)
+      ? Math.round((metricas.acta_suscrita / metricas.total_dependencias) * 100)
       : 0
   const pctPorRevisar =
     metricas.total_dependencias > 0
@@ -169,7 +169,7 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
             {perfil === 'ette' ? 'Monitoreo de la transferencia' : perfil === 'etts' ? 'Revisión y consolidación de entregas' : 'Monitoreo Institucional de Transferencia'}
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            {perfil === 'ette' ? 'Avance de las oficinas, entregas pendientes y observaciones del proceso.' : perfil === 'etts' ? 'Siga las entregas presentadas, aceptadas y remitidas de cada centro de costo.' : `Supervisión de ${metricas.total_dependencias} centros de costo y avance de las entregas del pliego.`}
+            {perfil === 'ette' ? 'Avance de las oficinas, entregas pendientes y observaciones del proceso.' : perfil === 'etts' ? 'Siga las entregas en revisión y firma, suscritas y remitidas de cada centro de costo.' : `Supervisión de ${metricas.total_dependencias} centros de costo y avance de las entregas del pliego.`}
           </p>
         </div>
 
@@ -246,15 +246,15 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFiltroEstado('verificada')}
+                  onClick={() => setFiltroEstado('acta_suscrita')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5 ${
-                    filtroEstado === 'verificada'
+                    filtroEstado === 'acta_suscrita'
                       ? 'bg-info text-white font-semibold'
                       : 'bg-info-soft text-info-fg border border-info-border hover:bg-info-soft'
                   }`}
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-info" />
-                  Aceptadas (a firma) ({metricas.verificadas})
+                  Acta suscrita ({metricas.acta_suscrita})
                 </button>
                 <button
                   type="button"
@@ -266,7 +266,7 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
                   }`}
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-warning" />
-                  Por revisar ({metricas.en_revision})
+                  En revisión y firma ({metricas.en_revision})
                 </button>
                 <button
                   type="button"
@@ -350,16 +350,16 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
                                 {dep.enviado_tarde && ' · tarde'}
                               </span>
                             )}
-                            {estaEnFirma(dep.estado_entrega) && (
+                            {dep.estado_entrega === 'acta_suscrita' && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-mini font-semibold bg-info-soft text-info-fg border border-info-border">
                                 <span className="h-1.5 w-1.5 rounded-full bg-info" />
-                                Aceptada
+                                Acta suscrita
                               </span>
                             )}
                             {dep.estado_entrega === 'en_revision' && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-mini font-semibold bg-warning-soft text-warning-fg border border-warning-border">
                                 <span className="h-1.5 w-1.5 rounded-full bg-warning" />
-                                Por revisar
+                                En revisión y firma
                               </span>
                             )}
                             {dep.estado_entrega === 'borrador' && (
@@ -442,7 +442,7 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
 
                           {/* Acciones */}
                           <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                            <Button size="sm" variant="ghost" onClick={() => setDependenciaDocumental(dep.id)}>Documentos</Button>
+                            {conDocumentosPendientes && <Button size="sm" variant="ghost" onClick={() => setDependenciaDocumental(dep.id)}>Documentos</Button>}
                             <Button
                               size="sm"
                               variant="outline"
@@ -510,12 +510,12 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
                   />
                   <div
                     style={{ width: `${pctAceptada}%` }}
-                    title={`Aceptadas (a firma): ${metricas.verificadas}`}
+                    title={`Acta suscrita: ${metricas.acta_suscrita}`}
                     className="bg-info h-full transition-all"
                   />
                   <div
                     style={{ width: `${pctPorRevisar}%` }}
-                    title={`Por revisar: ${metricas.en_revision}`}
+                    title={`En revisión y firma: ${metricas.en_revision}`}
                     className="bg-warning h-full transition-all"
                   />
                   <div
@@ -541,17 +541,17 @@ export function TableroOperativoView({ onSeleccionarDependencia, perfil = 'gener
                 <div className="flex justify-between items-center py-2">
                   <span className="flex items-center gap-1.5 font-medium text-foreground">
                     <span className="h-2 w-2 rounded-full bg-info" />
-                    Aceptadas (a firma)
+                    Acta suscrita
                   </span>
                   <span className="font-mono font-bold text-info-fg">
-                    {metricas.verificadas} ({pctAceptada}%)
+                    {metricas.acta_suscrita} ({pctAceptada}%)
                   </span>
                 </div>
 
                 <div className="flex justify-between items-center py-2">
                   <span className="flex items-center gap-1.5 font-medium text-foreground">
                     <span className="h-2 w-2 rounded-full bg-warning" />
-                    Por revisar
+                    En revisión y firma
                   </span>
                   <span className="font-mono font-bold text-warning-fg">
                     {metricas.en_revision} ({pctPorRevisar}%)

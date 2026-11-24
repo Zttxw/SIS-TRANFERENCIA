@@ -1,3 +1,5 @@
+import type { CalidadEtte } from '@/types/transferencia'
+
 export type TipoDocumentoFirma = 'anexo01' | 'anexo02' | 'anexo03' | 'anexo04' | 'anexo05' | 'anexo06' | 'anexo07'
 
 export interface PreparacionFirma {
@@ -19,7 +21,6 @@ export interface SesionFirma {
 }
 
 export type LadoFirma = 'entidad' | 'ette'
-export type CalidadEtte = 'coordinador' | 'titular_suplente'
 
 /** Firma vigente que aporta un lado a la cadena del documento (D-05). */
 export interface FirmaLado {
@@ -41,9 +42,11 @@ export interface EstadoFirma {
   ette: FirmaLado | null
   /** Ya hay una firma digital: el lado ETTE no puede subir firma manuscrita. */
   hay_firma_digital: boolean
-  /** Lado por el que firmaría el usuario autenticado (null si no firma). */
-  mi_lado: { lado: LadoFirma; en_calidad_de: CalidadEtte | null } | null
-  /** La entrega fue aceptada por el coordinador y aún no se remite. */
+  /** El usuario es el responsable del CC: opera las firmas de ambos lados en su sesión. */
+  opera_firmas: boolean
+  /** Quién firma presencialmente por el lado ETTE (su certificado es el único admitido). */
+  firmante_ette: { nombre: string; dni: string | null; en_calidad_de: CalidadEtte; motivo_suplencia: string | null } | null
+  /** La entrega está cerrada para revisión y firma y aún no se remite. */
   firma_habilitada: boolean
   firmado: boolean
   /** El usuario autenticado ya suscribió este documento (según el DNI del certificado). */

@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { CheckCircle2, Circle, ClipboardCheck, FileArchive, PenLine, Send } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { CheckCircle2, Circle, ClipboardCheck, FileArchive, PenLine, Send, UserCheck } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Can } from '@/auth/Can'
 import { useAuth } from '@/auth/hooks'
-import { Button } from '@/components/ui/button'
+import { esResponsableDe } from '@/auth/permisos'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { RemitirModal } from '@/features/dashboard/RemitirModal'
@@ -17,12 +19,12 @@ import {
   type EstadoEntregaResponse,
 } from '@/types/transferencia'
 import { entregasService } from './entregas.service'
-import { usePresentarEntrega } from './use-entregas'
+import { SuplenciaEtteDialog } from './SuplenciaEtteDialog'
+import { usePresentarEntrega, useSuplenciaEtte } from './use-entregas'
 
 const PASOS_CC: { estado: EstadoEntrega; titulo: string }[] = [
   { estado: 'borrador', titulo: 'Preparar anexos' },
-  { estado: 'en_revision', titulo: 'Presentada al coordinador' },
-  { estado: 'verificada', titulo: 'Aceptada y a firma' },
+  { estado: 'en_revision', titulo: 'Revisión y firma con el coordinador' },
   { estado: 'acta_suscrita', titulo: 'Acta suscrita' },
   { estado: 'remitida', titulo: 'Remitida' },
 ]
@@ -41,14 +43,17 @@ function fecha(iso: string | null | undefined): string {
 
 /**
  * Entrega del centro de costo vista por su responsable (D-07): prepara los
- * anexos, los presenta al coordinador ETTE (la edición se bloquea), espera su
- * aceptación —con observaciones solo como constancia—, firma y remite.
+ * anexos y los cierra para firma (la edición se bloquea). En su sesión, el
+ * coordinador ETTE presente revisa, deja observaciones como constancia y firma
+ * con su certificado —firmar es aprobar—; con ambos lados firmados, remite.
  */
 export function EntregaCentroCostoCard({ estado }: { estado: EstadoEntregaResponse }) {
-  const { tiene } = useAuth()
+  const { tiene, usuario } = useAuth()
   const confirmar = useConfirm()
   const presentarMut = usePresentarEntrega()
+  const suplenciaMut = useSuplenciaEtte()
   const [remitirAbierto, setRemitirAbierto] = useState(false)
+  const [suplenciaAbierta, setSuplenciaAbierta] = useState(false)
 
   const entrega = estado.entrega
   const actual: EstadoEntrega = entrega?.estado ?? 'borrador'
@@ -69,7 +74,10 @@ export function EntregaCentroCostoCard({ estado }: { estado: EstadoEntregaRespon
       setDescargando(false)
     }
   }
-  const enFirma = actual === 'verificada' || actual === 'acta_suscrita'
+  const enFirma = actual === 'en_revision' || actual === 'acta_suscrita'
+  const operaRevision = esResponsableDe(usuario?.roles ?? [], estado.dependencia.id)
+  const firmanteEtte = estado.firmante_ette
+  const esSuplente = firmanteEtte?.en_calidad_de === 'titular_suplente'
   const { data: firmas, isFetching: comprobandoFirmas } = useRequisitosRemision(
     estado.dependencia.id,
     enFirma && tiene('entregas.remitir'),
@@ -77,12 +85,21 @@ export function EntregaCentroCostoCard({ estado }: { estado: EstadoEntregaRespon
 
   const presentar = async () => {
     const ok = await confirmar({
-      title: 'Presentar al coordinador ETTE',
+      title: 'Cerrar y pasar a firma',
       description:
-        'Los anexos quedarán bloqueados para edición. El coordinador revisará lo entregado y lo aceptará; si advierte algo, lo dejará como observación en el acta. No hay devolución para corregir.',
-      confirmText: 'Presentar',
+        'Los anexos quedarán bloqueados para edición. Con el coordinador ETTE presente, registre lo que advierta como observación (constancia en el acta) y firmen ambos los anexos 02 al 07: su firma es la aprobación. No hay devolución para corregir.',
+      confirmText: 'Cerrar y pasar a firma',
     })
     if (ok) presentarMut.mutate(estado.dependencia.id)
+  }
+
+  const volverAlCoordinador = async () => {
+    const ok = await confirmar({
+      title: 'Volver a la firma del coordinador',
+      description: 'Se retira la suplencia: firmará el coordinador ETTE asignado al centro de costo.',
+      confirmText: 'Retirar suplencia',
+    })
+    if (ok) suplenciaMut.mutate({ dependencia_id: estado.dependencia.id, titular_id: null })
   }
 
   return (
@@ -103,7 +120,7 @@ export function EntregaCentroCostoCard({ estado }: { estado: EstadoEntregaRespon
       </CardHeader>
 
       <CardContent className="space-y-4 p-5">
-        <ol className={cn('grid grid-cols-2 gap-2', haciaEtts ? 'sm:grid-cols-4' : 'sm:grid-cols-5')}>
+        <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {pasos.map((paso, i) => {
             const hecho = i < indice || (i === indice && ultimo)
             const enCurso = i === indice && !ultimo
@@ -127,18 +144,8 @@ export function EntregaCentroCostoCard({ estado }: { estado: EstadoEntregaRespon
         <dl className="space-y-1.5 rounded-lg border bg-muted/30 p-3.5 text-xs">
           {entrega?.presentada_en && (
             <div className="flex justify-between gap-2">
-              <dt className="text-muted-foreground">Presentada</dt>
+              <dt className="text-muted-foreground">Cerrada para firma</dt>
               <dd>{fecha(entrega.presentada_en)}{entrega.presentada_por ? ` · ${entrega.presentada_por}` : ''}</dd>
-            </div>
-          )}
-          {entrega?.verificada_en && (
-            <div className="flex justify-between gap-2">
-              <dt className="text-muted-foreground">Aceptada</dt>
-              <dd>
-                {fecha(entrega.verificada_en)}
-                {entrega.verificada_por ? ` · ${entrega.verificada_por}` : ''}
-                {entrega.verificada_en_calidad_de === 'titular_suplente' ? ' (titular ETTE, suplente)' : ''}
-              </dd>
             </div>
           )}
           {entrega?.remitida_en && (
@@ -177,19 +184,46 @@ export function EntregaCentroCostoCard({ estado }: { estado: EstadoEntregaRespon
           </div>
         </dl>
 
-        {entrega?.resultado_verificacion && (
-          <div className="rounded-lg border p-3.5 text-xs">
-            <p className="mb-1 font-semibold text-foreground">Constancia de lo revisado por el coordinador</p>
-            <p className="whitespace-pre-wrap text-muted-foreground">{entrega.resultado_verificacion}</p>
+        {!remitida && (
+          <div className="space-y-2 rounded-lg border p-3.5 text-xs">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="flex items-start gap-2">
+                <UserCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <div>
+                  <p className="font-semibold text-foreground">Revisa y firma por el ETTE</p>
+                  {firmanteEtte ? (
+                    <p className="text-muted-foreground">
+                      {firmanteEtte.nombre}{firmanteEtte.dni ? ` · DNI ${firmanteEtte.dni}` : ''} ·{' '}
+                      {esSuplente ? `titular ETTE en suplencia (${firmanteEtte.motivo_suplencia})` : 'coordinador ETTE asignado'}
+                    </p>
+                  ) : (
+                    <p className="text-warning-fg">El centro de costo no tiene coordinador ETTE asignado. Solicítelo al comité ETTE.</p>
+                  )}
+                </div>
+              </div>
+              {actual === 'en_revision' && operaRevision && (
+                esSuplente ? (
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={suplenciaMut.isPending} onClick={() => void volverAlCoordinador()}>
+                    Volver al coordinador
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setSuplenciaAbierta(true)}>
+                    Firma un titular ETTE
+                  </Button>
+                )
+              )}
+            </div>
+            <p className="text-muted-foreground">
+              Firma presencialmente en esta sesión con su propio certificado; su firma es la aprobación de cada documento.
+            </p>
           </div>
         )}
 
         <div className="flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-muted-foreground">
-            {actual === 'borrador' && 'Complete los anexos 02 al 06 y preséntelos al coordinador ETTE.'}
-            {actual === 'en_revision' && 'El coordinador ETTE está revisando la entrega. Los anexos están bloqueados.'}
-            {actual === 'verificada' &&
-              `Genere y firme los anexos 02 al 07 en «PDF y firma»; el coordinador ETTE firma también cada uno (con ambas firmas: ${firmas?.firmados ?? 0}/6).`}
+            {actual === 'borrador' && 'Complete los anexos 02 al 06 y ciérrelos para la revisión y firma con el coordinador ETTE.'}
+            {actual === 'en_revision' &&
+              `Con el coordinador presente, registre sus observaciones en cada anexo y firmen ambos los anexos 02 al 07 en «PDF y firma» (con ambas firmas: ${firmas?.firmados ?? 0}/6).`}
             {actual === 'acta_suscrita' && 'Los anexos 02 al 07 tienen ambas firmas. Puede remitir la entrega.'}
             {remitida &&
               (actual === 'remitida'
@@ -203,7 +237,7 @@ export function EntregaCentroCostoCard({ estado }: { estado: EstadoEntregaRespon
             <Can permiso="entregas.remitir">
               <Button onClick={presentar} disabled={presentarMut.isPending} className="gap-1.5 text-xs">
                 <ClipboardCheck className="h-3.5 w-3.5" />
-                Presentar al coordinador
+                Cerrar y pasar a firma
               </Button>
             </Can>
           )}
@@ -218,6 +252,11 @@ export function EntregaCentroCostoCard({ estado }: { estado: EstadoEntregaRespon
           {enFirma && (
             <Can permiso="entregas.remitir">
               <div className="flex gap-2">
+                {actual === 'en_revision' && (
+                  <Link to="/pdf-firma" className={buttonVariants({ variant: 'outline', size: 'sm', className: 'gap-1.5 text-xs' })}>
+                    <PenLine className="h-3.5 w-3.5" /> PDF y firma
+                  </Link>
+                )}
                 {!firmas?.puede_remitir && <PenLine className="h-4 w-4 self-center text-warning-fg" aria-label="Faltan firmas" />}
                 <Button
                   onClick={() => setRemitirAbierto(true)}
@@ -232,6 +271,10 @@ export function EntregaCentroCostoCard({ estado }: { estado: EstadoEntregaRespon
           )}
         </div>
       </CardContent>
+
+      {suplenciaAbierta && (
+        <SuplenciaEtteDialog open onClose={() => setSuplenciaAbierta(false)} dependenciaId={estado.dependencia.id} />
+      )}
 
       <RemitirModal
         open={remitirAbierto}

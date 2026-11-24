@@ -6,6 +6,7 @@ namespace App\Modules\Transferencia\Services;
 
 use App\Models\User;
 use App\Modules\Acervo\Models\AcervoDocumental;
+use App\Modules\Auth\Services\CoordinacionEtte;
 use App\Modules\Gestion\Models\InformeGestion;
 use App\Modules\NoPatrimonial\Models\BienNoPatrimonial;
 use App\Modules\Organization\Models\Dependencia;
@@ -28,6 +29,7 @@ class TransferenciaService
     public function __construct(
         protected CronogramaService $cronograma,
         protected ConsolidacionCentroCosto $consolidacion,
+        protected CoordinacionEtte $coordinacion,
     ) {}
 
     /**
@@ -40,7 +42,7 @@ class TransferenciaService
         $procesoId = $this->resolverProcesoActivoId();
 
         $query = Entrega::query()
-            ->with(['dependencia', 'dependenciaDestino', 'emisor', 'presentadaPor', 'verificadaPor'])
+            ->with(['dependencia', 'dependenciaDestino', 'emisor', 'presentadaPor'])
             ->where('proceso_transferencia_id', $procesoId)
             ->orderByDesc('id');
 
@@ -151,7 +153,6 @@ class TransferenciaService
                 'patrimonio_confirmados' => $confirmados,
                 'patrimonio_porcentaje' => $porcPatrimonio,
                 'presentada_en' => $entrega?->presentada_en?->toIso8601String(),
-                'verificada_en' => $entrega?->verificada_en?->toIso8601String(),
                 'remitida_en' => $entrega?->remitida_en?->toIso8601String(),
                 'enviado_tarde' => $this->consolidacion->enviadoTarde($dep, $entregas),
                 'plazo' => $plazo,
@@ -173,8 +174,6 @@ class TransferenciaService
                 'total_dependencias' => $total,
                 'borrador' => $porEstado[EstadoEntrega::BORRADOR->value],
                 'en_revision' => $porEstado[EstadoEntrega::EN_REVISION->value],
-                // Aceptadas por el coordinador y en firma; `acta_suscrita` es el subtotal con ambas firmas.
-                'verificadas' => $porEstado[EstadoEntrega::VERIFICADA->value] + $porEstado[EstadoEntrega::ACTA_SUSCRITA->value],
                 'acta_suscrita' => $porEstado[EstadoEntrega::ACTA_SUSCRITA->value],
                 // Remitidas: incluye las que siguen la cadena ETTS → ETTE.
                 'remitidas' => $remitidas,
@@ -237,7 +236,7 @@ class TransferenciaService
             ->count();
 
         // Entrega jerárquica
-        $entrega = Entrega::with(['emisor', 'presentadaPor', 'verificadaPor', 'dependenciaDestino'])
+        $entrega = Entrega::with(['emisor', 'presentadaPor', 'dependenciaDestino'])
             ->where('dependencia_id', $dependenciaId)
             ->where('proceso_transferencia_id', $procesoId)
             ->latest()
@@ -280,10 +279,6 @@ class TransferenciaService
                 'hacia_etts' => $entrega->esHaciaEtts(),
                 'presentada_en' => $entrega->presentada_en?->toIso8601String(),
                 'presentada_por' => $entrega->presentadaPor?->name,
-                'verificada_en' => $entrega->verificada_en?->toIso8601String(),
-                'verificada_por' => $entrega->verificadaPor?->name,
-                'verificada_en_calidad_de' => $entrega->verificada_en_calidad_de?->value,
-                'resultado_verificacion' => $entrega->resultado_verificacion,
                 'remitida_en' => $entrega->remitida_en?->toIso8601String(),
                 'comentario' => $entrega->comentario,
                 'hijos_pendientes_al_remitir' => $entrega->hijos_pendientes_al_remitir ?? [],
@@ -291,13 +286,33 @@ class TransferenciaService
                 'remitida_ette_en' => $entrega->remitida_ette_en?->toIso8601String(),
                 'recibida_ette_en' => $entrega->recibida_ette_en?->toIso8601String(),
             ] : null,
+            // Quién revisa y firma presencialmente por el lado ETTE.
+            'firmante_ette' => $this->firmanteEtte($dependenciaId),
             // Hijos directos que aún no envían: advertencia al remitir (D-08).
             'hijos_pendientes' => $this->consolidacion->hijosPendientes($dep),
         ];
     }
 
     /**
-     * Remite la entrega verificada del CC a su destino (plan §3.1).
+     * Firmante designado del lado ETTE del CC (coordinador o titular suplente).
+     *
+     * @return array{id: int, nombre: string, dni: ?string, en_calidad_de: string, motivo_suplencia: ?string}|null
+     */
+    private function firmanteEtte(int $dependenciaId): ?array
+    {
+        $ette = $this->coordinacion->firmanteDe($dependenciaId);
+
+        return $ette === null ? null : [
+            'id' => $ette['usuario']->id,
+            'nombre' => $ette['usuario']->name,
+            'dni' => $ette['usuario']->dni,
+            'en_calidad_de' => $ette['en_calidad_de']->value,
+            'motivo_suplencia' => $ette['motivo_suplencia'],
+        ];
+    }
+
+    /**
+     * Remite la entrega suscrita del CC a su destino (plan §3.1).
      *
      * Ruteo del Anexo 01 (D-02): el destino es el CC padre registrado en CEPLAN
      * (`parent_id`), sin considerar el nivel. El CC cuyo padre es él mismo se
@@ -330,11 +345,11 @@ class TransferenciaService
                 ->lockForUpdate()
                 ->first();
 
-            // D-07 y D-05: solo se remite lo aceptado por el coordinador ETTE y
-            // con los anexos 02 al 07 firmados por ambos lados.
+            // D-07 y D-05: solo se remite lo cerrado para firma y con los anexos
+            // 02 al 07 firmados por ambos lados (firmar es aprobar).
             if (! ($entrega?->estado ?? EstadoEntrega::BORRADOR)->admiteFirma()) {
                 throw new HttpResponseException(ApiResponse::error(
-                    'Solo se remite una entrega aceptada por el coordinador ETTE y con el acta suscrita. Estado actual: "'
+                    'Solo se remite una entrega firmada por el responsable y el coordinador ETTE, con el acta suscrita. Estado actual: "'
                         .($entrega?->estado ?? EstadoEntrega::BORRADOR)->etiqueta().'".',
                     409,
                 ));

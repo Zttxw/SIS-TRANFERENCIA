@@ -80,7 +80,7 @@ class AutorizacionPermisosTest extends TestCase
         $this->postJson('/api/gestion/informe', [])->assertForbidden();
     }
 
-    public function test_coordinador_puede_registrar_observaciones_pero_no_remitir(): void
+    public function test_coordinador_no_remite(): void
     {
         $this->usuarioConRol(Rol::DELEGADO_ETTE);
 

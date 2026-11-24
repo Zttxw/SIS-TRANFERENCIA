@@ -11,8 +11,8 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 
 /**
  * Integridad del flujo (RN-13, D-07): los anexos solo se editan mientras la
- * entrega no existe o está en BORRADOR. Desde que el responsable la presenta al
- * coordinador (EN_REVISION, VERIFICADA, REMITIDA) quedan congelados: no hay
+ * entrega no existe o está en BORRADOR. Desde que el responsable la cierra y la
+ * pasa a firma (EN_REVISION, ACTA_SUSCRITA, REMITIDA…) quedan congelados: no hay
  * devolución ni subsanación.
  *
  * Es ortogonal a la autorización por ámbito (`AutorizaAmbito`): aquélla decide
@@ -27,7 +27,7 @@ trait RespetaEstadoEntrega
 {
     /**
      * Exige que la entrega de la dependencia dada admita edición. Lanza 409
-     * (envuelto en ApiResponse) si ya fue presentada al coordinador.
+     * (envuelto en ApiResponse) si ya se cerró para firma.
      */
     protected function exigirEntregaModificable(int $dependenciaId, ?int $procesoId = null): void
     {
@@ -45,7 +45,7 @@ trait RespetaEstadoEntrega
 
         throw new HttpResponseException(
             ApiResponse::error(
-                'Los anexos de este centro de costo ya fueron presentados al coordinador ETTE y no pueden editarse.',
+                'Los anexos de este centro de costo ya se cerraron para la revisión y firma con el coordinador ETTE y no pueden editarse.',
                 409,
             )
         );

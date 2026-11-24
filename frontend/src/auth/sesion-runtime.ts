@@ -10,9 +10,12 @@ export function cerrarSesionSinEspera(revocar: () => Promise<void>, limpiar: () 
   return revocacion.catch(() => undefined)
 }
 
-/** La API del acta admite emisión por el responsable o firma por el delegado ETTE. */
+/**
+ * La página del acta es de quien la emite y completa (responsable o ETTS). El
+ * coordinador ETTE la consulta en PDF desde la carpeta del CC.
+ */
 export function puedeConsultarActa(permisos: ReadonlySet<string>): boolean {
-  return permisos.has('actas.generar') || permisos.has('firmas.firmar')
+  return permisos.has('actas.generar')
 }
 
 /** El destino recordado puede pertenecer a otra cuenta que usó este navegador. */

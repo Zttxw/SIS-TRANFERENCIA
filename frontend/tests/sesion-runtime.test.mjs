@@ -33,7 +33,7 @@ test('un servidor entra al inicio si el administrador dejó abierta la gestión 
 })
 
 test('el servidor y las cuentas sin acceso al acta vuelven al inicio al abrir su enlace', () => {
-  for (const rol of ['servidor', 'responsable_equipo', 'coordinador', 'ette', 'administrador']) {
+  for (const rol of ['servidor', 'ette', 'delegado_ette', 'administrador']) {
     const permisos = derivarPermisos([{ rol }])
     assert.equal(puedeConsultarActa(permisos), false, rol)
     assert.equal(destinoPermitidoSesion('/acta', permisos), '/', rol)
@@ -41,8 +41,8 @@ test('el servidor y las cuentas sin acceso al acta vuelven al inicio al abrir su
   }
 })
 
-test('el responsable, ETTS y delegado ETTE conservan acceso al acta según sus permisos', () => {
-  for (const rol of ['responsable_centro_costo', 'etts', 'delegado_ette']) {
+test('el responsable y el ETTS conservan acceso a la página del acta', () => {
+  for (const rol of ['responsable_centro_costo', 'etts']) {
     const permisos = derivarPermisos([{ rol }])
     assert.equal(puedeConsultarActa(permisos), true, rol)
     assert.equal(destinoPermitidoSesion('/acta', permisos), '/acta', rol)

@@ -8,8 +8,8 @@ import { useEstadoEntrega } from './use-entregas'
 
 /**
  * Entrega del centro de costo activo (directiva 2026, D-07): el responsable la
- * presenta al coordinador ETTE, este la acepta, se firma y se remite al CC padre
- * o al ETTS. El CC padre no revisa ni devuelve lo que envían sus hijos (D-08).
+ * cierra para firma; en su sesión, el coordinador ETTE presente revisa y firma
+ * (firmar es aprobar) y la entrega se remite al CC padre o al ETTS. El CC padre no revisa ni devuelve lo que envían sus hijos (D-08).
  */
 export function EntregasPage() {
   const { dependenciaId } = useDependenciaActiva()
@@ -20,9 +20,9 @@ export function EntregasPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Entrega del centro de costo</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Presente los anexos al coordinador ETTE. Él acepta lo entregado (con observaciones solo como
-          constancia), se firman los anexos 02 al 07 y la entrega se remite al centro de costo padre o
-          al ETTS.
+          Cierre los anexos para firma y revíselos con el coordinador ETTE presente: registre sus
+          observaciones (solo constancia) y firmen ambos los anexos 02 al 07 en esta sesión —la firma del
+          coordinador es su aprobación—. Luego la entrega se remite al centro de costo padre o al ETTS.
         </p>
       </div>
 

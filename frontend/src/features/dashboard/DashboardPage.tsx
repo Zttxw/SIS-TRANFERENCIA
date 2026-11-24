@@ -19,12 +19,13 @@ import {
   Users,
 } from 'lucide-react'
 
-import { useAuth, useDependenciaActiva } from '@/auth/hooks'
+import { useAuth, useDependenciaActiva, useModulo } from '@/auth/hooks'
 import { puedeConsultarActa } from '@/auth/sesion-runtime'
 import { QueSigueCard } from '@/components/anexos/QueSigueCard'
 import { CoordinadorEtteAviso } from './CoordinadorEtteAviso'
 import type { TipoDocumentoFirma } from '@/features/firmaperu/firmaperu.types'
 import { Button, buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import {
   Card,
   CardContent,
@@ -63,7 +64,8 @@ export function DashboardPage() {
     !rolesUsuario.has('administrador')
 
   const { data: estadoData, isLoading, error } = useEstadoEntrega(dependenciaId)
-  const { data: resumenDocs } = useResumenDocumentos(dependenciaId)
+  const conDocumentosPendientes = useModulo('documentos_pendientes')
+  const { data: resumenDocs } = useResumenDocumentos(dependenciaId, conDocumentosPendientes)
   const [indicadorDocumental, setIndicadorDocumental] = useState<{ estado?: string } | null>(null)
 
   // El portal del delegado no depende de la dependencia activa; se resuelve tras
@@ -253,8 +255,8 @@ export function DashboardPage() {
       colorFuente: 'bg-indigo-50 text-indigo-700 border-indigo-200',
       resumen:
         estaEnFirma(estadoEntrega)
-          ? 'Lista para firma: el coordinador aceptó la entrega'
-          : 'Se firma tras la aceptación del coordinador',
+          ? 'En firma: el responsable y el coordinador ETTE la suscriben'
+          : 'Se firma al cerrar la entrega, con el coordinador ETTE presente',
       detalle: 'Acta formal de cierre y entrega de cargo',
       ruta: '/acta',
       accion: 'Ver acta',
@@ -367,13 +369,13 @@ export function DashboardPage() {
         />
       </div>
 
-      {/* Entrega del CC: presentar al coordinador, firmar y remitir (D-07). */}
+      {/* Entrega del CC: cerrar para firma, firmar con el coordinador y remitir (D-07). */}
       {permisos.has('entregas.remitir') && <EntregaCentroCostoCard estado={estadoData} />}
 
       {/* ========================================================
           SECUNDARIO: Trazabilidad + Documentos SGD (dos columnas)
           ======================================================== */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className={cn('grid grid-cols-1 gap-4', conDocumentosPendientes && 'lg:grid-cols-2')}>
         {/* Trazabilidad y Cronograma */}
         <Card className="border shadow-xs">
           <CardHeader className="py-2.5 px-4 border-b border-border bg-muted">
@@ -405,10 +407,10 @@ export function DashboardPage() {
             </div>
 
             <div className="flex justify-between items-center text-muted-foreground">
-              <span>Aceptada por el coordinador:</span>
+              <span>Cerrada para firma:</span>
               <span className="font-mono text-foreground">
-                {entrega?.verificada_en
-                  ? new Date(entrega.verificada_en).toLocaleString('es-PE', {
+                {entrega?.presentada_en
+                  ? new Date(entrega.presentada_en).toLocaleString('es-PE', {
                       day: '2-digit',
                       month: '2-digit',
                       year: 'numeric',
@@ -438,7 +440,7 @@ export function DashboardPage() {
         </Card>
 
         {/* Documentos SGD · Reporte de Asuntos Pendientes */}
-        <Card className="border shadow-xs overflow-hidden">
+        {conDocumentosPendientes && <Card className="border shadow-xs overflow-hidden">
           <CardHeader className="py-2.5 px-4 border-b border-border bg-muted">
             <div className="flex items-center justify-between">
               <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
@@ -479,7 +481,7 @@ export function DashboardPage() {
               <ArrowRight className="h-3 w-3" />
             </Link>
           </CardContent>
-        </Card>
+        </Card>}
       </div>
 
       {indicadorDocumental && <DocumentosIndicadorModal key={`${dependencia.id}-${indicadorDocumental.estado ?? 'todos'}`}

@@ -76,10 +76,11 @@ class FirmaperuRegistroService
             $documento = $sesion->documento;
             $usuario = User::findOrFail($sesion->usuario_id);
             abort_unless(hash_equals((string) $usuario->dni, $sesion->firmante_dni), 403,
-                'El DNI de la cuenta cambió durante la sesión.');
-            $firmante = $this->firmantes->lado($usuario, $sesion->tipo_documento, $dep?->id, $sesion->motivo_suplencia);
-            abort_unless($firmante['lado'] === $sesion->lado && $firmante['en_calidad_de'] === $sesion->en_calidad_de,
-                403, 'La responsabilidad del firmante cambió durante la sesión.');
+                'El DNI del firmante cambió durante la sesión.');
+            $operador = User::findOrFail($sesion->operador_id ?? $sesion->usuario_id);
+            $firmante = $this->firmantes->firmante($operador, $sesion->tipo_documento, $dep?->id, $sesion->lado);
+            abort_unless($firmante['firmante']->is($usuario) && $firmante['en_calidad_de'] === $sesion->en_calidad_de,
+                403, 'El firmante designado cambió durante la sesión.');
             $acta = $documento->acta_id ? ActaTransferencia::findOrFail($documento->acta_id) : null;
             $vigente = $this->cadena->vigente($sesion);
             $firma = FirmaAnexo::firstOrCreate(['firma_sesion_id' => $sesion->id], [

@@ -134,20 +134,6 @@ class CronogramaBloqueoTest extends TestCase
         $this->assertSame(EstadoEntrega::BORRADOR, Entrega::where('dependencia_id', $this->hija->id)->value('estado'));
     }
 
-    public function test_vencida_la_verificacion_el_coordinador_no_acepta_la_entrega(): void
-    {
-        $this->entregaEn($this->hija, EstadoEntrega::EN_REVISION);
-        $this->actividad(OperacionCronograma::VERIFICACION);
-        $this->actuarComo(Rol::DELEGADO_ETTE, $this->hija);
-
-        $this->postJson('/api/transferencia/verificar', [
-            'dependencia_id' => $this->hija->id,
-            'resultado_verificacion' => 'Se revisaron los anexos 02 al 06.',
-        ])->assertStatus(409)->assertJsonPath('errors.cronograma.accion', 'verificar');
-
-        $this->assertSame(EstadoEntrega::EN_REVISION, Entrega::where('dependencia_id', $this->hija->id)->value('estado'));
-    }
-
     public function test_vencida_la_suscripcion_del_acta_no_se_remite(): void
     {
         $this->actividad(OperacionCronograma::ACTA);

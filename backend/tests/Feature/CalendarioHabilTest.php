@@ -142,7 +142,7 @@ class CalendarioHabilTest extends TestCase
         $enPlazo = Dependencia::factory()->create(['proceso_transferencia_id' => $this->proceso->id, 'codigo' => '01']);
         $vencido = Dependencia::factory()->create(['proceso_transferencia_id' => $this->proceso->id, 'codigo' => '02']);
         $enFirma = Dependencia::factory()->create(['proceso_transferencia_id' => $this->proceso->id, 'codigo' => '03']);
-        $this->entregaEn($enFirma, EstadoEntrega::VERIFICADA);
+        $this->entregaEn($enFirma, EstadoEntrega::EN_REVISION);
         CronogramaActividad::factory()->paraOperacion(OperacionCronograma::VERIFICACION)->create([
             'proceso_transferencia_id' => $this->proceso->id,
             'fecha_vencimiento' => '2026-11-26',

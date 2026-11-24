@@ -1,4 +1,4 @@
-import { estaEnFirma, fueRemitida } from '@/types/transferencia'
+import { fueRemitida } from '@/types/transferencia'
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -50,7 +50,7 @@ type Perfil = 'ette' | 'etts'
 const PALETA = {
   primario: '#003366',
   remitida: '#16a34a',
-  verificada: '#2563eb',
+  acta_suscrita: '#2563eb',
   en_revision: '#d97706',
   borrador: '#64748b',
   patrimonio: '#0d9488',
@@ -82,7 +82,7 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
       const deps = dependencias.filter((d) => d.nivel === nivel)
       const total = deps.length
       const remitidas = deps.filter((d) => fueRemitida(d.estado_entrega)).length
-      const aceptadas = deps.filter((d) => estaEnFirma(d.estado_entrega)).length
+      const aceptadas = deps.filter((d) => d.estado_entrega === 'acta_suscrita').length
       const porRevisar = deps.filter((d) => d.estado_entrega === 'en_revision').length
       const pendientes = deps.filter(
         (d) => d.estado_entrega === 'borrador',
@@ -119,8 +119,8 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
     // Agrupación para el velocímetro / gauge semicircular
     const gaugeData = [
       { name: 'Remitidas', value: metricas.remitidas, fill: PALETA.remitida },
-      { name: 'Aceptadas (a firma)', value: metricas.verificadas, fill: PALETA.verificada },
-      { name: 'Por revisar', value: metricas.en_revision, fill: PALETA.en_revision },
+      { name: 'Acta suscrita', value: metricas.acta_suscrita, fill: PALETA.acta_suscrita },
+      { name: 'En revisión y firma', value: metricas.en_revision, fill: PALETA.en_revision },
       { name: 'En Preparación', value: metricas.borrador, fill: '#cbd5e1' },
     ]
 
@@ -240,7 +240,7 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             {perfil === 'ette'
               ? 'Análisis analítico del cumplimiento por dependencia, avance patrimonial y gestión de delegados.'
-              : 'Seguimiento de las entregas presentadas, aceptadas y remitidas, y de las observaciones del coordinador.'}
+              : 'Seguimiento de las entregas en revisión y firma, suscritas y remitidas, y de las observaciones del coordinador.'}
           </p>
         </div>
 
@@ -331,20 +331,20 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
           </CardContent>
         </Card>
 
-        {/* Aceptadas (a firma) */}
+        {/* Acta suscrita */}
         <Card className="border shadow-xs bg-card">
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-nota font-bold uppercase tracking-wider">Aceptadas (a firma)</span>
+              <span className="text-nota font-bold uppercase tracking-wider">Acta suscrita</span>
               <Send className="h-4 w-4 text-blue-600" />
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-extrabold text-blue-600 font-mono">
-                {metricas.verificadas}
+                {metricas.acta_suscrita}
               </span>
               <span className="text-mini text-muted-foreground">
                 {metricas.total_dependencias > 0
-                  ? Math.round((metricas.verificadas / metricas.total_dependencias) * 100)
+                  ? Math.round((metricas.acta_suscrita / metricas.total_dependencias) * 100)
                   : 0}%
               </span>
             </div>
@@ -354,11 +354,11 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
           </CardContent>
         </Card>
 
-        {/* Por revisar / Observaciones */}
+        {/* En revisión y firma / Observaciones */}
         <Card className="border shadow-xs bg-card">
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-nota font-bold uppercase tracking-wider">Por revisar</span>
+              <span className="text-nota font-bold uppercase tracking-wider">En revisión y firma</span>
               <AlertCircle className="h-4 w-4 text-amber-600" />
             </div>
             <div className="mt-2 flex items-baseline gap-2">
@@ -370,7 +370,7 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
               </span>
             </div>
             <p className="mt-1 text-microdato text-amber-700 font-medium">
-              Presentadas, esperan aceptación del coordinador
+              Cerradas, en revisión y firma con el coordinador
             </p>
           </CardContent>
         </Card>
@@ -462,14 +462,14 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
                 <div className="flex items-center justify-between p-1.5 rounded bg-blue-50/60 border border-blue-100">
                   <span className="flex items-center gap-1.5 text-blue-800 font-medium text-nota">
                     <span className="h-2 w-2 rounded-full bg-blue-600" />
-                    Aceptadas (a firma)
+                    Acta suscrita
                   </span>
-                  <span className="font-mono font-bold text-blue-700">{metricas.verificadas}</span>
+                  <span className="font-mono font-bold text-blue-700">{metricas.acta_suscrita}</span>
                 </div>
                 <div className="flex items-center justify-between p-1.5 rounded bg-amber-50/60 border border-amber-100">
                   <span className="flex items-center gap-1.5 text-amber-800 font-medium text-nota">
                     <span className="h-2 w-2 rounded-full bg-amber-600" />
-                    Por revisar
+                    En revisión y firma
                   </span>
                   <span className="font-mono font-bold text-amber-700">{metricas.en_revision}</span>
                 </div>
@@ -518,18 +518,18 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
                     <div
                       style={{ width: `${item.total > 0 ? (item.aceptadas / item.total) * 100 : 0}%` }}
                       className="bg-blue-600 h-full transition-all"
-                      title={`Aceptadas (a firma): ${item.aceptadas}`}
+                      title={`Acta suscrita: ${item.aceptadas}`}
                     />
                     <div
                       style={{ width: `${item.total > 0 ? (item.porRevisar / item.total) * 100 : 0}%` }}
                       className="bg-amber-500 h-full transition-all"
-                      title={`Por revisar: ${item.porRevisar}`}
+                      title={`En revisión y firma: ${item.porRevisar}`}
                     />
                   </div>
                 </div>
               ))}
               <p className="text-microdato text-muted-foreground pt-1">
-                Verde: Remitidas · Azul: Aceptadas (a firma) · Ámbar: Por revisar
+                Verde: Remitidas · Azul: Acta suscrita · Ámbar: En revisión y firma
               </p>
             </CardContent>
           </Card>
@@ -606,15 +606,15 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
                     <Bar
                       yAxisId="left"
                       dataKey="aceptadas"
-                      name="Aceptadas (a firma)"
-                      fill={PALETA.verificada}
+                      name="Acta suscrita"
+                      fill={PALETA.acta_suscrita}
                       radius={[4, 4, 0, 0]}
                       barSize={22}
                     />
                     <Bar
                       yAxisId="left"
                       dataKey="porRevisar"
-                      name="Por revisar"
+                      name="En revisión y firma"
                       fill={PALETA.en_revision}
                       radius={[4, 4, 0, 0]}
                       barSize={22}
@@ -720,12 +720,12 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
           SECCIÓN INFERIOR: BANDEJAS PRIORITARIAS Y DETALLE
           ======================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* TABLA 1: Dependencias que Requieren Seguimiento / Por revisar */}
+        {/* TABLA 1: Dependencias que Requieren Seguimiento / En revisión y firma */}
         <Card className="border shadow-xs">
           <CardHeader className="py-2.5 px-4 border-b border-border bg-muted flex flex-row items-center justify-between">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <span>Centros de costo por revisar o con observaciones ({dependenciasCriticas.length})</span>
+              <span>Centros de costo en revisión y firma o con observaciones ({dependenciasCriticas.length})</span>
             </CardTitle>
             <Link
               to="/observaciones"
@@ -738,7 +738,7 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
             {dependenciasCriticas.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground text-xs">
                 <CheckCircle2 className="mx-auto h-7 w-7 text-emerald-600 mb-1.5" />
-                No hay centros de costo por revisar ni con observaciones.
+                No hay centros de costo en revisión y firma ni con observaciones.
               </div>
             ) : (
               <div className="divide-y divide-border overflow-x-auto">
@@ -773,15 +773,15 @@ export function EquipoDashboard({ perfil }: { perfil: Perfil }) {
                             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-microdato font-semibold ${
                               dep.estado_entrega === 'en_revision'
                                 ? 'bg-amber-100 text-amber-800'
-                                : estaEnFirma(dep.estado_entrega)
+                                : dep.estado_entrega === 'acta_suscrita'
                                 ? 'bg-blue-100 text-blue-800'
                                 : 'bg-slate-100 text-slate-700'
                             }`}
                           >
                             {dep.estado_entrega === 'en_revision'
-                              ? 'Por revisar'
-                              : estaEnFirma(dep.estado_entrega)
-                              ? 'Aceptada'
+                              ? 'En revisión y firma'
+                              : dep.estado_entrega === 'acta_suscrita'
+                              ? 'Acta suscrita'
                               : 'Borrador'}
                           </span>
                         </td>

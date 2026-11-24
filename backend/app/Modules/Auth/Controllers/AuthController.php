@@ -75,6 +75,7 @@ class AuthController extends Controller
             'email' => $usuario->email,
             'activo' => $usuario->activo,
             'es_global' => $usuario->tieneAmbitoGlobal(),
+            'modulos' => config('modulos'),
             'dependencias_ambito' => $usuario->dependenciasEnAmbito(),
             'roles' => $usuario->asignacionesRol->map(fn ($a) => [
                 'rol' => $a->rol->value,

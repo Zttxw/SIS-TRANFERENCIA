@@ -18,8 +18,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Integridad del flujo (RN-13, D-07): desde que la entrega se presenta al
- * coordinador, sus anexos quedan congelados (409); no hay devolución.
+ * Integridad del flujo (RN-13, D-07): desde que la entrega se cierra para la
+ * revisión y firma con el coordinador, sus anexos quedan congelados (409); no
+ * hay devolución.
  */
 class BloqueoEdicionTrasRemitirTest extends TestCase
 {
@@ -107,13 +108,13 @@ class BloqueoEdicionTrasRemitirTest extends TestCase
     public static function estadosCongelados(): array
     {
         return [
-            'en revisión' => [EstadoEntrega::EN_REVISION],
-            'verificada' => [EstadoEntrega::VERIFICADA],
+            'en revisión y firma' => [EstadoEntrega::EN_REVISION],
+            'acta suscrita' => [EstadoEntrega::ACTA_SUSCRITA],
         ];
     }
 
     #[DataProvider('estadosCongelados')]
-    public function test_presentada_a_revision_o_verificada_tambien_bloquea(EstadoEntrega $estado): void
+    public function test_cerrada_para_firma_o_suscrita_tambien_bloquea(EstadoEntrega $estado): void
     {
         $this->actuarComo(Rol::SERVIDOR, $this->dep);
         $this->crearEntrega($estado);

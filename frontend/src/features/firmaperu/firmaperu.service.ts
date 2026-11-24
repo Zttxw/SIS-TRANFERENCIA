@@ -1,7 +1,7 @@
 import { api } from '@/lib/api'
 import { descargarArchivo } from '@/lib/descargas'
 import type { ApiSuccess } from '@/types/api'
-import type { EstadoFirma, PreparacionFirma, SesionFirma, TipoDocumentoFirma, RequisitosRemision } from './firmaperu.types'
+import type { EstadoFirma, LadoFirma, PreparacionFirma, SesionFirma, TipoDocumentoFirma, RequisitosRemision } from './firmaperu.types'
 
 export const firmaperuService = {
   async previsualizar(tipo: TipoDocumentoFirma, dependenciaId: number, signal: AbortSignal, soloGenerado = false) {
@@ -15,12 +15,16 @@ export const firmaperuService = {
     const res = await api.get<ApiSuccess<RequisitosRemision>>(`/firmaperu/requisitos-remision/${dependenciaId}`, { signal, timeout: 60000 })
     return res.data.data
   },
-  /** Sin previo, el backend agrega la firma sobre la cadena vigente del documento (D-06). */
-  async preparar(tipo: TipoDocumentoFirma, dependenciaId: number, signal: AbortSignal, motivoSuplencia?: string) {
+  /**
+   * Prepara la firma del lado indicado. La del lado ETTE se emite a nombre y DNI
+   * del coordinador (o titular suplente): Firma Perú solo acepta su certificado.
+   * Sin previo, el backend agrega la firma sobre la cadena vigente (D-06).
+   */
+  async preparar(tipo: TipoDocumentoFirma, dependenciaId: number, lado: LadoFirma, signal: AbortSignal) {
     const res = await api.post<ApiSuccess<PreparacionFirma>>('/firmaperu/preparar', {
       tipo_documento: tipo,
       dependencia_id: dependenciaId,
-      motivo_suplencia: motivoSuplencia,
+      lado,
     }, { signal, timeout: 60000 })
     return res.data.data
   },
@@ -48,14 +52,13 @@ export const firmaperuService = {
       { tipo_documento: tipo, dependencia_id: dependenciaId, solo_generado: 1 }, `Generado-${tipo}.pdf`)
   },
   /**
-   * Firma manuscrita del lado ETTE (D-06): el PDF generado firmado a mano y
-   * escaneado. El responsable firma digitalmente encima.
+   * Firma manuscrita del lado ETTE (D-06): el responsable sube el PDF generado
+   * que el coordinador firmó a mano. Luego firma digitalmente encima.
    */
-  async subirFirmaManuscrita(tipo: TipoDocumentoFirma, dependenciaId: number, archivo: File, motivoSuplencia?: string) {
+  async subirFirmaManuscrita(tipo: TipoDocumentoFirma, dependenciaId: number, archivo: File) {
     const form = new FormData()
     form.append('tipo_documento', tipo)
     form.append('dependencia_id', String(dependenciaId))
-    if (motivoSuplencia) form.append('motivo_suplencia', motivoSuplencia)
     form.append('signed_file', archivo)
     const res = await api.post<ApiSuccess<{ sesion_id: string; estado: string }>>('/firmaperu/subir-manual', form, { timeout: 60000 })
     return res.data.data

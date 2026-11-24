@@ -10,7 +10,7 @@ namespace App\Support\Enums;
  *
  * - `ninguna`: actividades informativas (acreditación de coordinadores,
  *   reunión de coordinación). No bloquean.
- * - `verificacion` (actividad 3): presentar al coordinador y aceptar.
+ * - `verificacion` (actividad 3): cerrar la entrega y pasarla a firma.
  * - `acta` (actividad 4): firmar los anexos y remitir.
  * - `remision`: remitir.
  */
@@ -36,7 +36,7 @@ enum OperacionCronograma: string
     {
         return match ($this) {
             self::NINGUNA => [],
-            self::VERIFICACION => [AccionPlazo::PRESENTAR, AccionPlazo::VERIFICAR],
+            self::VERIFICACION => [AccionPlazo::PRESENTAR],
             self::ACTA => [AccionPlazo::FIRMAR, AccionPlazo::REMITIR],
             self::REMISION => [AccionPlazo::REMITIR],
         };

@@ -24,7 +24,7 @@ export const observacionesService = {
     return res.data.data
   },
 
-  /** El coordinador retira su observación antes de aceptar la entrega. */
+  /** El responsable retira una observación del coordinador antes de que se firme el acta. */
   async retirar(id: number): Promise<Observacion> {
     const res = await api.post<ApiSuccess<Observacion>>(`/observaciones/${id}/retirar`)
     return res.data.data

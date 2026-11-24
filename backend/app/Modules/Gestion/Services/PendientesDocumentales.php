@@ -12,7 +12,9 @@ use Illuminate\Support\Collection;
 /**
  * Lee en vivo los documentos pendientes de un CC (los ingeridos del SGD y los
  * registrados a mano) y los convierte en filas de la sección IV del Anexo 02
- * (D-09), con las mismas columnas que la entrada libre del informe.
+ * (D-09), con las mismas columnas que la entrada libre del informe. Con el
+ * módulo apagado (`modulos.documentos_pendientes`) no devuelve filas, así
+ * tampoco se congelan al presentar la entrega.
  */
 class PendientesDocumentales
 {
@@ -21,6 +23,10 @@ class PendientesDocumentales
      */
     public function filas(int $dependenciaId, int $procesoId): array
     {
+        if (! config('modulos.documentos_pendientes')) {
+            return [];
+        }
+
         $estadosSgd = EstadoSgd::query()->recepcion()->pluck('descripcion', 'codigo');
 
         return DocumentoPendiente::query()

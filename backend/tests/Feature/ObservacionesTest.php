@@ -11,6 +11,7 @@ use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\Observacion;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Modules\Transferencia\Services\SuscripcionEntrega;
 use App\Support\Enums\CalidadEtte;
 use App\Support\Enums\EstadoEntrega;
 use App\Support\Enums\EstadoObservacion;
@@ -18,14 +19,17 @@ use App\Support\Enums\Rol;
 use Database\Seeders\RolesPermisosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Mockery\MockInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\PreparaEntregas;
 use Tests\TestCase;
 
 /**
- * Observaciones del coordinador ETTE (D-07): constancia sin subsanación. Se
- * registran sobre una fila o el anexo completo mientras la entrega está
- * presentada y sin aceptar, y no cambian su estado.
+ * Observaciones del coordinador ETTE (D-07): constancia sin subsanación. Las
+ * registra el responsable del CC en su sesión, durante la revisión presencial,
+ * a nombre del coordinador; se admiten sobre una fila o el anexo completo
+ * mientras la entrega está en revisión y el acta sin firmas, y no cambian su
+ * estado.
  */
 class ObservacionesTest extends TestCase
 {
@@ -37,6 +41,8 @@ class ObservacionesTest extends TestCase
 
     private Dependencia $hija;
 
+    private User $coordinador;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -47,9 +53,10 @@ class ObservacionesTest extends TestCase
             'nivel' => 2,
         ]);
         $this->hija = Dependencia::factory()->hijaDe($this->padre)->create();
+        $this->coordinador = $this->usuarioCon(Rol::DELEGADO_ETTE, $this->hija);
     }
 
-    private function actuarComo(Rol $rol, ?Dependencia $dependencia): User
+    private function usuarioCon(Rol $rol, ?Dependencia $dependencia): User
     {
         $usuario = User::factory()->create();
         AsignacionRol::factory()->rol($rol)->create([
@@ -57,6 +64,13 @@ class ObservacionesTest extends TestCase
             'proceso_transferencia_id' => $this->proceso->id,
             'dependencia_id' => $dependencia?->id,
         ]);
+
+        return $usuario;
+    }
+
+    private function actuarComo(Rol $rol, ?Dependencia $dependencia): User
+    {
+        $usuario = $this->usuarioCon($rol, $dependencia);
         Sanctum::actingAs($usuario);
 
         return $usuario;
@@ -79,17 +93,23 @@ class ObservacionesTest extends TestCase
             'proceso_transferencia_id' => $this->proceso->id,
             'dependencia_id' => $dep->id,
             'anexo' => 'gestion',
-            'autor_id' => User::factory()->create()->id,
+            'autor_id' => $this->coordinador->id,
             'descripcion' => 'El informe no detalla los pendientes.',
             'estado' => EstadoObservacion::REGISTRADA,
         ]);
     }
 
-    public function test_coordinador_observa_una_fila_sin_cambiar_el_estado_de_la_entrega(): void
+    /** @return array<string, string> */
+    private function payloadAnexo(): array
+    {
+        return ['anexo' => 'gestion', 'dependencia_id' => $this->hija->id, 'descripcion' => 'El informe no detalla los pendientes.'];
+    }
+
+    public function test_el_responsable_registra_la_observacion_del_coordinador_sobre_una_fila(): void
     {
         $informe = $this->informeDe($this->hija);
         $this->entregaEn($this->hija, EstadoEntrega::EN_REVISION);
-        $this->actuarComo(Rol::DELEGADO_ETTE, $this->hija);
+        $responsable = $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
 
         $this->postJson('/api/observaciones', [
             'anexo' => 'gestion',
@@ -103,15 +123,17 @@ class ObservacionesTest extends TestCase
             'observable_id' => $informe->id,
             'dependencia_id' => $this->hija->id,
             'anexo' => 'gestion',
+            'autor_id' => $this->coordinador->id,
+            'registrada_por_id' => $responsable->id,
             'en_calidad_de' => CalidadEtte::COORDINADOR->value,
         ]);
         $this->assertSame(EstadoEntrega::EN_REVISION, Entrega::where('dependencia_id', $this->hija->id)->value('estado'));
     }
 
-    public function test_coordinador_observa_el_anexo_completo(): void
+    public function test_se_observa_el_anexo_completo(): void
     {
         $this->entregaEn($this->hija, EstadoEntrega::EN_REVISION);
-        $this->actuarComo(Rol::DELEGADO_ETTE, $this->hija);
+        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
 
         $this->postJson('/api/observaciones', [
             'anexo' => 'acervo',
@@ -126,93 +148,76 @@ class ObservacionesTest extends TestCase
     public static function estadosNoObservables(): array
     {
         return [
-            'sin presentar' => [null],
+            'sin cerrar' => [null],
             'borrador' => [EstadoEntrega::BORRADOR],
-            'aceptada' => [EstadoEntrega::VERIFICADA],
+            'acta suscrita' => [EstadoEntrega::ACTA_SUSCRITA],
             'remitida' => [EstadoEntrega::REMITIDA],
         ];
     }
 
     #[DataProvider('estadosNoObservables')]
-    public function test_solo_se_observa_una_entrega_presentada_y_sin_aceptar(?EstadoEntrega $estado): void
+    public function test_solo_se_observa_una_entrega_en_revision(?EstadoEntrega $estado): void
     {
         if ($estado !== null) {
             $this->entregaEn($this->hija, $estado);
         }
-        $this->actuarComo(Rol::DELEGADO_ETTE, $this->hija);
+        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
 
-        $this->postJson('/api/observaciones', [
-            'anexo' => 'gestion',
-            'dependencia_id' => $this->hija->id,
-            'descripcion' => 'Observación fuera de revisión.',
-        ])->assertConflict();
+        $this->postJson('/api/observaciones', $this->payloadAnexo())->assertConflict();
 
         $this->assertDatabaseCount('observaciones', 0);
     }
 
-    public function test_coordinador_no_observa_fuera_del_cc_asignado(): void
+    public function test_con_el_acta_firmada_ya_no_se_observa(): void
     {
         $this->entregaEn($this->hija, EstadoEntrega::EN_REVISION);
-        $this->actuarComo(Rol::DELEGADO_ETTE, $this->padre);
+        $this->partialMock(SuscripcionEntrega::class, fn (MockInterface $mock) => $mock
+            ->shouldReceive('requisitosRemision')->andReturn(['documentos' => [
+                'anexo07' => ['entidad' => ['firmante' => 'Responsable'], 'ette' => null],
+            ]]));
+        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
 
-        $this->postJson('/api/observaciones', [
-            'anexo' => 'gestion',
-            'dependencia_id' => $this->hija->id,
-            'descripcion' => 'Observación fuera de ámbito.',
-        ])->assertForbidden();
+        $this->postJson('/api/observaciones', $this->payloadAnexo())->assertConflict()
+            ->assertJsonPath('message', 'El acta ya tiene firmas: las observaciones del coordinador quedaron fijadas en ella.');
     }
 
-    public function test_titular_ette_observa_en_suplencia_solo_con_motivo(): void
+    public function test_el_responsable_del_cc_padre_no_observa_a_sus_hijos(): void
     {
-        $informe = $this->informeDe($this->hija);
         $this->entregaEn($this->hija, EstadoEntrega::EN_REVISION);
-        $titular = $this->actuarComo(Rol::ETTE, null);
-        $payload = ['anexo' => 'gestion', 'observable_id' => $informe->id, 'descripcion' => 'Falta el detalle de pendientes.'];
+        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->padre);
 
-        $this->postJson('/api/observaciones', $payload)
-            ->assertStatus(422)->assertJsonValidationErrors('motivo_suplencia');
-
-        $this->postJson('/api/observaciones', [...$payload, 'motivo_suplencia' => 'Coordinador con descanso médico.'])
-            ->assertCreated();
-
-        $this->assertDatabaseHas('observaciones', [
-            'observable_id' => $informe->id,
-            'autor_id' => $titular->id,
-            'en_calidad_de' => CalidadEtte::TITULAR_SUPLENTE->value,
-            'motivo_suplencia' => 'Coordinador con descanso médico.',
-        ]);
+        $this->postJson('/api/observaciones', $this->payloadAnexo())->assertForbidden();
     }
 
-    public function test_responsable_y_servidor_no_registran_observaciones(): void
+    public function test_coordinador_y_servidor_no_registran_desde_su_cuenta(): void
     {
         $this->entregaEn($this->hija, EstadoEntrega::EN_REVISION);
-        $payload = ['anexo' => 'gestion', 'dependencia_id' => $this->hija->id, 'descripcion' => 'No tiene permiso para observar.'];
 
         $this->actuarComo(Rol::SERVIDOR, $this->hija);
-        $this->postJson('/api/observaciones', $payload)->assertForbidden();
+        $this->postJson('/api/observaciones', $this->payloadAnexo())->assertForbidden();
 
-        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
-        $this->postJson('/api/observaciones', $payload)->assertForbidden();
+        Sanctum::actingAs($this->coordinador);
+        $this->postJson('/api/observaciones', $this->payloadAnexo())->assertForbidden();
     }
 
-    public function test_el_coordinador_retira_su_observacion_antes_de_aceptar(): void
+    public function test_el_responsable_retira_la_observacion_durante_la_revision(): void
     {
         $this->entregaEn($this->hija, EstadoEntrega::EN_REVISION);
         $observacion = $this->observacionDe($this->hija);
 
-        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
+        Sanctum::actingAs($this->coordinador);
         $this->postJson("/api/observaciones/{$observacion->id}/retirar")->assertForbidden();
 
-        $this->actuarComo(Rol::DELEGADO_ETTE, $this->hija);
+        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
         $this->postJson("/api/observaciones/{$observacion->id}/retirar")
             ->assertOk()->assertJsonPath('data.estado', EstadoObservacion::RETIRADA->value);
     }
 
-    public function test_tras_aceptar_la_observacion_queda_como_constancia(): void
+    public function test_suscrita_el_acta_la_observacion_queda_como_constancia(): void
     {
-        $this->entregaEn($this->hija, EstadoEntrega::VERIFICADA);
+        $this->entregaEn($this->hija, EstadoEntrega::ACTA_SUSCRITA);
         $observacion = $this->observacionDe($this->hija);
-        $this->actuarComo(Rol::DELEGADO_ETTE, $this->hija);
+        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
 
         $this->postJson("/api/observaciones/{$observacion->id}/retirar")->assertConflict();
 

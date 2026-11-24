@@ -72,12 +72,14 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
         return $usuario;
     }
 
-    private function preparar(string $tipo = 'anexo07', ?string $previo = null): array
+    /** Prepara la firma en la sesión del responsable; el lado ETTE lo firma el coordinador presente. */
+    private function preparar(string $tipo = 'anexo07', ?string $previo = null, string $lado = 'entidad'): array
     {
-        if (! $previo && auth()->user()->is($this->responsable)) {
+        Sanctum::actingAs($this->responsable);
+        if (! $previo && $lado === 'entidad') {
             $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => $tipo, 'dependencia_id' => $this->dep->id])->assertCreated();
         }
-        $preparacion = $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => $tipo,
+        $preparacion = $this->postJson('/api/firmaperu/preparar', ['lado' => $lado, 'tipo_documento' => $tipo,
             'dependencia_id' => $this->dep->id, 'documento_previo_id' => $previo])->assertCreated()->json('data');
         $r = $this->post('/api/firmaperu/param', ['param_token' => $preparacion['param_token']])->assertOk();
 
@@ -98,12 +100,11 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
         if (FirmaSesion::where('tipo_documento', 'anexo07')->where('dependencia_id', $this->dep->id)->where('estado', 'firmada')->exists()) {
             $documentos = app(SuscripcionEntrega::class)->requisitosRemision($this->dep->id, $this->responsable)['documentos'];
             foreach ($documentos as $tipo => $estado) {
-                foreach (['entidad' => $this->responsable, 'ette' => $this->coordinador] as $lado => $firmante) {
+                foreach (['entidad', 'ette'] as $lado) {
                     // El acta solo se completa con la firma ETTE sobre la del responsable vigente.
                     $acta = $tipo === 'anexo07' && ($lado === 'entidad' || $estado['entidad'] === null);
                     if ($estado[$lado] === null && ! $acta) {
-                        Sanctum::actingAs($firmante);
-                        $this->recibir($this->preparar($tipo));
+                        $this->recibir($this->preparar($tipo, lado: $lado));
                     }
                 }
             }
@@ -125,8 +126,7 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
         app(FirmaperuRegistroService::class)->registrar($sesion);
         $this->assertDatabaseCount('firmas_anexo', 1);
 
-        Sanctum::actingAs($this->coordinador);
-        $ette = $this->recibir($this->preparar());
+        $ette = $this->recibir($this->preparar(lado: 'ette'));
         $this->assertSame($sesion->id, $ette->documento_previo_id, 'La firma ETTE se agrega sobre el PDF ya firmado.');
         $this->assertDatabaseHas('firmas_anexo', ['firma_sesion_id' => $ette->id, 'lado' => 'ette', 'en_calidad_de' => 'coordinador']);
         $this->assertSame('suscrita', $acta->fresh()->estado);
@@ -148,14 +148,14 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
         $this->remitir()->assertOk();
     }
 
-    public function test_un_solo_lado_no_basta_y_el_coordinador_solo_firma_su_cc(): void
+    public function test_un_solo_lado_no_basta_y_el_responsable_solo_opera_su_cc(): void
     {
         $primera = $this->recibir($this->preparar());
-        Sanctum::actingAs($this->coordinador);
-        $segunda = $this->recibir($this->preparar());
-        $this->assertDatabaseHas('firmas_anexo', ['firma_sesion_id' => $segunda->id, 'estado' => 'firmada', 'lado' => 'ette']);
+        $segunda = $this->recibir($this->preparar(lado: 'ette'));
+        $this->assertDatabaseHas('firmas_anexo', ['firma_sesion_id' => $segunda->id, 'estado' => 'firmada', 'lado' => 'ette',
+            'firmante_id' => $this->coordinador->id]);
         $otra = Dependencia::factory()->create(['proceso_transferencia_id' => $this->dep->proceso_transferencia_id]);
-        $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo07', 'dependencia_id' => $otra->id])->assertForbidden();
+        $this->postJson('/api/firmaperu/preparar', ['lado' => 'ette', 'tipo_documento' => 'anexo07', 'dependencia_id' => $otra->id])->assertForbidden();
 
         FirmaAnexo::where('firma_sesion_id', $primera->id)->update(['estado' => 'cancelada']);
         $estado = app(CadenaFirmas::class)->estado($this->dep->proceso_transferencia_id, $this->dep->id, 'anexo07', $this->responsable);
@@ -173,7 +173,7 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
         $primera = $this->recibir($this->preparar());
         $serie->update(['serie_documental' => 'Contenido corregido, con la misma presencia de anexos']);
         $this->remitir()->assertConflict();
-        $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo07', 'dependencia_id' => $this->dep->id,
+        $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'anexo07', 'dependencia_id' => $this->dep->id,
             'documento_previo_id' => $primera->id])->assertConflict();
         $segunda = $this->recibir($this->preparar());
         $this->assertSame(2, $segunda->documento->version);

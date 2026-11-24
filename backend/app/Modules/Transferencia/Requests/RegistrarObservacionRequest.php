@@ -11,7 +11,8 @@ use Illuminate\Validation\Rule;
 /**
  * Validación del registro de una observación. Se observa una fila del anexo
  * (`observable_id`) o el anexo completo de un CC (`dependencia_id`). El ámbito
- * y la calidad ETTE se verifican en el controller.
+ * y que quien la registra sea el responsable del CC se verifican en el
+ * controller; el autor es el firmante ETTE designado.
  */
 class RegistrarObservacionRequest extends FormRequest
 {
@@ -27,7 +28,6 @@ class RegistrarObservacionRequest extends FormRequest
             'observable_id' => ['nullable', 'integer', 'min:1', 'required_without:dependencia_id'],
             'dependencia_id' => ['nullable', 'integer', 'required_without:observable_id', 'exists:dependencias,id,es_centro_costo,1'],
             'descripcion' => ['required', 'string', 'min:5'],
-            'motivo_suplencia' => ['nullable', 'string', 'max:500'],
         ];
     }
 }

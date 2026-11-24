@@ -147,7 +147,7 @@ class FirmaAnexo01CierreTest extends TestCase
 
         $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo01', 'dependencia_id' => $this->raiz->id])
             ->assertUnprocessable();
-        $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo01', 'dependencia_id' => $this->raiz->id])
+        $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'anexo01', 'dependencia_id' => $this->raiz->id])
             ->assertUnprocessable();
     }
 }

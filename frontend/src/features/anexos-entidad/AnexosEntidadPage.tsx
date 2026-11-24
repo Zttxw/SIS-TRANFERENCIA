@@ -3,9 +3,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronRight,
-  ClipboardCheck,
   Home,
-  MessageSquarePlus,
   MessageSquareText,
   RefreshCw,
   Search,
@@ -19,23 +17,9 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/auth/hooks'
 import { useTableroOperativo } from '@/features/dashboard/use-dashboard'
 import { DocumentoFirmaDetalle } from '@/features/firmaperu/DocumentoFirmaDetalle'
-import { BotonFirmaPeru } from '@/features/firmaperu/BotonFirmaPeru'
-import { FirmaManuscritaEtte } from '@/features/firmaperu/FirmaManuscritaEtte'
-import { AceptarEntregaDialog } from '@/features/entregas/AceptarEntregaDialog'
-import { RegistrarObservacionDialog } from '@/features/observaciones/RegistrarObservacionDialog'
 import { useObservaciones } from '@/features/observaciones/use-observaciones'
-import type { TipoDocumentoFirma } from '@/features/firmaperu/firmaperu.types'
-import { ANEXOS_OBSERVABLES_CONFIG, type ClaveAnexoObservable } from '@/types/observaciones'
+import { ANEXOS_OBSERVABLES_CONFIG } from '@/types/observaciones'
 import { estaEnFirma, type DependenciaSemaforoItem } from '@/types/transferencia'
-
-/** Anexo observable por cada documento de la carpeta (el 01 y el 07 no se observan). */
-const ANEXO_OBSERVABLE: Partial<Record<TipoDocumentoFirma, ClaveAnexoObservable>> = {
-  anexo02: 'gestion',
-  anexo03: 'acervo',
-  anexo04: 'patrimonio',
-  anexo05: 'personal',
-  anexo06: 'nopatrimonial',
-}
 
 import {
   anexosDeLaDependencia,
@@ -65,8 +49,8 @@ function perfilDe(roles: Set<string>): Perfil {
 /**
  * Módulo "Anexos de la Entidad" para el portal ETTE/ETTS: un explorador de
  * carpetas SVG donde cada dependencia es una carpeta y sus anexos son hojas de
- * papel. El color comunica el estado: verde = remitida, ámbar = presentada al
- * coordinador (por revisar o aceptada), gris = en preparación. Reutiliza el
+ * papel. El color comunica el estado: verde = remitida, ámbar = en revisión y
+ * firma con el coordinador, gris = en preparación. Reutiliza el
  * tablero operativo.
  */
 export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil } = {}) {
@@ -74,7 +58,7 @@ export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil }
   const { data, isLoading, error, refetch, isFetching } = useTableroOperativo()
 
   const [busqueda, setBusqueda] = useState('')
-  const [soloRemitidas, setSoloRemitidas] = useState<'todas' | 'por_revisar' | 'remitidas' | 'pendientes'>('todas')
+  const [soloRemitidas, setSoloRemitidas] = useState<'todas' | 'en_firma' | 'remitidas' | 'pendientes'>('todas')
   const [abierta, setAbierta] = useState<DependenciaSemaforoItem | null>(null)
 
   const roles = new Set(usuario?.roles.map(({ rol }) => rol) ?? [])
@@ -96,8 +80,8 @@ export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil }
       const remitida = estaRemitida(d.estado_entrega)
       const coincideEstado =
         soloRemitidas === 'todas' ||
-        (soloRemitidas === 'por_revisar'
-          ? d.estado_entrega === 'en_revision'
+        (soloRemitidas === 'en_firma'
+          ? estaEnFirma(d.estado_entrega)
           : soloRemitidas === 'remitidas'
             ? remitida
             : !remitida)
@@ -200,18 +184,18 @@ export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil }
             <p className="mt-1.5 max-w-2xl text-xs sm:text-sm text-muted-foreground">
               {esDelegado ? (
                 <>
-                  Revise los centros de costo que tiene asignados. Cuando el responsable le
-                  presenta la entrega (<strong className="text-warning-fg">carpetas ámbar</strong>),
-                  revise sus anexos, registre las observaciones que correspondan como constancia
-                  y acepte la entrega; luego se firman los anexos. No hay devolución para corregir.
-                  Las <strong className="text-success-fg">verdes ya remitieron</strong>.
+                  Consulte los centros de costo que tiene asignados. La revisión y la firma se
+                  hacen presencialmente en la sesión del responsable del CC: allí se registran sus
+                  observaciones y usted firma con su certificado, lo que aprueba cada documento.
+                  Las <strong className="text-warning-fg">carpetas ámbar</strong> están en revisión y
+                  firma; las <strong className="text-success-fg">verdes ya remitieron</strong>.
                 </>
               ) : (
                 <>
                   Cada centro de costo es una carpeta y cada anexo una hoja de su interior.
                   Las carpetas <strong className="text-success-fg">verdes ya remitieron</strong> su
-                  entrega; las <strong className="text-warning-fg">ámbar</strong> están presentadas al
-                  coordinador; las <strong className="text-muted-foreground">grises</strong> siguen en preparación.
+                  entrega; las <strong className="text-warning-fg">ámbar</strong> están en revisión y firma
+                  con el coordinador; las <strong className="text-muted-foreground">grises</strong> siguen en preparación.
                 </>
               )}
             </p>
@@ -272,7 +256,7 @@ export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil }
           <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
             {/* Chips de filtro por remisión */}
             <div className="flex items-center gap-1.5">
-              {(['todas', 'por_revisar', 'remitidas', 'pendientes'] as const).map((f) => (
+              {(['todas', 'en_firma', 'remitidas', 'pendientes'] as const).map((f) => (
                 <button
                   key={f}
                   type="button"
@@ -290,11 +274,11 @@ export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil }
                 >
                   {f === 'remitidas' && <span className="h-2 w-2 rounded-full bg-success" />}
                   {f === 'pendientes' && <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />}
-                  {f === 'por_revisar' && <span className="h-2 w-2 rounded-full bg-warning" />}
+                  {f === 'en_firma' && <span className="h-2 w-2 rounded-full bg-warning" />}
                   {f === 'todas'
                     ? 'Todas'
-                    : f === 'por_revisar'
-                      ? 'Por revisar'
+                    : f === 'en_firma'
+                      ? 'En revisión y firma'
                       : f === 'remitidas'
                         ? 'Remitidas'
                         : 'Sin remitir'}
@@ -417,10 +401,10 @@ function TarjetaCarpeta({
         {remitida ? <CheckCircle2 className="h-3 w-3" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
         {remitida
           ? 'Remitida'
-          : dependencia.estado_entrega === 'en_revision'
-            ? 'Por revisar'
+          : dependencia.estado_entrega === 'acta_suscrita'
+            ? 'Acta suscrita'
             : estaEnFirma(dependencia.estado_entrega)
-              ? 'Aceptada'
+              ? 'En revisión y firma'
               : 'En preparación'}
       </span>
 
@@ -456,8 +440,8 @@ function TarjetaCarpeta({
 /**
  * Carpeta abierta: cabecera + anexos como hojas de papel SVG. Cada hoja reutiliza
  * `DocumentoFirmaDetalle` (previsualizar + descargar el PDF oficial, en modo solo
- * lectura). Mientras la entrega está presentada, el lado ETTE (coordinador o
- * titular suplente) registra observaciones por anexo y acepta la entrega (D-07).
+ * lectura) y muestra las observaciones del coordinador como constancia. Es solo
+ * consulta: la revisión y la firma se hacen en la sesión del responsable.
  */
 function CarpetaAbierta({
   dependencia,
@@ -466,21 +450,11 @@ function CarpetaAbierta({
   dependencia: DependenciaSemaforoItem
   onCerrar: () => void
 }) {
-  const { tiene } = useAuth()
   const tono = tonoDeCarpeta(dependencia.estado_entrega)
   const remitida = estaRemitida(dependencia.estado_entrega)
   const anexos = anexosDeLaDependencia(dependencia)
-  const [aceptarAbierto, setAceptarAbierto] = useState(false)
-  const [anexoAObservar, setAnexoAObservar] = useState<ClaveAnexoObservable | null>(null)
   const { data: obsResp } = useObservaciones({ dependencia_id: dependencia.id, estado: 'registrada', per_page: 100 })
   const observaciones = obsResp?.data ?? []
-
-  // El lado ETTE revisa mientras la entrega está presentada y aún sin aceptar.
-  // El backend valida que sea el coordinador del CC o un titular suplente.
-  const enRevision = dependencia.estado_entrega === 'en_revision'
-  const puedeRevisar = enRevision && tiene('entregas.verificar')
-  // Tras la aceptación firma el lado ETTE (coordinador o titular suplente, D-05).
-  const firmaEtte = estaEnFirma(dependencia.estado_entrega) && tiene('firmas.firmar')
 
   return (
     <Card
@@ -526,10 +500,10 @@ function CarpetaAbierta({
               {remitida ? <CheckCircle2 className="h-3 w-3" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
               {remitida
                 ? 'Entrega remitida'
-                : dependencia.estado_entrega === 'en_revision'
-                  ? 'Presentada — por revisar'
+                : dependencia.estado_entrega === 'acta_suscrita'
+                  ? 'Acta suscrita — por remitir'
                   : estaEnFirma(dependencia.estado_entrega)
-                    ? 'Aceptada — a firma'
+                    ? 'En revisión y firma'
                     : 'En preparación por el responsable'}
             </span>
           </div>
@@ -544,28 +518,6 @@ function CarpetaAbierta({
           Volver a las carpetas
         </Button>
       </div>
-
-      {/* Revisión del lado ETTE: observaciones como constancia y aceptación (D-07). */}
-      {puedeRevisar && (
-        <div className="flex flex-col gap-2 border-b border-border bg-warning-soft/60 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-2 text-xs text-warning-fg">
-            <ClipboardCheck className="mt-0.5 h-4 w-4 shrink-0" />
-            <p className="leading-snug">
-              <span className="font-bold">Entrega presentada para su revisión.</span> Revise los anexos;
-              si advierte algo, regístrelo con «Observar» en el anexo (queda como constancia en el acta).
-              Luego acepte la entrega para habilitar la firma.
-            </p>
-          </div>
-          <Button
-            size="sm"
-            onClick={() => setAceptarAbierto(true)}
-            className="h-9 shrink-0 gap-1.5 bg-primary text-xs font-semibold text-white hover:bg-primary-hover cursor-pointer"
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            Aceptar entrega
-          </Button>
-        </div>
-      )}
 
       {/* Hojas de papel (anexos) */}
       <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -611,29 +563,6 @@ function CarpetaAbierta({
                     soloLectura
                   />
 
-                  {puedeRevisar && ANEXO_OBSERVABLE[anexo.tipoFirma] && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setAnexoAObservar(ANEXO_OBSERVABLE[anexo.tipoFirma]!)}
-                      className="h-7 w-full gap-1.5 text-xs"
-                    >
-                      <MessageSquarePlus className="h-3.5 w-3.5" />
-                      Observar
-                    </Button>
-                  )}
-
-                  {/* Firma del lado ETTE: digital (Firma Perú) o manuscrita (D-06).
-                      Excluye el Anexo 01, que el lado ETTE no firma. */}
-                  {firmaEtte && anexo.tipoFirma !== 'anexo01' && (
-                    <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-dashed border-border pt-2">
-                      <span className="mr-auto text-microdato font-semibold uppercase tracking-wide text-muted-foreground">
-                        Firma del coordinador ETTE
-                      </span>
-                      <BotonFirmaPeru tipoDocumento={anexo.tipoFirma} dependenciaId={dependencia.id} compacto />
-                      <FirmaManuscritaEtte tipoDocumento={anexo.tipoFirma} dependenciaId={dependencia.id} />
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -662,21 +591,6 @@ function CarpetaAbierta({
         </div>
       )}
 
-      <AceptarEntregaDialog
-        open={aceptarAbierto}
-        onClose={() => setAceptarAbierto(false)}
-        dependenciaId={dependencia.id}
-        dependenciaNombre={dependencia.nombre}
-        observaciones={observaciones.length}
-      />
-      {anexoAObservar && (
-        <RegistrarObservacionDialog
-          open
-          onClose={() => setAnexoAObservar(null)}
-          dependenciaId={dependencia.id}
-          anexo={anexoAObservar}
-        />
-      )}
     </Card>
   )
 }

@@ -16,9 +16,11 @@ use Throwable;
 
 /**
  * Firma manuscrita del lado ETTE (D-06 a): el coordinador (o el titular
- * suplente) descarga el PDF generado, lo firma a mano y sube el escaneo. El
- * escaneo queda como base de la cadena y el responsable firma digitalmente
- * encima, lo que lo convalida; no se verifica criptográficamente.
+ * suplente) firma a mano el PDF generado y el responsable del CC sube el
+ * escaneo desde su sesión, a nombre del firmante designado. El escaneo queda
+ * como base de la cadena y el responsable firma digitalmente encima, lo que lo
+ * convalida; no se verifica criptográficamente y queda constancia de quién lo
+ * cargó (`operador_id`).
  *
  * Si ya hay una firma digital, la manuscrita la invalidaría: se rechaza y el
  * lado ETTE debe firmar digitalmente (D-06 b).
@@ -33,21 +35,19 @@ class FirmaManuscritaService
         private readonly SuscripcionEntrega $suscripcion,
     ) {}
 
-    public function recibir(User $usuario, string $tipo, int $dependenciaId, UploadedFile $archivo, ?string $motivoSuplencia = null): FirmaSesion
+    public function recibir(User $usuario, string $tipo, int $dependenciaId, UploadedFile $archivo): FirmaSesion
     {
-        abort_unless(preg_match('/^\d{8}$/', (string) $usuario->dni), 422, 'La cuenta debe tener un DNI válido para firmar.');
         $procesoId = ProcesoTransferencia::where('estado', 'abierto')->value('id');
         abort_unless($procesoId, 409, 'No existe un proceso de transferencia abierto.');
 
-        $firmante = $this->firmantes->lado($usuario, $tipo, $dependenciaId, $motivoSuplencia);
-        abort_unless($firmante['lado'] === LadoFirma::ETTE, 403,
-            'El responsable del centro de costo firma digitalmente con Firma Perú.');
+        $firmante = $this->firmantes->firmante($usuario, $tipo, $dependenciaId, LadoFirma::ETTE);
+        FirmaperuSesionService::exigirDniFirmante($firmante['firmante']);
         $this->suscripcion->exigirFirmaHabilitada($dependenciaId);
 
         $documento = $this->registro->documento($usuario, $tipo, $dependenciaId);
         $generado = $this->cadena->generado($procesoId, $dependenciaId, $tipo);
         abort_unless($this->pdf->generadoVigente($generado, $tipo, $dependenciaId, $usuario), 409,
-            'El anexo no tiene un PDF generado vigente para firmar. Pida al responsable que lo genere.');
+            'El anexo no tiene un PDF generado vigente para firmar. Genérelo en «PDF y firma».');
         abort_if($this->cadena->hayFirmaDigitalVigente($documento), 409,
             'Ya existe una firma digital; la firma del coordinador debe ser digital para no invalidarla.');
         $original = Storage::disk('local')->get($generado->pdf_path);
@@ -69,8 +69,9 @@ class FirmaManuscritaService
                     'id' => $id,
                     'proceso_transferencia_id' => $procesoId,
                     'dependencia_id' => $dependenciaId,
-                    'usuario_id' => $usuario->id,
-                    'firmante_dni' => $usuario->dni,
+                    'usuario_id' => $firmante['firmante']->id,
+                    'operador_id' => $usuario->id,
+                    'firmante_dni' => $firmante['firmante']->dni,
                     'tipo_documento' => $tipo,
                     'documento_firma_id' => $documento->id,
                     'lado' => $firmante['lado'],

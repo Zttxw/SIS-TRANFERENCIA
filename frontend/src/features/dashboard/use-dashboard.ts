@@ -21,11 +21,11 @@ export function useEstadoEntrega(dependenciaId: number | null) {
   })
 }
 
-export function useResumenDocumentos(dependenciaId: number | null) {
+export function useResumenDocumentos(dependenciaId: number | null, habilitado = true) {
   return useQuery({
     queryKey: ['documentos-pendientes', 'resumen', dependenciaId],
     queryFn: () => dashboardService.obtenerResumenDocumentos(dependenciaId!),
-    enabled: typeof dependenciaId === 'number' && dependenciaId > 0,
+    enabled: habilitado && typeof dependenciaId === 'number' && dependenciaId > 0,
   })
 }
 

@@ -6,6 +6,7 @@ namespace App\Modules\Transferencia\Services;
 
 use App\Models\User;
 use App\Modules\Acervo\Models\AcervoDocumental;
+use App\Modules\Auth\Services\CoordinacionEtte;
 use App\Modules\Documentos\Models\DocumentoPendiente;
 use App\Modules\Gestion\Models\InformeGestion;
 use App\Modules\NoPatrimonial\Models\BienNoPatrimonial;
@@ -13,7 +14,6 @@ use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Patrimonio\Models\BienPatrimonial;
 use App\Modules\Personal\Models\Personal;
 use App\Modules\Transferencia\Models\Observacion;
-use App\Support\Enums\CalidadEtte;
 use App\Support\Enums\EstadoObservacion;
 use App\Support\Http\ApiResponse;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -22,11 +22,12 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Observaciones del coordinador ETTE (D-07). Son constancia: se registran
- * mientras la entrega está presentada y aún sin aceptar, sobre una fila de un
- * anexo o sobre el anexo completo. No se subsanan, no cambian el estado de la
- * entrega y no impiden aceptarla; figuran en el Acta 07 y en el reporte al
- * comité ETTE. El coordinador puede retirarlas antes de aceptar.
+ * Observaciones del coordinador ETTE (D-07). Son constancia: durante la
+ * revisión presencial, el responsable del CC las registra en su sesión a nombre
+ * del firmante ETTE designado (coordinador o titular suplente), sobre una fila
+ * de un anexo o sobre el anexo completo. No se subsanan ni cambian el estado de
+ * la entrega; figuran en el Acta 07 y en el reporte al comité ETTE. Se
+ * registran y retiran mientras la entrega está en revisión y el acta sin firmas.
  */
 class ObservacionService
 {
@@ -47,6 +48,7 @@ class ObservacionService
 
     public function __construct(
         private readonly RevisionEntregaService $revision,
+        private readonly CoordinacionEtte $coordinacion,
     ) {}
 
     /**
@@ -76,7 +78,7 @@ class ObservacionService
     public function listar(array $filtros = []): LengthAwarePaginator
     {
         $query = Observacion::query()
-            ->with(['autor', 'observable', 'dependencia:id,codigo,nombre'])
+            ->with(['autor', 'registradaPor', 'observable', 'dependencia:id,codigo,nombre'])
             ->orderByDesc('id');
 
         if (! empty($filtros['anexo']) && isset(self::ANEXOS[$filtros['anexo']])) {
@@ -100,22 +102,24 @@ class ObservacionService
     }
 
     /**
-     * Registra una observación del lado ETTE sobre una fila (`$observable`) o
-     * sobre el anexo completo (`$observable` null) mientras la entrega está
-     * presentada y aún sin aceptar.
-     *
-     * @param  array{en_calidad_de: CalidadEtte, motivo_suplencia: ?string}  $calidadEtte
+     * Registra, a nombre del firmante ETTE designado, una observación sobre una
+     * fila (`$observable`) o sobre el anexo completo (`$observable` null).
      */
     public function registrar(
         Dependencia $dependencia,
         string $anexo,
         ?Model $observable,
-        User $autor,
+        User $operador,
         string $descripcion,
-        array $calidadEtte,
     ): Observacion {
-        return DB::transaction(function () use ($dependencia, $anexo, $observable, $autor, $descripcion, $calidadEtte): Observacion {
+        return DB::transaction(function () use ($dependencia, $anexo, $observable, $operador, $descripcion): Observacion {
             $this->revision->exigirEnRevision($dependencia);
+            $this->revision->exigirActaSinFirmas($dependencia, $operador);
+            $ette = $this->coordinacion->firmanteDe($dependencia->id);
+            if ($ette === null) {
+                throw new HttpResponseException(ApiResponse::error(
+                    'El centro de costo no tiene coordinador ETTE vigente ni un titular ETTE designado en suplencia.', 409));
+            }
 
             $observacion = Observacion::create([
                 'proceso_transferencia_id' => $dependencia->proceso_transferencia_id,
@@ -123,25 +127,27 @@ class ObservacionService
                 'anexo' => $anexo,
                 'observable_type' => $observable?->getMorphClass(),
                 'observable_id' => $observable?->getKey(),
-                'autor_id' => $autor->id,
-                'en_calidad_de' => $calidadEtte['en_calidad_de'],
-                'motivo_suplencia' => $calidadEtte['motivo_suplencia'],
+                'autor_id' => $ette['usuario']->id,
+                'registrada_por_id' => $operador->id,
+                'en_calidad_de' => $ette['en_calidad_de'],
+                'motivo_suplencia' => $ette['motivo_suplencia'],
                 'descripcion' => $descripcion,
                 'estado' => EstadoObservacion::REGISTRADA,
             ]);
 
-            return $observacion->load(['autor', 'observable']);
+            return $observacion->load(['autor', 'registradaPor', 'observable']);
         });
     }
 
     /**
-     * Retira una observación registrada (lado ETTE) antes de aceptar la
-     * entrega; después queda como constancia.
+     * Retira una observación registrada mientras la entrega sigue en revisión y
+     * el acta sin firmas; después queda como constancia.
      */
-    public function retirar(Observacion $observacion): Observacion
+    public function retirar(Observacion $observacion, User $operador): Observacion
     {
-        return DB::transaction(function () use ($observacion): Observacion {
+        return DB::transaction(function () use ($observacion, $operador): Observacion {
             $this->revision->exigirEnRevision($observacion->dependencia);
+            $this->revision->exigirActaSinFirmas($observacion->dependencia, $operador);
 
             if ($observacion->estado !== EstadoObservacion::REGISTRADA) {
                 throw new HttpResponseException(ApiResponse::error('La observación ya fue retirada.', 409));
@@ -149,7 +155,7 @@ class ObservacionService
 
             $observacion->update(['estado' => EstadoObservacion::RETIRADA]);
 
-            return $observacion->fresh(['autor', 'observable']);
+            return $observacion->fresh(['autor', 'registradaPor', 'observable']);
         });
     }
 }

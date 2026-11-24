@@ -27,15 +27,13 @@ export const PERMISOS = {
   VerificarBienes: 'bienes.verificar',
   // Flujo jerárquico.
   RemitirEntrega: 'entregas.remitir',
-  // Verificación ETTE y cadena ETTS → ETTE (directiva 2026).
-  VerificarEntrega: 'entregas.verificar',
+  // Cadena ETTS → ETTE (directiva 2026).
   RecibirEntregaEtts: 'entregas.recibir_etts',
   RemitirEntregaEtte: 'entregas.remitir_ette',
   RecibirEntregaEtte: 'entregas.recibir_ette',
-  // Firma y gestión de coordinadores ETTE.
-  FirmarAnexos: 'firmas.firmar',
+  // Gestión de coordinadores ETTE.
   GestionarDelegados: 'delegados.gestionar',
-  // Observaciones.
+  // Observaciones del coordinador: las registra el responsable en su sesión.
   RegistrarObservaciones: 'observaciones.registrar',
   // Actas, expediente, reportes.
   GenerarActas: 'actas.generar',
@@ -89,6 +87,7 @@ const PERMISOS_POR_ROL: Record<RolCodigo, readonly Permiso[]> = {
     PERMISOS.RegistrarAnexos,
     PERMISOS.VerificarBienes,
     PERMISOS.RemitirEntrega,
+    PERMISOS.RegistrarObservaciones,
     PERMISOS.GenerarActas,
     PERMISOS.VerExpediente,
     PERMISOS.VerReportes,
@@ -111,19 +110,26 @@ const PERMISOS_POR_ROL: Record<RolCodigo, readonly Permiso[]> = {
     PERMISOS.VerExpediente,
     PERMISOS.VerReportes,
     PERMISOS.GestionarDelegados,
-    PERMISOS.FirmarAnexos,
-    PERMISOS.RegistrarObservaciones,
-    PERMISOS.VerificarEntrega,
     PERMISOS.RecibirEntregaEtte,
   ],
+  // El coordinador solo consulta: revisa y firma en la sesión del responsable.
   [ROLES.DelegadoEtte]: [
     PERMISOS.AccederPlataforma,
     PERMISOS.VerAnexos,
     PERMISOS.VerExpediente,
-    PERMISOS.FirmarAnexos,
-    PERMISOS.RegistrarObservaciones,
-    PERMISOS.VerificarEntrega,
   ],
+}
+
+/**
+ * ¿Es el responsable de ese CC exacto? Solo él opera la revisión y la firma
+ * presencial con el coordinador ETTE (el responsable de un CC padre no, D-08).
+ */
+export function esResponsableDe(
+  roles: readonly { rol: RolCodigo; dependencia_id?: number | null }[],
+  dependenciaId: number | null | undefined,
+): boolean {
+  return dependenciaId != null
+    && roles.some((r) => r.rol === ROLES.ResponsableCentroCosto && r.dependencia_id === dependenciaId)
 }
 
 /**

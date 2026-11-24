@@ -14,6 +14,7 @@ use App\Modules\Transferencia\Services\FirmaperuAuthService;
 use App\Modules\Transferencia\Services\FirmaperuPdfService;
 use App\Modules\Transferencia\Services\FirmaperuValidadorService;
 use App\Support\Enums\EstadoEntrega;
+use App\Support\Enums\LadoFirma;
 use App\Support\Enums\OperacionCronograma;
 use App\Support\Enums\Rol;
 use Database\Seeders\RolesPermisosSeeder;
@@ -27,10 +28,11 @@ use Tests\Concerns\PreparaEntregas;
 use Tests\TestCase;
 
 /**
- * Firma de ambos lados en orden libre (D-05, D-06): el responsable firma
- * siempre digitalmente; el lado ETTE (coordinador o titular suplente) firma
- * digital o a mano, pero a mano solo antes de cualquier firma digital. Ambas
- * firmas deben quedar en la misma cadena de PDF.
+ * Firma de ambos lados en orden libre (D-05, D-06), operada desde la sesión del
+ * responsable del CC: él firma por la entidad y el coordinador ETTE presente (o
+ * el titular que lo suple) firma con su propio certificado, digital o a mano;
+ * a mano solo antes de cualquier firma digital. Firmar es aprobar. Ambas firmas
+ * deben quedar en la misma cadena de PDF.
  */
 class FirmaAmbosLadosTest extends TestCase
 {
@@ -82,26 +84,43 @@ class FirmaAmbosLadosTest extends TestCase
         return $usuario;
     }
 
-    /** @param array<string, string> $extra */
-    private function firmarDigital(User $firmante, array $extra = []): FirmaSesion
+    private function preparar(LadoFirma $lado, ?User $operador = null): TestResponse
     {
-        Sanctum::actingAs($firmante);
-        $preparacion = $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo03',
-            'dependencia_id' => $this->dep->id, ...$extra])->assertCreated()->json('data');
+        Sanctum::actingAs($operador ?? $this->responsable);
+
+        return $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo03',
+            'dependencia_id' => $this->dep->id, 'lado' => $lado->value]);
+    }
+
+    /**
+     * Abre Firma Perú con los parámetros de la sesión y sube el PDF firmado.
+     *
+     * @return array<string, mixed> parámetros que recibió el applet
+     */
+    private function completarFirma(string $paramToken, string $firma): array
+    {
         $parametros = json_decode(base64_decode($this->post('/api/firmaperu/param',
-            ['param_token' => $preparacion['param_token']])->assertOk()->getContent()), true);
+            ['param_token' => $paramToken])->assertOk()->getContent()), true);
         $this->post(parse_url($parametros['uploadDocumentSigned'], PHP_URL_PATH), ['signed_file' => UploadedFile::fake()
-            ->createWithContent('firmado.pdf', self::PDF.'firma-'.$firmante->dni)])->assertOk();
+            ->createWithContent('firmado.pdf', self::PDF.'firma-'.$firma)]);
+
+        return $parametros;
+    }
+
+    private function firmarDigital(LadoFirma $lado): FirmaSesion
+    {
+        $preparacion = $this->preparar($lado)->assertCreated()->json('data');
+        $this->completarFirma($preparacion['param_token'], $lado->value);
 
         return FirmaSesion::findOrFail($preparacion['sesion_id']);
     }
 
-    private function subirManuscrita(User $firmante, ?string $motivo = null): TestResponse
+    private function subirManuscrita(?User $operador = null): TestResponse
     {
-        Sanctum::actingAs($firmante);
+        Sanctum::actingAs($operador ?? $this->responsable);
 
         return $this->postJson('/api/firmaperu/subir-manual', ['tipo_documento' => 'anexo03', 'dependencia_id' => $this->dep->id,
-            'motivo_suplencia' => $motivo, 'signed_file' => UploadedFile::fake()->createWithContent('escaneo.pdf', self::PDF.'firma-a-mano')]);
+            'signed_file' => UploadedFile::fake()->createWithContent('escaneo.pdf', self::PDF.'firma-a-mano')]);
     }
 
     private function estado(): TestResponse
@@ -111,14 +130,37 @@ class FirmaAmbosLadosTest extends TestCase
         return $this->getJson('/api/firmaperu/estado/anexo03/'.$this->dep->id)->assertOk();
     }
 
+    public function test_el_coordinador_firma_en_la_sesion_del_responsable_con_su_certificado(): void
+    {
+        $preparacion = $this->preparar(LadoFirma::ETTE)->assertCreated()->json('data');
+        $parametros = $this->completarFirma($preparacion['param_token'], 'coordinador');
+
+        $this->assertStringContainsString($this->coordinador->dni, $parametros['certificateFilter']);
+        $this->assertStringNotContainsString($this->responsable->dni, $parametros['certificateFilter']);
+        $this->assertDatabaseHas('firma_sesiones', ['id' => $preparacion['sesion_id'], 'estado' => 'firmada',
+            'usuario_id' => $this->coordinador->id, 'operador_id' => $this->responsable->id,
+            'firmante_dni' => $this->coordinador->dni]);
+        $this->assertDatabaseHas('firmas_anexo', ['firma_sesion_id' => $preparacion['sesion_id'], 'lado' => 'ette',
+            'firmante_id' => $this->coordinador->id, 'en_calidad_de' => 'coordinador']);
+
+        $final = $this->firmarDigital(LadoFirma::ENTIDAD);
+
+        $this->assertSame($preparacion['sesion_id'], $final->documento_previo_id);
+        $this->assertSame($this->responsable->id, $final->usuario_id);
+        $this->estado()->assertJsonPath('data.completo', true)->assertJsonPath('data.opera_firmas', true)
+            ->assertJsonPath('data.firmante_ette.nombre', $this->coordinador->name);
+    }
+
     public function test_ette_manuscrita_primero_y_el_responsable_firma_digital_sobre_el_escaneo(): void
     {
-        $id = $this->subirManuscrita($this->coordinador)->assertCreated()->assertJsonPath('data.estado', 'firmada')->json('data.sesion_id');
+        $id = $this->subirManuscrita()->assertCreated()->assertJsonPath('data.estado', 'firmada')->json('data.sesion_id');
+        $this->assertDatabaseHas('firma_sesiones', ['id' => $id, 'usuario_id' => $this->coordinador->id,
+            'operador_id' => $this->responsable->id]);
         $this->assertDatabaseHas('firmas_anexo', ['firma_sesion_id' => $id, 'lado' => 'ette', 'estado' => 'firmada']);
         $this->estado()->assertJsonPath('data.completo', false)->assertJsonPath('data.ette.origen', 'manuscrita')
             ->assertJsonPath('data.hay_firma_digital', false);
 
-        $final = $this->firmarDigital($this->responsable);
+        $final = $this->firmarDigital(LadoFirma::ENTIDAD);
 
         $this->assertSame($id, $final->documento_previo_id);
         $this->assertSame(self::PDF.'firma-a-mano', Storage::disk('local')->get($final->pdf_path));
@@ -126,19 +168,10 @@ class FirmaAmbosLadosTest extends TestCase
             ->assertJsonPath('data.entidad.origen', 'digital');
     }
 
-    public function test_ette_digital_primero_y_luego_el_responsable(): void
-    {
-        $ette = $this->firmarDigital($this->coordinador);
-        $final = $this->firmarDigital($this->responsable);
-
-        $this->assertSame($ette->id, $final->documento_previo_id);
-        $this->estado()->assertJsonPath('data.completo', true);
-    }
-
     public function test_responsable_primero_y_el_ette_firma_digital_encima(): void
     {
-        $entidad = $this->firmarDigital($this->responsable);
-        $final = $this->firmarDigital($this->coordinador);
+        $entidad = $this->firmarDigital(LadoFirma::ENTIDAD);
+        $final = $this->firmarDigital(LadoFirma::ETTE);
 
         $this->assertSame($entidad->id, $final->documento_previo_id);
         $this->estado()->assertJsonPath('data.completo', true)->assertJsonPath('data.ette.en_calidad_de', 'coordinador');
@@ -146,38 +179,84 @@ class FirmaAmbosLadosTest extends TestCase
 
     public function test_con_una_firma_digital_se_rechaza_la_manuscrita(): void
     {
-        $this->firmarDigital($this->responsable);
+        $this->firmarDigital(LadoFirma::ENTIDAD);
 
-        $this->subirManuscrita($this->coordinador)->assertConflict()
+        $this->subirManuscrita()->assertConflict()
             ->assertJsonPath('message', 'Ya existe una firma digital; la firma del coordinador debe ser digital para no invalidarla.');
         $this->assertDatabaseMissing('firma_sesiones', ['origen' => 'manual']);
     }
 
-    public function test_el_titular_ette_firma_en_suplencia_solo_con_motivo(): void
+    public function test_el_titular_designado_en_suplencia_firma_con_su_certificado(): void
     {
         $titular = $this->usuario(Rol::ETTE, null);
+        Sanctum::actingAs($this->responsable);
+        $this->putJson('/api/transferencia/suplencia-ette', ['dependencia_id' => $this->dep->id,
+            'titular_id' => $titular->id, 'motivo_suplencia' => 'Coordinador de licencia'])->assertOk();
 
-        $this->subirManuscrita($titular)->assertUnprocessable()->assertJsonValidationErrors('motivo_suplencia');
-        $id = $this->subirManuscrita($titular, 'Coordinador de licencia')->assertCreated()->json('data.sesion_id');
+        $preparacion = $this->preparar(LadoFirma::ETTE)->assertCreated()->json('data');
+        $parametros = $this->completarFirma($preparacion['param_token'], 'titular');
 
-        $this->assertDatabaseHas('firmas_anexo', ['firma_sesion_id' => $id, 'lado' => 'ette',
-            'en_calidad_de' => 'titular_suplente', 'motivo_suplencia' => 'Coordinador de licencia']);
-        $this->firmarDigital($this->responsable);
+        $this->assertStringContainsString($titular->dni, $parametros['certificateFilter']);
+        $this->assertDatabaseHas('firmas_anexo', ['firma_sesion_id' => $preparacion['sesion_id'], 'lado' => 'ette',
+            'firmante_id' => $titular->id, 'en_calidad_de' => 'titular_suplente', 'motivo_suplencia' => 'Coordinador de licencia']);
+        $this->firmarDigital(LadoFirma::ENTIDAD);
         $this->estado()->assertJsonPath('data.completo', true)->assertJsonPath('data.ette.en_calidad_de', 'titular_suplente');
     }
 
-    public function test_el_responsable_no_sube_firma_manuscrita(): void
+    public function test_con_firma_ette_vigente_ya_no_se_cambia_el_firmante(): void
     {
-        $this->subirManuscrita($this->responsable)->assertForbidden();
+        $titular = $this->usuario(Rol::ETTE, null);
+        $this->firmarDigital(LadoFirma::ETTE);
+
+        Sanctum::actingAs($this->responsable);
+        $this->putJson('/api/transferencia/suplencia-ette', ['dependencia_id' => $this->dep->id,
+            'titular_id' => $titular->id, 'motivo_suplencia' => 'Licencia'])->assertConflict();
     }
 
-    public function test_no_se_firma_antes_de_que_el_coordinador_acepte_la_entrega(): void
+    public function test_si_cambia_el_firmante_entre_preparar_y_firmar_se_rechaza(): void
     {
-        $this->entregaEn($this->dep, EstadoEntrega::EN_REVISION);
+        $titular = $this->usuario(Rol::ETTE, null);
+        $preparacion = $this->preparar(LadoFirma::ETTE)->assertCreated()->json('data');
+        $this->putJson('/api/transferencia/suplencia-ette', ['dependencia_id' => $this->dep->id,
+            'titular_id' => $titular->id, 'motivo_suplencia' => 'Licencia'])->assertOk();
 
-        $this->subirManuscrita($this->coordinador)->assertConflict();
+        $this->completarFirma($preparacion['param_token'], 'coordinador');
+
+        $this->assertDatabaseHas('firma_sesiones', ['id' => $preparacion['sesion_id'], 'estado' => 'rechazada']);
+        $this->assertDatabaseCount('firmas_anexo', 0);
+    }
+
+    public function test_el_coordinador_no_firma_desde_su_cuenta(): void
+    {
+        $this->preparar(LadoFirma::ETTE, $this->coordinador)->assertForbidden();
+        $this->subirManuscrita($this->coordinador)->assertForbidden();
+        $this->assertDatabaseCount('firma_sesiones', 0);
+    }
+
+    public function test_el_responsable_del_cc_padre_no_opera_las_firmas_del_hijo(): void
+    {
+        $hijo = Dependencia::factory()->create(['proceso_transferencia_id' => $this->dep->proceso_transferencia_id,
+            'parent_id' => $this->dep->id]);
+        $this->entregaEn($hijo);
         Sanctum::actingAs($this->responsable);
-        $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo03', 'dependencia_id' => $this->dep->id])->assertConflict();
+
+        $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo03', 'dependencia_id' => $hijo->id,
+            'lado' => 'ette'])->assertForbidden();
+    }
+
+    public function test_el_firmante_ette_necesita_un_dni_valido(): void
+    {
+        $this->coordinador->update(['dni' => null]);
+
+        $this->preparar(LadoFirma::ETTE)->assertUnprocessable();
+    }
+
+    public function test_no_se_firma_antes_de_cerrar_la_entrega(): void
+    {
+        $this->entregaEn($this->dep, EstadoEntrega::BORRADOR);
+
+        $this->subirManuscrita()->assertConflict();
+        $this->preparar(LadoFirma::ENTIDAD)->assertConflict();
         $this->assertDatabaseCount('firma_sesiones', 0);
     }
 
@@ -187,26 +266,15 @@ class FirmaAmbosLadosTest extends TestCase
             'proceso_transferencia_id' => $this->dep->proceso_transferencia_id,
         ]);
 
-        $this->subirManuscrita($this->coordinador)->assertConflict()->assertJsonPath('errors.cronograma.accion', 'firmar');
-        Sanctum::actingAs($this->responsable);
-        $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo03', 'dependencia_id' => $this->dep->id])
-            ->assertConflict()->assertJsonPath('errors.cronograma.accion', 'firmar');
+        $this->subirManuscrita()->assertConflict()->assertJsonPath('errors.cronograma.accion', 'firmar');
+        $this->preparar(LadoFirma::ENTIDAD)->assertConflict()->assertJsonPath('errors.cronograma.accion', 'firmar');
         $this->assertDatabaseCount('firma_sesiones', 0);
-    }
-
-    public function test_el_coordinador_no_firma_un_cc_ajeno(): void
-    {
-        $ajena = Dependencia::factory()->create(['proceso_transferencia_id' => $this->dep->proceso_transferencia_id]);
-        Sanctum::actingAs($this->coordinador);
-
-        $this->postJson('/api/firmaperu/subir-manual', ['tipo_documento' => 'anexo03', 'dependencia_id' => $ajena->id,
-            'signed_file' => UploadedFile::fake()->createWithContent('escaneo.pdf', self::PDF)])->assertForbidden();
     }
 
     public function test_si_cambian_los_datos_se_invalidan_ambas_firmas(): void
     {
-        $this->subirManuscrita($this->coordinador)->assertCreated();
-        $this->firmarDigital($this->responsable);
+        $this->subirManuscrita()->assertCreated();
+        $this->firmarDigital(LadoFirma::ENTIDAD);
         $this->estado()->assertJsonPath('data.completo', true);
 
         $this->datos = 'datos-cambiados';

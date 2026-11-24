@@ -10,7 +10,7 @@ import type {
 import { acervoService } from './acervo.service'
 
 const CONFLICTO_ACERVO =
-  'No se puede guardar: la entrega de este centro de costo está bloqueada (ya fue presentada al coordinador).'
+  'No se puede guardar: la entrega de este centro de costo está bloqueada (ya se cerró para revisión y firma).'
 
 export function useAcervo(filtros: FiltrosAcervo = {}) {
   return useQuery({
@@ -82,7 +82,7 @@ export function useEliminarAcervo() {
     onError: (error) =>
       notificarError(error, {
         conflicto:
-          'No se puede eliminar: la entrega está bloqueada (ya fue presentada al coordinador).',
+          'No se puede eliminar: la entrega está bloqueada (ya se cerró para revisión y firma).',
       }),
   })
 }

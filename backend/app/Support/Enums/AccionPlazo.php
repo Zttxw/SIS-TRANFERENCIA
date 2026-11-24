@@ -6,21 +6,19 @@ namespace App\Support\Enums;
 
 /**
  * Acciones de la entrega que el cronograma puede bloquear al vencer un plazo
- * (D-12, fase 7): presentar al coordinador, aceptar la entrega, firmar y
- * remitir.
+ * (D-12, fase 7): cerrar y pasar a firma, firmar (ambos lados, en la sesión
+ * del responsable) y remitir.
  */
 enum AccionPlazo: string
 {
     case PRESENTAR = 'presentar';
-    case VERIFICAR = 'verificar';
     case FIRMAR = 'firmar';
     case REMITIR = 'remitir';
 
     public function etiqueta(): string
     {
         return match ($this) {
-            self::PRESENTAR => 'Presentar al coordinador',
-            self::VERIFICAR => 'Aceptar la entrega',
+            self::PRESENTAR => 'Cerrar y pasar a firma',
             self::FIRMAR => 'Firmar los anexos',
             self::REMITIR => 'Remitir la entrega',
         };
@@ -31,8 +29,7 @@ enum AccionPlazo: string
     {
         return match ($estado) {
             EstadoEntrega::BORRADOR => self::PRESENTAR,
-            EstadoEntrega::EN_REVISION => self::VERIFICAR,
-            EstadoEntrega::VERIFICADA => self::FIRMAR,
+            EstadoEntrega::EN_REVISION => self::FIRMAR,
             EstadoEntrega::ACTA_SUSCRITA => self::REMITIR,
             default => null,
         };

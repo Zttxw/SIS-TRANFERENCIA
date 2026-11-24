@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 import { DependenciaProvider } from '@/auth/DependenciaProvider'
+import { RutaModulo } from '@/auth/RutaModulo'
 import { RutaProtegida } from '@/auth/RutaProtegida'
 import { NotFoundPage } from '@/components/common/NotFoundPage'
 import { LoginPage } from '@/features/auth/LoginPage'
@@ -27,7 +28,12 @@ export const router = createBrowserRouter([
           { index: true, lazy: () => import('@/features/dashboard/DashboardPage').then(({ DashboardPage }) => ({ Component: DashboardPage })) },
           { path: 'organigrama', lazy: () => import('@/features/organization/EstructuraOrganicaPage').then(({ EstructuraOrganicaPage }) => ({ Component: EstructuraOrganicaPage })) },
           { path: 'anexos-entidad', lazy: () => import('@/features/anexos-entidad/AnexosEntidadPage').then(({ AnexosEntidadPage }) => ({ Component: AnexosEntidadPage })) },
-          { path: 'documentos', lazy: () => import('@/features/documentos/DocumentosPage').then(({ DocumentosPage }) => ({ Component: DocumentosPage })) },
+          {
+            element: <RutaModulo modulo="documentos_pendientes" />,
+            children: [
+              { path: 'documentos', lazy: () => import('@/features/documentos/DocumentosPage').then(({ DocumentosPage }) => ({ Component: DocumentosPage })) },
+            ],
+          },
           { path: 'pdf-firma', lazy: () => import('@/features/firmaperu/PdfFirmaPage').then(({ PdfFirmaPage }) => ({ Component: PdfFirmaPage })) },
           { path: 'gestion', lazy: () => import('@/features/gestion/InformeGestionPage').then(({ InformeGestionPage }) => ({ Component: InformeGestionPage })) },
           { path: 'acervo', lazy: () => import('@/features/acervo/AcervoPage').then(({ AcervoPage }) => ({ Component: AcervoPage })) },

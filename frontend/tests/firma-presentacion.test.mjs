@@ -29,7 +29,7 @@ async function cargarComponente(ruta, dependencias) {
   return modulo.namespace
 }
 
-async function renderizarBoton(estado, compacto = true) {
+async function renderizarBoton(estado, lado = 'entidad') {
   const icono = () => null
   const { BotonFirmaPeru } = await cargarComponente(
     '../src/features/firmaperu/BotonFirmaPeru.tsx',
@@ -44,11 +44,9 @@ async function renderizarBoton(estado, compacto = true) {
         FileWarning: icono,
         Loader2: icono,
         PenLine: icono,
-        Plus: icono,
         Settings2: icono,
       },
       sonner: { toast: {} },
-      '@/auth/hooks': { usePermiso: () => true },
       '@/components/ui/button': {
         Button: ({ children, variant: _variant, size: _size, ...props }) =>
           React.createElement('button', props, children),
@@ -58,7 +56,6 @@ async function renderizarBoton(estado, compacto = true) {
         DropdownMenuItem: () => null,
       },
       '@/components/ui/confirm-dialog': { useConfirm: () => async () => true },
-      '@/components/ui/tooltip': { Tooltip: ({ children }) => children },
       './firmaperu.service': { firmaperuService: {} },
       './firmaperu-runtime': { firmarConCliente() {} },
       './equipo-firmaperu': { comprobarServicioFirma() {} },
@@ -66,39 +63,50 @@ async function renderizarBoton(estado, compacto = true) {
     },
   )
   return renderToStaticMarkup(
-    React.createElement(BotonFirmaPeru, {
-      tipoDocumento: 'anexo03',
-      dependenciaId: 12,
-      compacto,
-    }),
+    React.createElement(BotonFirmaPeru, { tipoDocumento: 'anexo03', dependenciaId: 12, lado }),
   )
 }
 
-test('un documento sin firma ofrece la acción directa de firmar', async () => {
-  const html = await renderizarBoton({ firmado: false, vigente: false, pdf_generado_vigente: true })
-  assert.match(html, /aria-label="Firmar con Firma Perú"/)
+/** Estado de firma visto por el responsable del CC, con la entrega cerrada para firma. */
+const enFirma = {
+  firma_habilitada: true,
+  opera_firmas: true,
+  firmante_ette: { nombre: 'Coordinadora ETTE', dni: '12345678', en_calidad_de: 'coordinador', motivo_suplencia: null },
+  entidad: null,
+  ette: null,
+  pdf_generado_vigente: true,
+}
+
+test('el responsable firma su lado con Firma Perú', async () => {
+  const html = await renderizarBoton({ ...enFirma, firmado: false, vigente: false })
+  assert.match(html, />Firmar como responsable<\/button>/)
   assert.doesNotMatch(html, /disabled/)
 })
 
 test('no permite iniciar firma sin un PDF generado vigente', async () => {
-  const html = await renderizarBoton({ firmado: false, pdf_generado_vigente: false })
+  const html = await renderizarBoton({ ...enFirma, firmado: false, pdf_generado_vigente: false })
   assert.match(html, /disabled=""/)
 })
 
-test('el detalle del documento muestra Firmar con Firma Perú como texto visible', async () => {
-  const html = await renderizarBoton({ firmado: false, vigente: false }, false)
-  assert.match(html, />Firmar con Firma Perú<\/button>/)
+test('en la sesión del responsable se ofrece la firma presencial del coordinador', async () => {
+  const html = await renderizarBoton({ ...enFirma, firmado: false, vigente: false }, 'ette')
+  assert.match(html, />Firma del coordinador ETTE<\/button>/)
 })
 
-test('una firma histórica permite firmar nuevamente el contenido actual', async () => {
-  const html = await renderizarBoton({ firmado: true, vigente: false })
-  assert.match(html, /aria-label="Firmar con Firma Perú"/)
+test('sin coordinador asignado no se ofrece la firma del lado ETTE', async () => {
+  const html = await renderizarBoton({ ...enFirma, firmante_ette: null, firmado: false }, 'ette')
+  assert.doesNotMatch(html, /Firma del coordinador ETTE/)
+})
+
+test('quien no es el responsable del CC no opera las firmas', async () => {
+  const html = await renderizarBoton({ ...enFirma, opera_firmas: false, firmado: false })
+  assert.doesNotMatch(html, /Firmar como responsable/)
 })
 
 test('una firma vigente ofrece la descarga como acción principal', async () => {
-  const html = await renderizarBoton({ firmado: true, vigente: true })
-  assert.match(html, /aria-label="Descargar PDF firmado"/)
-  assert.doesNotMatch(html, /aria-label="Firmar con Firma Perú"/)
+  const html = await renderizarBoton({ ...enFirma, entidad: { sesion_id: 'x' }, firmado: true, vigente: true })
+  assert.match(html, /Descargar PDF firmado/)
+  assert.doesNotMatch(html, /Firmar como responsable/)
 })
 
   test('Mi entrega muestra el estado del acta sin controles de generación o firma', async () => {

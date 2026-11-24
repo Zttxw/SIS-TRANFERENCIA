@@ -60,8 +60,8 @@ class ConsolidacionCentroCosto
     }
 
     /**
-     * El CC y su subárbol, con el estado de cada entrega, quién la presentó,
-     * aceptó y remitió (autoría, RF-43) y el volumen de cada anexo.
+     * El CC y su subárbol, con el estado de cada entrega, quién la cerró para
+     * firma y quién la remitió (autoría, RF-43) y el volumen de cada anexo.
      *
      * @return array{centro: array<string, mixed>, centros: list<array<string, mixed>>,
      *     resumen: array{total: int, remitidos: int, pendientes: int, enviados_tarde: int}}
@@ -72,7 +72,7 @@ class ConsolidacionCentroCosto
         $ids = $centro->idsSubarbol();
         $centros = Dependencia::query()->centrosCosto()->whereIn('id', $ids)
             ->with('padre:id,codigo,nombre')->get()->sortBy('codigo', SORT_NATURAL)->values();
-        $entregas = $this->entregasPorCentro($procesoId, $ids, ['presentadaPor:id,name', 'verificadaPor:id,name', 'emisor:id,name']);
+        $entregas = $this->entregasPorCentro($procesoId, $ids, ['presentadaPor:id,name', 'emisor:id,name']);
         $volumen = $this->volumenAnexos($procesoId, $ids);
 
         $filas = $centros->map(function (Dependencia $cc) use ($centro, $entregas, $volumen): array {
@@ -90,8 +90,6 @@ class ConsolidacionCentroCosto
                 'estado_etiqueta' => $estado->etiqueta(),
                 'presentada_por' => $entrega?->presentadaPor?->name,
                 'presentada_en' => $entrega?->presentada_en?->toIso8601String(),
-                'verificada_por' => $entrega?->verificadaPor?->name,
-                'verificada_en_calidad_de' => $entrega?->verificada_en_calidad_de?->value,
                 'remitida_por' => $entrega?->emisor?->name,
                 'remitida_en' => $entrega?->remitida_en?->toIso8601String(),
                 'enviado_tarde' => $this->enviadoTarde($cc, $entregas),

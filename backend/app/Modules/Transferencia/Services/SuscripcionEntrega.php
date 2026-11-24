@@ -13,10 +13,11 @@ use App\Support\Enums\EstadoEntrega;
 use App\Support\Services\ContextoTransferencia;
 
 /**
- * Suscripción de la entrega de un CC (D-05, plan §3.1): los anexos 02 al 07
- * se firman tras la aceptación del coordinador y, cuando los seis tienen
- * firma vigente de ambos lados en una misma cadena, el acta queda `suscrita` y
- * la entrega pasa a `acta_suscrita`, lista para remitir.
+ * Suscripción de la entrega de un CC (D-05, plan §3.1): con la entrega cerrada
+ * para revisión, los anexos 02 al 07 se firman en la sesión del responsable
+ * (el coordinador ETTE, presencialmente: firmar es aprobar) y, cuando los seis
+ * tienen firma vigente de ambos lados en una misma cadena, el acta queda
+ * `suscrita` y la entrega pasa a `acta_suscrita`, lista para remitir.
  */
 class SuscripcionEntrega
 {
@@ -58,9 +59,9 @@ class SuscripcionEntrega
     }
 
     /**
-     * Solo se firma después de que el coordinador acepta la entrega (D-07) y
-     * mientras el plazo de la suscripción del acta siga vigente (D-12); el
-     * Anexo 01, cuando el ETTE recibió todas las entregas del ETTS.
+     * Solo se firma con la entrega cerrada para revisión (D-07) y mientras el
+     * plazo de la suscripción del acta siga vigente (D-12); el Anexo 01, cuando
+     * el ETTE recibió todas las entregas del ETTS.
      */
     public function exigirFirmaHabilitada(?int $dependenciaId): void
     {
@@ -73,13 +74,13 @@ class SuscripcionEntrega
         $estado = $this->estadoEntrega($dependenciaId);
         abort_unless($estado->admiteFirma(), 409, $estado->fueRemitida()
             ? 'La entrega ya fue remitida.'
-            : 'La firma se habilita cuando el coordinador ETTE acepta la entrega (estado actual: "'.$estado->etiqueta().'").');
+            : 'La firma se habilita cuando el responsable cierra la entrega para revisión y firma (estado actual: "'.$estado->etiqueta().'").');
         $this->cronograma->exigirPlazoVigente($this->contexto->procesoActivoId(), $dependenciaId, AccionPlazo::FIRMAR);
     }
 
     /**
      * Refleja las firmas vigentes en el acta (suscrita o generada) y en la
-     * entrega (acta_suscrita o verificada). Se invoca tras registrar una firma.
+     * entrega (acta_suscrita o en_revision). Se invoca tras registrar una firma.
      */
     public function sincronizar(Dependencia $dependencia, User $usuario): void
     {
@@ -96,8 +97,8 @@ class SuscripcionEntrega
 
         $entrega = $this->entrega($dependencia);
         $nuevo = match (true) {
-            $entrega?->estado === EstadoEntrega::VERIFICADA && $requisitos['puede_remitir'] => EstadoEntrega::ACTA_SUSCRITA,
-            $entrega?->estado === EstadoEntrega::ACTA_SUSCRITA && ! $requisitos['puede_remitir'] => EstadoEntrega::VERIFICADA,
+            $entrega?->estado === EstadoEntrega::EN_REVISION && $requisitos['puede_remitir'] => EstadoEntrega::ACTA_SUSCRITA,
+            $entrega?->estado === EstadoEntrega::ACTA_SUSCRITA && ! $requisitos['puede_remitir'] => EstadoEntrega::EN_REVISION,
             default => null,
         };
         if ($nuevo !== null) {

@@ -12,7 +12,6 @@ use App\Modules\Transferencia\Models\Observacion;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Enums\CalidadEtte;
 use App\Support\Enums\EstadoEntrega;
-use App\Support\Enums\EstadoObservacion;
 use App\Support\Enums\Rol;
 use Database\Seeders\RolesPermisosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,9 +22,10 @@ use Tests\Concerns\PreparaEntregas;
 use Tests\TestCase;
 
 /**
- * Aceptación del coordinador ETTE antes de firmar (D-07, F-03, F-05): el
- * responsable presenta; el coordinador acepta lo entregado, con observaciones
- * solo como constancia. No hay devolución ni subsanación.
+ * Revisión presencial del coordinador ETTE (D-07, F-03): el responsable cierra
+ * la entrega para firma y, en su sesión, registra las observaciones del
+ * coordinador presente (o del titular ETTE que lo suple) como constancia. No hay
+ * aceptación aparte: firmar es aprobar (FirmaAmbosLadosTest).
  */
 class RevisionCoordinadorTest extends TestCase
 {
@@ -66,36 +66,40 @@ class RevisionCoordinadorTest extends TestCase
         return Entrega::where('dependencia_id', $this->centro->id)->first()?->estado;
     }
 
-    private function verificar(array $datos = []): TestResponse
+    private function observar(): TestResponse
     {
-        return $this->postJson('/api/transferencia/verificar', [
-            'dependencia_id' => $this->centro->id,
-            'resultado_verificacion' => 'Se revisaron los anexos 02 al 06; no se verificó el estado físico de los bienes.',
-            ...$datos,
-        ]);
+        return $this->postJson('/api/observaciones', ['anexo' => 'gestion', 'dependencia_id' => $this->centro->id,
+            'descripcion' => 'No se detallan los asuntos pendientes.']);
     }
 
-    public function test_presentar_y_aceptar_con_observaciones_de_constancia(): void
+    private function designar(array $datos): TestResponse
+    {
+        return $this->putJson('/api/transferencia/suplencia-ette', ['dependencia_id' => $this->centro->id, ...$datos]);
+    }
+
+    public function test_cerrar_para_firma_y_registrar_observaciones_a_nombre_del_coordinador(): void
     {
         Sanctum::actingAs($this->responsable);
         $this->postJson('/api/transferencia/presentar', ['dependencia_id' => $this->centro->id])->assertOk();
         $this->assertSame(EstadoEntrega::EN_REVISION, $this->estado());
 
-        // F-03: la observación queda registrada, sin devolver la entrega.
-        Sanctum::actingAs($this->coordinador);
-        $this->postJson('/api/observaciones', ['anexo' => 'gestion', 'dependencia_id' => $this->centro->id,
-            'descripcion' => 'No se detallan los asuntos pendientes.'])->assertCreated();
+        // F-03: la observación queda como constancia, sin devolver la entrega.
+        $this->observar()->assertCreated();
+
+        $observacion = Observacion::where('dependencia_id', $this->centro->id)->sole();
+        $this->assertSame($this->coordinador->id, $observacion->autor_id);
+        $this->assertSame($this->responsable->id, $observacion->registrada_por_id);
+        $this->assertSame(CalidadEtte::COORDINADOR, $observacion->en_calidad_de);
         $this->assertSame(EstadoEntrega::EN_REVISION, $this->estado());
+    }
 
-        // F-05: el coordinador acepta aunque haya observaciones y deja constancia.
-        $this->verificar()->assertOk();
+    public function test_el_estado_informa_quien_firma_por_el_lado_ette(): void
+    {
+        Sanctum::actingAs($this->responsable);
 
-        $entrega = Entrega::where('dependencia_id', $this->centro->id)->firstOrFail();
-        $this->assertSame(EstadoEntrega::VERIFICADA, $entrega->estado);
-        $this->assertSame($this->coordinador->id, $entrega->verificada_por_id);
-        $this->assertSame(CalidadEtte::COORDINADOR, $entrega->verificada_en_calidad_de);
-        $this->assertStringContainsString('no se verificó', (string) $entrega->resultado_verificacion);
-        $this->assertSame(1, Observacion::where('dependencia_id', $this->centro->id)->count());
+        $this->getJson('/api/transferencia/estado?dependencia_id='.$this->centro->id)->assertOk()
+            ->assertJsonPath('data.firmante_ette.id', $this->coordinador->id)
+            ->assertJsonPath('data.firmante_ette.en_calidad_de', 'coordinador');
     }
 
     /** @return array<string, array{0: EstadoEntrega}> */
@@ -103,13 +107,13 @@ class RevisionCoordinadorTest extends TestCase
     {
         return [
             'en revisión' => [EstadoEntrega::EN_REVISION],
-            'verificada' => [EstadoEntrega::VERIFICADA],
+            'acta suscrita' => [EstadoEntrega::ACTA_SUSCRITA],
             'remitida' => [EstadoEntrega::REMITIDA],
         ];
     }
 
     #[DataProvider('estadosQueNoSePresentan')]
-    public function test_solo_se_presenta_desde_borrador(EstadoEntrega $estado): void
+    public function test_solo_se_cierra_para_firma_desde_borrador(EstadoEntrega $estado): void
     {
         $this->entregaEn($this->centro, $estado);
         Sanctum::actingAs($this->responsable);
@@ -119,69 +123,74 @@ class RevisionCoordinadorTest extends TestCase
         $this->assertSame($estado, $this->estado());
     }
 
-    public function test_el_coordinador_no_presenta_ni_el_responsable_verifica(): void
+    public function test_el_coordinador_no_opera_desde_su_cuenta(): void
     {
+        $this->entregaEn($this->centro);
         Sanctum::actingAs($this->coordinador);
+
         $this->postJson('/api/transferencia/presentar', ['dependencia_id' => $this->centro->id])->assertForbidden();
+        $this->observar()->assertForbidden();
+        $this->designar(['titular_id' => null])->assertForbidden();
+        $this->postJson('/api/transferencia/verificar', ['dependencia_id' => $this->centro->id])->assertNotFound();
+    }
 
-        $this->entregaEn($this->centro, EstadoEntrega::EN_REVISION);
+    public function test_las_observaciones_solo_se_registran_en_revision(): void
+    {
         Sanctum::actingAs($this->responsable);
-        $this->verificar()->assertForbidden();
-    }
-
-    public function test_el_coordinador_de_otro_cc_no_verifica(): void
-    {
-        $this->entregaEn($this->centro, EstadoEntrega::EN_REVISION);
-        $otro = Dependencia::factory()->create(['proceso_transferencia_id' => $this->proceso->id]);
-        Sanctum::actingAs($this->usuarioCon(Rol::DELEGADO_ETTE, $otro));
-
-        $this->verificar()->assertForbidden();
-        $this->assertSame(EstadoEntrega::EN_REVISION, $this->estado());
-    }
-
-    public function test_la_aceptacion_exige_constancia_y_entrega_presentada(): void
-    {
-        Sanctum::actingAs($this->coordinador);
 
         $this->entregaEn($this->centro, EstadoEntrega::BORRADOR);
-        $this->verificar()->assertConflict();
+        $this->observar()->assertConflict();
 
-        $this->entregaEn($this->centro, EstadoEntrega::EN_REVISION);
-        $this->verificar(['resultado_verificacion' => ''])->assertUnprocessable()
-            ->assertJsonValidationErrors('resultado_verificacion');
+        $this->entregaEn($this->centro, EstadoEntrega::ACTA_SUSCRITA);
+        $this->observar()->assertConflict();
     }
 
-    public function test_titular_ette_verifica_en_suplencia_con_motivo(): void
+    public function test_sin_coordinador_ni_suplente_no_se_registran_observaciones(): void
     {
-        $this->entregaEn($this->centro, EstadoEntrega::EN_REVISION);
-        Sanctum::actingAs($this->usuarioCon(Rol::ETTE, null));
+        AsignacionRol::where('user_id', $this->coordinador->id)->delete();
+        $this->entregaEn($this->centro);
+        Sanctum::actingAs($this->responsable);
 
-        $this->verificar()->assertUnprocessable()->assertJsonValidationErrors('motivo_suplencia');
-        $this->verificar(['motivo_suplencia' => 'Coordinador con licencia.'])->assertOk();
-
-        $entrega = Entrega::where('dependencia_id', $this->centro->id)->firstOrFail();
-        $this->assertSame(CalidadEtte::TITULAR_SUPLENTE, $entrega->verificada_en_calidad_de);
-        $this->assertSame('Coordinador con licencia.', $entrega->motivo_suplencia_verificacion);
+        $this->observar()->assertConflict();
     }
 
-    public function test_reporte_de_verificacion_informa_al_comite_ette(): void
+    public function test_designar_titular_suplente_cambia_el_firmante_ette(): void
     {
-        $this->entregaEn($this->centro, EstadoEntrega::EN_REVISION);
-        Observacion::create([
-            'proceso_transferencia_id' => $this->proceso->id,
-            'dependencia_id' => $this->centro->id,
-            'anexo' => 'gestion',
-            'autor_id' => $this->coordinador->id,
-            'descripcion' => 'No se detallan los pendientes.',
-            'estado' => EstadoObservacion::REGISTRADA,
-        ]);
-        Sanctum::actingAs($this->usuarioCon(Rol::ETTE, null));
+        $titular = $this->usuarioCon(Rol::ETTE, null);
+        $this->entregaEn($this->centro);
+        Sanctum::actingAs($this->responsable);
 
-        $fila = collect($this->getJson('/api/reportes/verificacion')->assertOk()->json('data.filas'))
-            ->firstWhere('dependencia_id', $this->centro->id);
+        $this->designar(['titular_id' => $titular->id, 'motivo_suplencia' => 'Coordinador con licencia.'])->assertOk();
+        $this->observar()->assertCreated();
 
-        $this->assertSame('en_revision', $fila['estado_entrega']);
-        $this->assertSame(1, $fila['observaciones']);
-        $this->assertContains('Anexo 02', $fila['anexos_faltantes']);
+        $observacion = Observacion::where('dependencia_id', $this->centro->id)->sole();
+        $this->assertSame($titular->id, $observacion->autor_id);
+        $this->assertSame(CalidadEtte::TITULAR_SUPLENTE, $observacion->en_calidad_de);
+        $this->assertSame('Coordinador con licencia.', $observacion->motivo_suplencia);
+
+        // Sin designación vuelve a actuar el coordinador asignado.
+        $this->designar(['titular_id' => null])->assertOk();
+        $this->assertNull(Entrega::where('dependencia_id', $this->centro->id)->value('titular_suplente_id'));
+    }
+
+    public function test_la_suplencia_exige_motivo_y_un_titular_ette(): void
+    {
+        $titular = $this->usuarioCon(Rol::ETTE, null);
+        $this->entregaEn($this->centro);
+        Sanctum::actingAs($this->responsable);
+
+        $this->designar(['titular_id' => $titular->id])->assertUnprocessable()
+            ->assertJsonValidationErrors('motivo_suplencia');
+        $this->designar(['titular_id' => $this->coordinador->id, 'motivo_suplencia' => 'Licencia.'])->assertUnprocessable()
+            ->assertJsonValidationErrors('titular_id');
+    }
+
+    public function test_la_suplencia_solo_se_designa_en_revision(): void
+    {
+        $titular = $this->usuarioCon(Rol::ETTE, null);
+        $this->entregaEn($this->centro, EstadoEntrega::BORRADOR);
+        Sanctum::actingAs($this->responsable);
+
+        $this->designar(['titular_id' => $titular->id, 'motivo_suplencia' => 'Licencia.'])->assertConflict();
     }
 }

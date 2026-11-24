@@ -19,9 +19,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Serie del acervo documentario (Anexo 03). La sección A reúne las series
- * digitales que se precargan del SGD (tipo documental + emitidos/recibidos);
- * la sección B, las series físicas que el centro de costo registra a mano.
- * Cada fila pertenece a un año.
+ * digitales que se precargan del SGD (tipo documental + emitidos/recibidos),
+ * medidas en número de documentos; la sección B, las series físicas que el
+ * centro de costo registra a mano, medidas en folios. Cada fila es de un año.
  *
  * @property string $tipo
  */
@@ -45,6 +45,7 @@ class AcervoDocumental extends BaseModel
         'serie_documental',
         'anio',
         'folios',
+        'numero_documentos',
         'unidad_conservacion',
         'ubicacion',
         'fuente',
@@ -57,6 +58,7 @@ class AcervoDocumental extends BaseModel
         return [
             'anio' => 'integer',
             'folios' => 'integer',
+            'numero_documentos' => 'integer',
         ];
     }
 
