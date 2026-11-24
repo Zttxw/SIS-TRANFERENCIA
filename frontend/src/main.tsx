@@ -13,6 +13,12 @@ import '@fontsource/ibm-plex-mono/600.css'
 import './index.css'
 import App from './App.tsx'
 
+// Auto-recarga automática cuando se despliega una nueva versión y un chunk anterior ya no existe
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault()
+  window.location.reload()
+})
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
