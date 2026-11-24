@@ -33,7 +33,9 @@ import {
 } from 'recharts'
 
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { DataTable, type ColumnaTabla } from '@/components/ui/data-table'
 import { cn } from '@/lib/utils'
@@ -167,6 +169,153 @@ function getEstadoSemaforo(f: FilaMatriz): EstadoSemaforo {
   return 'en_plazo'
 }
 
+/** Modal con divulgación progresiva para vista móvil / detalle de dependencia */
+function ModalDetalleDependencia({
+  fila,
+  open,
+  onClose,
+}: {
+  fila: FilaMatriz | null
+  open: boolean
+  onClose: () => void
+}) {
+  if (!fila) return null
+
+  const sem = getEstadoSemaforo(fila)
+  const anexosCompletados =
+    (esCompletoAnexo(fila.anexo_02) ? 1 : 0) +
+    (esCompletoAnexo(fila.anexo_03) ? 1 : 0) +
+    (esCompletoAnexo(fila.anexo_04) ? 1 : 0) +
+    (esCompletoAnexo(fila.anexo_05) ? 1 : 0) +
+    (esCompletoAnexo(fila.anexo_06) ? 1 : 0)
+
+  const porcentaje =
+    fila.estado_entrega === 'consolidada'
+      ? 100
+      : (fila.porcentaje_avance ?? Math.round((anexosCompletados / 5) * 100))
+
+  const colorBarra =
+    porcentaje === 100 || fila.estado_entrega === 'consolidada'
+      ? 'bg-emerald-600'
+      : sem === 'vencido'
+      ? 'bg-rose-600'
+      : 'bg-amber-500'
+
+  const colorTexto =
+    porcentaje === 100 || fila.estado_entrega === 'consolidada'
+      ? 'text-emerald-700'
+      : sem === 'vencido'
+      ? 'text-rose-700'
+      : 'text-amber-700'
+
+  const anexosLista = [
+    { clave: 'A02', nombre: 'Informe de Gestión', valor: fila.anexo_02 },
+    { clave: 'A03', nombre: 'Acervo Documental', valor: fila.anexo_03 },
+    { clave: 'A04', nombre: 'Bienes Patrimoniales', valor: fila.anexo_04 },
+    { clave: 'A05', nombre: 'Personal', valor: fila.anexo_05 },
+    { clave: 'A06', nombre: 'Bienes No Patrimoniales', valor: fila.anexo_06 },
+  ]
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title={`[${fila.codigo}] ${fila.nombre}`}
+      description={fila.encargado ? `Responsable: ${fila.encargado}` : undefined}
+    >
+      <div className="space-y-4 max-h-[72vh] overflow-y-auto pr-1 text-sm">
+        {/* Estado y Avance */}
+        <div className="p-3.5 rounded-xl border border-border bg-muted/40 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              Estado de entrega
+            </span>
+            <BadgeEstado estado={fila.estado_entrega} />
+          </div>
+          <div className="flex items-center justify-between text-xs pt-1">
+            <span className="text-muted-foreground font-medium">Avance global</span>
+            <span className={cn('font-mono font-bold', colorTexto)}>
+              {porcentaje}% ({anexosCompletados}/5 anexos)
+            </span>
+          </div>
+          <div className="h-2 rounded-full bg-slate-100 overflow-hidden border border-border/60">
+            <div
+              className={cn('h-full rounded-full transition-all duration-300', colorBarra)}
+              style={{ width: `${porcentaje}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Anexos de Transferencia */}
+        <div className="space-y-2">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Anexos de Transferencia
+          </h4>
+          <div className="divide-y divide-border border rounded-xl bg-card overflow-hidden">
+            {anexosLista.map((anexo) => (
+              <div key={anexo.clave} className="flex items-center justify-between p-2.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-primary">[{anexo.clave}]</span>
+                  <span className="text-foreground font-medium">{anexo.nombre}</span>
+                </div>
+                <Presencia valor={anexo.valor} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Observaciones y Patrimonio */}
+        <div className="grid grid-cols-2 gap-2.5">
+          {/* Observaciones */}
+          <div className="p-3 rounded-xl border border-border bg-card flex flex-col justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              Observaciones
+            </span>
+            <div className="mt-1.5 flex items-center gap-1.5">
+              {fila.observaciones_abiertas > 0 ? (
+                <span className="inline-flex items-center gap-1 font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded text-xs border border-rose-200">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  {fila.observaciones_abiertas} abiertas
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-xs font-semibold border border-emerald-200">
+                  <Check className="h-3.5 w-3.5" />
+                  0 abiertas
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Conciliación Patrimonio */}
+          <div className="p-3 rounded-xl border border-border bg-card flex flex-col justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              % Patrimonio
+            </span>
+            <div className="mt-1.5 flex items-baseline gap-1.5 font-mono font-bold text-xs">
+              <span className={fila.patrimonio_porcentaje === 100 ? 'text-emerald-700' : 'text-amber-700'}>
+                {fila.patrimonio_porcentaje}%
+              </span>
+              <span className="text-[11px] text-muted-foreground font-normal">
+                ({fila.patrimonio_confirmados}/{fila.patrimonio_total})
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Botón Cerrar */}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          className="w-full mt-2"
+        >
+          Cerrar detalle
+        </Button>
+      </div>
+    </Dialog>
+  )
+}
+
 /* =========================================================================
    VISTA 1: MATRIZ DE ANEXOS (CONSOLIDADOS DINÁMICOS Y GRÁFICOS)
    ========================================================================= */
@@ -175,6 +324,7 @@ function MatrizView() {
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<string>('todos')
   const [filtroFaltante, setFiltroFaltante] = useState<string>('todos')
+  const [filaDetalle, setFilaDetalle] = useState<FilaMatriz | null>(null)
 
   const metricas = data?.metricas
   const filas = data?.filas ?? []
@@ -257,6 +407,7 @@ function MatrizView() {
     {
       id: 'codigo',
       header: 'Código',
+      className: 'w-14 sm:w-16 whitespace-nowrap',
       cell: (f) => (
         <span className="font-mono font-bold text-primary text-nota whitespace-nowrap">
           [{f.codigo}]
@@ -266,6 +417,7 @@ function MatrizView() {
     {
       id: 'nombre',
       header: 'Centro de costo',
+      className: 'min-w-0',
       cell: (f) => {
         const sem = getEstadoSemaforo(f)
         const anexosCompletados =
@@ -295,7 +447,7 @@ function MatrizView() {
             : 'text-amber-700'
 
         return (
-          <div className="max-w-[280px]">
+          <div className="min-w-0 max-w-[210px] sm:max-w-[280px]">
             <div className="font-semibold text-foreground uppercase text-nota truncate">
               {f.nombre}
             </div>
@@ -321,44 +473,69 @@ function MatrizView() {
       },
     },
     {
+      id: 'acciones_movil',
+      header: '',
+      align: 'right',
+      className: 'table-cell sm:hidden w-18 text-right',
+      cell: (f) => (
+        <button
+          type="button"
+          className="text-xs font-semibold text-primary hover:text-primary/80 hover:underline cursor-pointer transition-colors p-0 whitespace-nowrap bg-transparent border-0"
+          onClick={(e) => {
+            e.stopPropagation()
+            setFilaDetalle(f)
+          }}
+        >
+          Ver más
+        </button>
+      ),
+    },
+    {
       id: 'estado',
       header: 'Estado',
+      ocultarEnMovil: true,
       cell: (f) => <BadgeEstado estado={f.estado_entrega} />,
     },
     {
       id: 'a02',
       header: 'A02 Gestión',
       align: 'center',
+      ocultarEnMovil: true,
       cell: (f) => <Presencia valor={f.anexo_02} />,
     },
     {
       id: 'a03',
       header: 'A03 Acervo',
       align: 'center',
+      ocultarEnMovil: true,
       cell: (f) => <Presencia valor={f.anexo_03} />,
     },
     {
       id: 'a04',
       header: 'A04 Patr.',
       align: 'center',
+      ocultarEnMovil: true,
       cell: (f) => <Presencia valor={f.anexo_04} />,
     },
     {
       id: 'a05',
       header: 'A05 Personal',
       align: 'center',
+      ocultarEnMovil: true,
       cell: (f) => <Presencia valor={f.anexo_05} />,
     },
     {
       id: 'a06',
       header: 'A06 No Patr.',
       align: 'center',
+      ocultarEnMovil: true,
       cell: (f) => <Presencia valor={f.anexo_06} />,
     },
     {
       id: 'obs',
       header: 'Obs.',
       align: 'center',
+      ocultarEnMovil: true,
       cell: (f) =>
         f.observaciones_abiertas > 0 ? (
           <span className="inline-flex items-center gap-0.5 font-mono font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded text-microdato">
@@ -371,25 +548,33 @@ function MatrizView() {
     },
     {
       id: 'patr',
-      header: '% Patrimonio',
+      header: 'Patrimonio',
       align: 'right',
+      ocultarEnMovil: true,
       cell: (f) => (
-        <div className="flex items-center justify-end gap-2">
-          <div className="w-16 h-1.5 rounded-full bg-slate-100 overflow-hidden border border-border">
-            <div
-              className={`h-full rounded-full ${
-                f.patrimonio_porcentaje === 100
-                  ? 'bg-emerald-600'
-                  : f.patrimonio_porcentaje > 50
-                  ? 'bg-teal-600'
-                  : 'bg-amber-500'
-              }`}
-              style={{ width: `${f.patrimonio_porcentaje}%` }}
-            />
-          </div>
-          <span className="font-mono text-nota font-semibold w-10 text-right">
-            {f.patrimonio_porcentaje}%
-          </span>
+        <div className="flex items-center justify-end font-mono text-nota whitespace-nowrap">
+          {f.patrimonio_total === 0 ? (
+            <span className="text-muted-foreground text-microdato font-mono">0 / 0</span>
+          ) : (
+            <div className="flex items-baseline gap-1">
+              <span
+                className={cn(
+                  'font-bold',
+                  f.patrimonio_confirmados === f.patrimonio_total
+                    ? 'text-emerald-700'
+                    : f.patrimonio_confirmados > 0
+                    ? 'text-blue-700'
+                    : 'text-foreground',
+                )}
+              >
+                {f.patrimonio_confirmados}
+              </span>
+              <span className="text-muted-foreground">/ {f.patrimonio_total}</span>
+              <span className="text-[10px] font-semibold text-muted-foreground ml-1">
+                ({f.patrimonio_porcentaje}%)
+              </span>
+            </div>
+          )}
         </div>
       ),
     },
@@ -400,9 +585,15 @@ function MatrizView() {
       {/* ========================================================
           TARJETAS KPI SUPERIORES CON MICRO-MÉTRICAS INTUITIVAS (X/TOTAL)
           ======================================================== */}
-      {metricas && (() => {
-        const total = metricas.total_dependencias || filas.length || 1
-        const totalEvaluadas = metricas.consolidadas + metricas.remitidas + metricas.observadas
+      {(() => {
+        const total = Number(metricas?.total_dependencias || filas.length) || 1
+        const consolidadas = Number(metricas?.consolidadas ?? filas.filter(f => f.estado_entrega === 'consolidada').length) || 0
+        const remitidas = Number(metricas?.remitidas ?? filas.filter(f => f.estado_entrega === 'remitida').length) || 0
+        const observadas = Number(metricas?.observadas ?? filas.filter(f => f.estado_entrega === 'observada' || (f.observaciones_abiertas ?? 0) > 0).length) || 0
+        const borrador = Number(metricas?.borrador ?? filas.filter(f => !f.estado_entrega || f.estado_entrega === 'borrador').length) || 0
+        const pctAvance = Number(metricas?.porcentaje_avance ?? (total > 0 ? Math.round((consolidadas / total) * 100) : 0)) || 0
+
+        const totalEvaluadas = consolidadas + remitidas + observadas
         const denObs = totalEvaluadas > 0 ? totalEvaluadas : total
 
         return (
@@ -415,7 +606,7 @@ function MatrizView() {
                   <Building2 className="h-3.5 w-3.5 text-slate-700" />
                 </div>
                 <div className="mt-1 text-xl sm:text-2xl font-black text-slate-900 font-mono">
-                  {metricas.total_dependencias}
+                  {total}
                 </div>
                 <p className="text-[11px] text-slate-600 mt-0.5 font-medium truncate">100% supervisadas</p>
               </CardContent>
@@ -429,11 +620,11 @@ function MatrizView() {
                   <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
                 </div>
                 <div className="mt-1 flex items-baseline gap-1 font-mono">
-                  <span className="text-xl sm:text-2xl font-black text-emerald-700">{metricas.consolidadas}</span>
+                  <span className="text-xl sm:text-2xl font-black text-emerald-700">{consolidadas}</span>
                   <span className="text-[11px] font-semibold text-emerald-700/70">/ {total}</span>
                 </div>
                 <p className="text-[11px] text-emerald-800 font-medium mt-0.5 truncate">
-                  {Math.round((metricas.consolidadas / total) * 100)}% conformes
+                  {total > 0 ? Math.round((consolidadas / total) * 100) : 0}% conformes
                 </p>
               </CardContent>
             </Card>
@@ -446,11 +637,11 @@ function MatrizView() {
                   <Clock className="h-3.5 w-3.5 text-blue-600" />
                 </div>
                 <div className="mt-1 flex items-baseline gap-1 font-mono">
-                  <span className="text-xl sm:text-2xl font-black text-blue-700">{metricas.remitidas}</span>
+                  <span className="text-xl sm:text-2xl font-black text-blue-700">{remitidas}</span>
                   <span className="text-[11px] font-semibold text-blue-700/70">/ {total}</span>
                 </div>
                 <p className="text-[11px] text-blue-800 font-medium mt-0.5 truncate">
-                  En revisión técnica ({Math.round((metricas.remitidas / total) * 100)}%)
+                  En revisión técnica ({total > 0 ? Math.round((remitidas / total) * 100) : 0}%)
                 </p>
               </CardContent>
             </Card>
@@ -463,12 +654,12 @@ function MatrizView() {
                   <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
                 </div>
                 <div className="mt-1 flex items-baseline gap-1 font-mono">
-                  <span className="text-xl sm:text-2xl font-black text-amber-700">{metricas.observadas}</span>
+                  <span className="text-xl sm:text-2xl font-black text-amber-700">{observadas}</span>
                   <span className="text-[11px] font-semibold text-amber-700/70">/ {denObs}</span>
                 </div>
                 <p className="text-[11px] text-amber-800 font-medium mt-0.5 truncate">
                   {totalEvaluadas > 0
-                    ? `${Math.round((metricas.observadas / totalEvaluadas) * 100)}% observadas`
+                    ? `${Math.round((observadas / totalEvaluadas) * 100)}% observadas`
                     : 'Sin observaciones'}
                 </p>
               </CardContent>
@@ -482,11 +673,11 @@ function MatrizView() {
                   <Minus className="h-3.5 w-3.5 text-slate-500" />
                 </div>
                 <div className="mt-1 flex items-baseline gap-1 font-mono">
-                  <span className="text-xl sm:text-2xl font-black text-slate-700">{metricas.borrador}</span>
+                  <span className="text-xl sm:text-2xl font-black text-slate-700">{borrador}</span>
                   <span className="text-[11px] font-semibold text-slate-500">/ {total}</span>
                 </div>
                 <p className="text-[11px] text-slate-600 font-medium mt-0.5 truncate">
-                  En formulación ({Math.round((metricas.borrador / total) * 100)}%)
+                  En formulación ({total > 0 ? Math.round((borrador / total) * 100) : 0}%)
                 </p>
               </CardContent>
             </Card>
@@ -499,10 +690,10 @@ function MatrizView() {
                   <TrendingUp className="h-3.5 w-3.5 text-sky-600" />
                 </div>
                 <div className="mt-1 text-xl sm:text-2xl font-black text-sky-800 font-mono">
-                  {metricas.porcentaje_avance}%
+                  {pctAvance}%
                 </div>
                 <p className="text-[11px] text-sky-700 mt-0.5 font-medium truncate">
-                  {metricas.consolidadas} de {total} cerradas
+                  {consolidadas} de {total} cerradas
                 </p>
               </CardContent>
             </Card>
@@ -730,6 +921,7 @@ function MatrizView() {
             loading={isLoading}
             error={error}
             onReintentar={() => refetch()}
+            onRowClick={(f) => setFilaDetalle(f)}
             vacio={{
               titulo: 'No se encontraron dependencias con los filtros seleccionados',
               descripcion: 'Pruebe ajustando el término de búsqueda o cambiando el filtro de estado.',
@@ -737,6 +929,13 @@ function MatrizView() {
           />
         </CardContent>
       </Card>
+
+      {/* Modal con divulgación progresiva para vista móvil / consulta rápida */}
+      <ModalDetalleDependencia
+        fila={filaDetalle}
+        open={filaDetalle !== null}
+        onClose={() => setFilaDetalle(null)}
+      />
     </div>
   )
 }

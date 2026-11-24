@@ -41,7 +41,7 @@ class ReportesService
         $procesoId = $this->procesoActivoId();
         $tablero = $this->transferencia->obtenerTableroOperativo($dependenciaIds, $procesoId);
 
-        $depIds = array_column($tablero['dependencias'], 'id');
+        $depIds = array_column($tablero['dependencias'] ?? [], 'id');
 
         // Pre-cargar en lote borradores oficiales generados en "PDF y firma"
         $borradores = FirmaBorrador::query()
@@ -91,30 +91,38 @@ class ReportesService
         };
 
         $filas = [];
-        foreach ($tablero['dependencias'] as $dep) {
-            $estado02 = $resolverEstadoAnexo($dep['id'], 'anexo02', $dep['estado_entrega']);
-            $estado03 = $resolverEstadoAnexo($dep['id'], 'anexo03', $dep['estado_entrega']);
-            $estado04 = $resolverEstadoAnexo($dep['id'], 'anexo04', $dep['estado_entrega']);
-            $estado05 = $resolverEstadoAnexo($dep['id'], 'anexo05', $dep['estado_entrega']);
-            $estado06 = $resolverEstadoAnexo($dep['id'], 'anexo06', $dep['estado_entrega']);
+        foreach ($tablero['dependencias'] ?? [] as $dep) {
+            $depId = (int) ($dep['id'] ?? 0);
+            $estadoEntrega = (string) ($dep['estado_entrega'] ?? 'borrador');
+
+            $estado02 = $resolverEstadoAnexo($depId, 'anexo02', $estadoEntrega);
+            $estado03 = $resolverEstadoAnexo($depId, 'anexo03', $estadoEntrega);
+            $estado04 = $resolverEstadoAnexo($depId, 'anexo04', $estadoEntrega);
+            $estado05 = $resolverEstadoAnexo($depId, 'anexo05', $estadoEntrega);
+            $estado06 = $resolverEstadoAnexo($depId, 'anexo06', $estadoEntrega);
 
             $estados = [$estado02, $estado03, $estado04, $estado05, $estado06];
             $completados = count(array_filter($estados, fn ($s) => in_array($s, ['generado', 'firmado'], true)));
             $firmadosCount = count(array_filter($estados, fn ($s) => $s === 'firmado'));
 
-            $porcentajeAvance = $dep['estado_entrega'] === 'consolidada'
+            $porcentajeAvance = $estadoEntrega === 'consolidada'
                 ? 100
                 : (int) round(($completados / 5) * 100);
 
+            $encargadoNombre = null;
+            if (! empty($dep['encargado']) && is_array($dep['encargado'])) {
+                $nombres = $dep['encargado']['nombres'] ?? '';
+                $apellidos = $dep['encargado']['apellidos'] ?? '';
+                $encargadoNombre = trim("{$nombres} {$apellidos}") ?: null;
+            }
+
             $filas[] = [
-                'dependencia_id' => $dep['id'],
-                'codigo' => $dep['codigo'],
-                'nombre' => $dep['nombre'],
-                'nivel' => $dep['nivel'],
-                'encargado' => $dep['encargado']
-                    ? trim("{$dep['encargado']['nombres']} {$dep['encargado']['apellidos']}")
-                    : null,
-                'estado_entrega' => $dep['estado_entrega'],
+                'dependencia_id' => $depId,
+                'codigo' => (string) ($dep['codigo'] ?? ''),
+                'nombre' => (string) ($dep['nombre'] ?? ''),
+                'nivel' => (string) ($dep['nivel'] ?? ''),
+                'encargado' => $encargadoNombre,
+                'estado_entrega' => $estadoEntrega,
                 'anexo_02' => $estado02,
                 'anexo_03' => $estado03,
                 'anexo_04' => $estado04,
@@ -123,16 +131,39 @@ class ReportesService
                 'anexos_completados' => $completados,
                 'anexos_firmados' => $firmadosCount,
                 'porcentaje_avance' => $porcentajeAvance,
-                'observaciones_abiertas' => $dep['observaciones_abiertas'],
-                'patrimonio_total' => $dep['patrimonio_total'],
-                'patrimonio_confirmados' => $dep['patrimonio_confirmados'],
-                'patrimonio_porcentaje' => $dep['patrimonio_porcentaje'],
+                'observaciones_abiertas' => (int) ($dep['observaciones_abiertas'] ?? 0),
+                'patrimonio_total' => (int) ($dep['patrimonio_total'] ?? 0),
+                'patrimonio_confirmados' => (int) ($dep['patrimonio_confirmados'] ?? 0),
+                'patrimonio_porcentaje' => (float) ($dep['patrimonio_porcentaje'] ?? 0),
             ];
         }
 
+        $totalDeps = count($filas);
+        $consolidadasCount = (int) ($tablero['metricas']['consolidadas'] ?? count(array_filter($filas, fn ($f) => $f['estado_entrega'] === 'consolidada')));
+        $remitidasCount = (int) ($tablero['metricas']['remitidas'] ?? count(array_filter($filas, fn ($f) => $f['estado_entrega'] === 'remitida')));
+        $observadasCount = (int) ($tablero['metricas']['observadas'] ?? count(array_filter($filas, fn ($f) => $f['estado_entrega'] === 'observada' || ($f['observaciones_abiertas'] ?? 0) > 0)));
+        $borradorCount = (int) ($tablero['metricas']['borrador'] ?? count(array_filter($filas, fn ($f) => in_array($f['estado_entrega'], ['borrador', null, ''], true))));
+        $porcentajeAvanceGlobal = $totalDeps > 0 ? (float) round(($consolidadasCount / $totalDeps) * 100, 1) : 0.0;
+
+        $metricas = [
+            'total_dependencias' => $totalDeps,
+            'consolidadas' => $consolidadasCount,
+            'remitidas' => $remitidasCount,
+            'observadas' => $observadasCount,
+            'borrador' => $borradorCount,
+            'porcentaje_avance' => (float) ($tablero['metricas']['porcentaje_avance'] ?? $porcentajeAvanceGlobal),
+            'patrimonio' => $tablero['metricas']['patrimonio'] ?? [
+                'total_bienes' => 0,
+                'verificados' => 0,
+                'pendientes' => 0,
+                'porcentaje' => 0,
+                'valor_total' => 0,
+            ],
+        ];
+
         return [
             'generado_en' => Carbon::now()->format('d/m/Y H:i'),
-            'metricas' => $tablero['metricas'],
+            'metricas' => $metricas,
             'filas' => $filas,
         ];
     }
@@ -150,26 +181,29 @@ class ReportesService
         $tablero = $this->transferencia->obtenerTableroOperativo($dependenciaIds, $procesoId);
 
         $filas = [];
-        foreach ($tablero['dependencias'] as $dep) {
+        foreach ($tablero['dependencias'] ?? [] as $dep) {
+            $totalBienes = (int) ($dep['patrimonio_total'] ?? 0);
+            $confirmados = (int) ($dep['patrimonio_confirmados'] ?? 0);
+
             // Solo dependencias con bienes patrimoniales aportan a la conciliación.
-            if ($dep['patrimonio_total'] === 0) {
+            if ($totalBienes === 0) {
                 continue;
             }
 
             $filas[] = [
-                'dependencia_id' => $dep['id'],
-                'codigo' => $dep['codigo'],
-                'nombre' => $dep['nombre'],
-                'total' => $dep['patrimonio_total'],
-                'confirmados' => $dep['patrimonio_confirmados'],
-                'pendientes' => max(0, $dep['patrimonio_total'] - $dep['patrimonio_confirmados']),
-                'porcentaje' => $dep['patrimonio_porcentaje'],
+                'dependencia_id' => (int) ($dep['id'] ?? 0),
+                'codigo' => (string) ($dep['codigo'] ?? ''),
+                'nombre' => (string) ($dep['nombre'] ?? ''),
+                'total' => $totalBienes,
+                'confirmados' => $confirmados,
+                'pendientes' => max(0, $totalBienes - $confirmados),
+                'porcentaje' => (float) ($dep['patrimonio_porcentaje'] ?? 0),
             ];
         }
 
         return [
             'generado_en' => Carbon::now()->format('d/m/Y H:i'),
-            'totales' => $tablero['metricas']['patrimonio'],
+            'totales' => $tablero['metricas']['patrimonio'] ?? [],
             'filas' => $filas,
         ];
     }
