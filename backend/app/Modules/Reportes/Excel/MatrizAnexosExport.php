@@ -43,15 +43,27 @@ class MatrizAnexosExport implements FromArray, ShouldAutoSize, WithHeadings, Wit
             $f['nivel'],
             $f['encargado'] ?? '',
             ucfirst((string) $f['estado_entrega']),
-            $f['anexo_02'] ? 'Sí' : '—',
-            $f['anexo_03'] ? 'Sí' : '—',
-            $f['anexo_04'] ? 'Sí' : '—',
-            $f['anexo_05'] ? 'Sí' : '—',
-            $f['anexo_06'] ? 'Sí' : '—',
+            $this->etiquetaEstadoAnexo($f['anexo_02'] ?? null),
+            $this->etiquetaEstadoAnexo($f['anexo_03'] ?? null),
+            $this->etiquetaEstadoAnexo($f['anexo_04'] ?? null),
+            $this->etiquetaEstadoAnexo($f['anexo_05'] ?? null),
+            $this->etiquetaEstadoAnexo($f['anexo_06'] ?? null),
             $f['observaciones_abiertas'],
             $f['patrimonio_total'],
             $f['patrimonio_confirmados'],
             $f['patrimonio_porcentaje'].' %',
         ], $this->data['filas']);
+    }
+
+    private function etiquetaEstadoAnexo(mixed $valor): string
+    {
+        if ($valor === 'firmado' || $valor === 'entregado') {
+            return 'Entregado';
+        }
+        if ($valor === 'generado' || $valor === true || $valor === 'si') {
+            return 'Sí';
+        }
+
+        return '—';
     }
 }

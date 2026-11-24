@@ -9,6 +9,7 @@ use App\Modules\Auth\Models\AsignacionRol;
 use App\Modules\Gestion\Models\InformeGestion;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Patrimonio\Models\BienPatrimonial;
+use App\Modules\Transferencia\Models\FirmaBorrador;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Enums\Rol;
 use Database\Seeders\RolesPermisosSeeder;
@@ -62,10 +63,19 @@ class ReportesTest extends TestCase
             'funciones' => [['n' => 1, 'descripcion' => 'Función de prueba.']],
             'estado' => 'completado',
         ]);
+        FirmaBorrador::create([
+            'proceso_transferencia_id' => $this->proceso->id,
+            'dependencia_id' => $this->dep->id,
+            'tipo_documento' => 'anexo02',
+            'pdf_path' => 'firmaperu/borradores/test.pdf',
+            'pdf_sha256' => str_repeat('a', 64),
+            'generado_en' => now(),
+        ]);
 
         $r = $this->getJson('/api/reportes/matriz-anexos')->assertOk();
         $r->assertJsonPath('data.filas.0.dependencia_id', $this->dep->id);
-        $r->assertJsonPath('data.filas.0.anexo_02', true);
+        $r->assertJsonPath('data.filas.0.anexo_02', 'generado');
+        $r->assertJsonPath('data.filas.0.anexo_03', 'no_generado');
         $r->assertJsonStructure(['data' => ['generado_en', 'metricas', 'filas']]);
     }
 

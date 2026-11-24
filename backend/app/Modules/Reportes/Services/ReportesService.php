@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\Reportes\Services;
 
 use App\Modules\Organization\Models\Dependencia;
+use App\Modules\Transferencia\Models\DocumentoFirma;
+use App\Modules\Transferencia\Models\FirmaBorrador;
+use App\Modules\Transferencia\Models\FirmaSesion;
 use App\Modules\Transferencia\Models\Observacion;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Modules\Transferencia\Services\TransferenciaService;
@@ -38,9 +41,70 @@ class ReportesService
         $procesoId = $this->procesoActivoId();
         $tablero = $this->transferencia->obtenerTableroOperativo($dependenciaIds, $procesoId);
 
+        $depIds = array_column($tablero['dependencias'], 'id');
+
+        // Pre-cargar en lote borradores oficiales generados en "PDF y firma"
+        $borradores = FirmaBorrador::query()
+            ->where('proceso_transferencia_id', $procesoId)
+            ->whereIn('dependencia_id', $depIds)
+            ->get(['dependencia_id', 'tipo_documento'])
+            ->groupBy('dependencia_id')
+            ->map(fn ($items) => $items->pluck('tipo_documento')->flip()->all())
+            ->all();
+
+        // Pre-cargar en lote firmas digitales suscritas
+        $firmadas = FirmaSesion::query()
+            ->where('proceso_transferencia_id', $procesoId)
+            ->whereIn('dependencia_id', $depIds)
+            ->where('estado', 'firmada')
+            ->get(['dependencia_id', 'tipo_documento'])
+            ->groupBy('dependencia_id')
+            ->map(fn ($items) => $items->pluck('tipo_documento')->flip()->all())
+            ->all();
+
+        // Pre-cargar en lote documentos formalizados
+        $documentosFirmados = DocumentoFirma::query()
+            ->where('proceso_transferencia_id', $procesoId)
+            ->whereIn('dependencia_id', $depIds)
+            ->get(['dependencia_id', 'tipo_documento'])
+            ->groupBy('dependencia_id')
+            ->map(fn ($items) => $items->pluck('tipo_documento')->flip()->all())
+            ->all();
+
+        $resolverEstadoAnexo = function (int $depId, string $tipo, string $estadoEntrega) use ($borradores, $firmadas, $documentosFirmados): string {
+            // 1. Si la entrega general está consolidada o el documento está suscrito/formalizado => 'firmado' (Entregado)
+            if (
+                $estadoEntrega === 'consolidada'
+                || isset($firmadas[$depId][$tipo])
+                || isset($documentosFirmados[$depId][$tipo])
+            ) {
+                return 'firmado';
+            }
+
+            // 2. Si se generó el PDF oficial en "PDF y firma" => 'generado' (Sí / Avance)
+            if (isset($borradores[$depId][$tipo])) {
+                return 'generado';
+            }
+
+            // 3. Documento no generado aún => 'no_generado' (—)
+            return 'no_generado';
+        };
+
         $filas = [];
         foreach ($tablero['dependencias'] as $dep) {
-            $presencia = $this->transferencia->presenciaAnexos($dep['id'], $procesoId);
+            $estado02 = $resolverEstadoAnexo($dep['id'], 'anexo02', $dep['estado_entrega']);
+            $estado03 = $resolverEstadoAnexo($dep['id'], 'anexo03', $dep['estado_entrega']);
+            $estado04 = $resolverEstadoAnexo($dep['id'], 'anexo04', $dep['estado_entrega']);
+            $estado05 = $resolverEstadoAnexo($dep['id'], 'anexo05', $dep['estado_entrega']);
+            $estado06 = $resolverEstadoAnexo($dep['id'], 'anexo06', $dep['estado_entrega']);
+
+            $estados = [$estado02, $estado03, $estado04, $estado05, $estado06];
+            $completados = count(array_filter($estados, fn ($s) => in_array($s, ['generado', 'firmado'], true)));
+            $firmadosCount = count(array_filter($estados, fn ($s) => $s === 'firmado'));
+
+            $porcentajeAvance = $dep['estado_entrega'] === 'consolidada'
+                ? 100
+                : (int) round(($completados / 5) * 100);
 
             $filas[] = [
                 'dependencia_id' => $dep['id'],
@@ -51,11 +115,14 @@ class ReportesService
                     ? trim("{$dep['encargado']['nombres']} {$dep['encargado']['apellidos']}")
                     : null,
                 'estado_entrega' => $dep['estado_entrega'],
-                'anexo_02' => $presencia['anexo_02'],
-                'anexo_03' => $presencia['anexo_03'],
-                'anexo_04' => $presencia['anexo_04'],
-                'anexo_05' => $presencia['anexo_05'],
-                'anexo_06' => $presencia['anexo_06'],
+                'anexo_02' => $estado02,
+                'anexo_03' => $estado03,
+                'anexo_04' => $estado04,
+                'anexo_05' => $estado05,
+                'anexo_06' => $estado06,
+                'anexos_completados' => $completados,
+                'anexos_firmados' => $firmadosCount,
+                'porcentaje_avance' => $porcentajeAvance,
                 'observaciones_abiertas' => $dep['observaciones_abiertas'],
                 'patrimonio_total' => $dep['patrimonio_total'],
                 'patrimonio_confirmados' => $dep['patrimonio_confirmados'],

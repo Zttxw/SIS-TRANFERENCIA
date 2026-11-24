@@ -21,6 +21,8 @@ export interface MetricasMatriz {
   }
 }
 
+export type EstadoAnexoMatriz = 'no_generado' | 'generado' | 'firmado' | 'entregado'
+
 export interface FilaMatriz {
   dependencia_id: number
   codigo: string
@@ -28,11 +30,14 @@ export interface FilaMatriz {
   nivel: number
   encargado: string | null
   estado_entrega: string
-  anexo_02: boolean
-  anexo_03: boolean
-  anexo_04: boolean
-  anexo_05: boolean
-  anexo_06: boolean
+  anexo_02: EstadoAnexoMatriz | boolean | string
+  anexo_03: EstadoAnexoMatriz | boolean | string
+  anexo_04: EstadoAnexoMatriz | boolean | string
+  anexo_05: EstadoAnexoMatriz | boolean | string
+  anexo_06: EstadoAnexoMatriz | boolean | string
+  anexos_completados?: number
+  anexos_firmados?: number
+  porcentaje_avance?: number
   observaciones_abiertas: number
   patrimonio_total: number
   patrimonio_confirmados: number

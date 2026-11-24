@@ -127,8 +127,11 @@ class ReportesController extends Controller
                 ['Código', 'Centro de costo', 'Nivel', 'Estado', 'A02', 'A03', 'A04', 'A05', 'A06', 'Obs.', 'Bienes', 'Verif.', '% Patr.'],
                 array_map(fn (array $f): array => [
                     $f['codigo'], $f['nombre'], $f['nivel'], ucfirst((string) $f['estado_entrega']),
-                    $f['anexo_02'] ? 'Sí' : '—', $f['anexo_03'] ? 'Sí' : '—', $f['anexo_04'] ? 'Sí' : '—',
-                    $f['anexo_05'] ? 'Sí' : '—', $f['anexo_06'] ? 'Sí' : '—',
+                    $this->etiquetaEstadoAnexo($f['anexo_02']),
+                    $this->etiquetaEstadoAnexo($f['anexo_03']),
+                    $this->etiquetaEstadoAnexo($f['anexo_04']),
+                    $this->etiquetaEstadoAnexo($f['anexo_05']),
+                    $this->etiquetaEstadoAnexo($f['anexo_06']),
                     $f['observaciones_abiertas'], $f['patrimonio_total'], $f['patrimonio_confirmados'],
                     $f['patrimonio_porcentaje'].' %',
                 ], $datos['filas']),
@@ -171,5 +174,17 @@ class ReportesController extends Controller
                 'filas' => $filas,
             ],
         ];
+    }
+
+    private function etiquetaEstadoAnexo(mixed $valor): string
+    {
+        if ($valor === 'firmado' || $valor === 'entregado') {
+            return 'Entregado';
+        }
+        if ($valor === 'generado' || $valor === true || $valor === 'si') {
+            return 'Sí';
+        }
+
+        return '—';
     }
 }
