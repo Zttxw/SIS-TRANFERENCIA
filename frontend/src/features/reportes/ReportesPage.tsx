@@ -578,9 +578,15 @@ function MatrizView() {
       {/* ========================================================
           TARJETAS KPI SUPERIORES CON MICRO-MÉTRICAS INTUITIVAS (X/TOTAL)
           ======================================================== */}
-      {metricas && (() => {
-        const total = metricas.total_dependencias || filas.length || 1
-        const totalEvaluadas = metricas.consolidadas + metricas.remitidas + metricas.observadas
+      {(() => {
+        const total = Number(metricas?.total_dependencias || filas.length) || 1
+        const consolidadas = Number(metricas?.consolidadas ?? filas.filter(f => f.estado_entrega === 'consolidada').length) || 0
+        const remitidas = Number(metricas?.remitidas ?? filas.filter(f => f.estado_entrega === 'remitida').length) || 0
+        const observadas = Number(metricas?.observadas ?? filas.filter(f => f.estado_entrega === 'observada' || (f.observaciones_abiertas ?? 0) > 0).length) || 0
+        const borrador = Number(metricas?.borrador ?? filas.filter(f => !f.estado_entrega || f.estado_entrega === 'borrador').length) || 0
+        const pctAvance = Number(metricas?.porcentaje_avance ?? (total > 0 ? Math.round((consolidadas / total) * 100) : 0)) || 0
+
+        const totalEvaluadas = consolidadas + remitidas + observadas
         const denObs = totalEvaluadas > 0 ? totalEvaluadas : total
 
         return (
@@ -593,7 +599,7 @@ function MatrizView() {
                   <Building2 className="h-3.5 w-3.5 text-slate-700" />
                 </div>
                 <div className="mt-1 text-xl sm:text-2xl font-black text-slate-900 font-mono">
-                  {metricas.total_dependencias}
+                  {total}
                 </div>
                 <p className="text-[11px] text-slate-600 mt-0.5 font-medium truncate">100% supervisadas</p>
               </CardContent>
@@ -607,11 +613,11 @@ function MatrizView() {
                   <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
                 </div>
                 <div className="mt-1 flex items-baseline gap-1 font-mono">
-                  <span className="text-xl sm:text-2xl font-black text-emerald-700">{metricas.consolidadas}</span>
+                  <span className="text-xl sm:text-2xl font-black text-emerald-700">{consolidadas}</span>
                   <span className="text-[11px] font-semibold text-emerald-700/70">/ {total}</span>
                 </div>
                 <p className="text-[11px] text-emerald-800 font-medium mt-0.5 truncate">
-                  {Math.round((metricas.consolidadas / total) * 100)}% conformes
+                  {total > 0 ? Math.round((consolidadas / total) * 100) : 0}% conformes
                 </p>
               </CardContent>
             </Card>
@@ -624,11 +630,11 @@ function MatrizView() {
                   <Clock className="h-3.5 w-3.5 text-blue-600" />
                 </div>
                 <div className="mt-1 flex items-baseline gap-1 font-mono">
-                  <span className="text-xl sm:text-2xl font-black text-blue-700">{metricas.remitidas}</span>
+                  <span className="text-xl sm:text-2xl font-black text-blue-700">{remitidas}</span>
                   <span className="text-[11px] font-semibold text-blue-700/70">/ {total}</span>
                 </div>
                 <p className="text-[11px] text-blue-800 font-medium mt-0.5 truncate">
-                  En revisión técnica ({Math.round((metricas.remitidas / total) * 100)}%)
+                  En revisión técnica ({total > 0 ? Math.round((remitidas / total) * 100) : 0}%)
                 </p>
               </CardContent>
             </Card>
@@ -641,12 +647,12 @@ function MatrizView() {
                   <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
                 </div>
                 <div className="mt-1 flex items-baseline gap-1 font-mono">
-                  <span className="text-xl sm:text-2xl font-black text-amber-700">{metricas.observadas}</span>
+                  <span className="text-xl sm:text-2xl font-black text-amber-700">{observadas}</span>
                   <span className="text-[11px] font-semibold text-amber-700/70">/ {denObs}</span>
                 </div>
                 <p className="text-[11px] text-amber-800 font-medium mt-0.5 truncate">
                   {totalEvaluadas > 0
-                    ? `${Math.round((metricas.observadas / totalEvaluadas) * 100)}% observadas`
+                    ? `${Math.round((observadas / totalEvaluadas) * 100)}% observadas`
                     : 'Sin observaciones'}
                 </p>
               </CardContent>
@@ -660,11 +666,11 @@ function MatrizView() {
                   <Minus className="h-3.5 w-3.5 text-slate-500" />
                 </div>
                 <div className="mt-1 flex items-baseline gap-1 font-mono">
-                  <span className="text-xl sm:text-2xl font-black text-slate-700">{metricas.borrador}</span>
+                  <span className="text-xl sm:text-2xl font-black text-slate-700">{borrador}</span>
                   <span className="text-[11px] font-semibold text-slate-500">/ {total}</span>
                 </div>
                 <p className="text-[11px] text-slate-600 font-medium mt-0.5 truncate">
-                  En formulación ({Math.round((metricas.borrador / total) * 100)}%)
+                  En formulación ({total > 0 ? Math.round((borrador / total) * 100) : 0}%)
                 </p>
               </CardContent>
             </Card>
@@ -677,10 +683,10 @@ function MatrizView() {
                   <TrendingUp className="h-3.5 w-3.5 text-sky-600" />
                 </div>
                 <div className="mt-1 text-xl sm:text-2xl font-black text-sky-800 font-mono">
-                  {metricas.porcentaje_avance}%
+                  {pctAvance}%
                 </div>
                 <p className="text-[11px] text-sky-700 mt-0.5 font-medium truncate">
-                  {metricas.consolidadas} de {total} cerradas
+                  {consolidadas} de {total} cerradas
                 </p>
               </CardContent>
             </Card>

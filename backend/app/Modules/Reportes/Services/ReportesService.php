@@ -138,9 +138,32 @@ class ReportesService
             ];
         }
 
+        $totalDeps = count($filas);
+        $consolidadasCount = (int) ($tablero['metricas']['consolidadas'] ?? count(array_filter($filas, fn ($f) => $f['estado_entrega'] === 'consolidada')));
+        $remitidasCount = (int) ($tablero['metricas']['remitidas'] ?? count(array_filter($filas, fn ($f) => $f['estado_entrega'] === 'remitida')));
+        $observadasCount = (int) ($tablero['metricas']['observadas'] ?? count(array_filter($filas, fn ($f) => $f['estado_entrega'] === 'observada' || ($f['observaciones_abiertas'] ?? 0) > 0)));
+        $borradorCount = (int) ($tablero['metricas']['borrador'] ?? count(array_filter($filas, fn ($f) => in_array($f['estado_entrega'], ['borrador', null, ''], true))));
+        $porcentajeAvanceGlobal = $totalDeps > 0 ? (float) round(($consolidadasCount / $totalDeps) * 100, 1) : 0.0;
+
+        $metricas = [
+            'total_dependencias' => $totalDeps,
+            'consolidadas' => $consolidadasCount,
+            'remitidas' => $remitidasCount,
+            'observadas' => $observadasCount,
+            'borrador' => $borradorCount,
+            'porcentaje_avance' => (float) ($tablero['metricas']['porcentaje_avance'] ?? $porcentajeAvanceGlobal),
+            'patrimonio' => $tablero['metricas']['patrimonio'] ?? [
+                'total_bienes' => 0,
+                'verificados' => 0,
+                'pendientes' => 0,
+                'porcentaje' => 0,
+                'valor_total' => 0,
+            ],
+        ];
+
         return [
             'generado_en' => Carbon::now()->format('d/m/Y H:i'),
-            'metricas' => $tablero['metricas'] ?? [],
+            'metricas' => $metricas,
             'filas' => $filas,
         ];
     }
