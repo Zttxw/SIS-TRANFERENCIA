@@ -56,6 +56,17 @@
 
   --hielo-institucional: hsl(198 35% 96%);
 
+  /* Canales de color institucionales y niveles (Anexos de la Entidad) */
+  --primario: #3484A5;
+  --secundario: #2CA792;
+  --acento: #F0C84F;
+  --hielo: hsl(198 35% 98%);
+
+  /* Un pastel por nivel jerárquico */
+  --nivel-1: #7FB5CE;
+  --nivel-2: #B3A9E3;
+  --nivel-3: #F0B7A4;
+
   /* ----------------------------------------------------------
    * Colores semánticos de ESTADO (claro)
    * Convención: <nombre>        → tono sólido (íconos, acentos)
@@ -132,6 +143,10 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
 
   --hielo-institucional: oklch(0.22 0 0);
+  --hielo: oklch(0.18 0.01 200);
+  --nivel-1: #4a7d94;
+  --nivel-2: #655b94;
+  --nivel-3: #8a5849;
 
   /* Colores semánticos de estado (oscuro): -soft translúcido, -fg claro */
   --info: #60a5fa;
@@ -296,4 +311,98 @@
     letter-spacing: -0.015em;
     font-weight: 600;
   }
+}
+
+/* ==========================================================================
+ * Vista "Anexos de la Entidad" — Canales de nivel jerárquico y estado
+ * ========================================================================== */
+
+.nivel-1 { --c: var(--nivel-1); }
+.nivel-2 { --c: var(--nivel-2); }
+.nivel-3 { --c: var(--nivel-3); }
+
+.tarjeta {
+  background: color-mix(in srgb, var(--c) 30%, var(--hielo));
+  border: 0.5px solid color-mix(in srgb, var(--c) 75%, transparent);
+  border-radius: 12px;
+}
+.tarjeta .carpeta {
+  color: color-mix(in srgb, var(--c) 75%, #1a1a1a);
+}
+
+.tarjeta.revision {
+  background: color-mix(in srgb, var(--acento) 32%, var(--hielo));
+  border: 1.5px solid var(--acento);
+}
+.tarjeta.revision .carpeta {
+  color: #C9A02A;
+}
+.tarjeta.revision .estado {
+  color: #7A5A06;
+  font-weight: 500;
+}
+
+.tarjeta.remitida {
+  background: color-mix(in srgb, var(--secundario) 22%, var(--hielo));
+  border: 1.5px solid var(--secundario);
+}
+.tarjeta.remitida .carpeta {
+  color: var(--secundario);
+}
+.tarjeta.remitida .estado {
+  color: #1D7A6A;
+  font-weight: 500;
+}
+
+/* Modo oscuro: contraste adaptado */
+.dark .tarjeta .carpeta {
+  color: color-mix(in srgb, var(--c) 80%, #ffffff);
+}
+.dark .tarjeta.revision {
+  background: color-mix(in srgb, var(--acento) 22%, var(--hielo));
+  border: 1.5px solid var(--acento);
+}
+.dark .tarjeta.revision .carpeta {
+  color: #F0C84F;
+}
+.dark .tarjeta.revision .estado {
+  color: #FCD34D;
+  font-weight: 500;
+}
+.dark .tarjeta.remitida {
+  background: color-mix(in srgb, var(--secundario) 18%, var(--hielo));
+  border: 1.5px solid var(--secundario);
+}
+.dark .tarjeta.remitida .carpeta {
+  color: var(--secundario);
+}
+.dark .tarjeta.remitida .estado {
+  color: #34D399;
+  font-weight: 500;
+}
+
+/* Encabezados de nivel jerárquico */
+.nivel-titulo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-transform: uppercase;
+}
+.nivel-titulo::before,
+.nivel-titulo::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: color-mix(in srgb, var(--c) 80%, transparent);
+}
+.nivel-titulo b {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 700;
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--c) 45%, var(--hielo));
+  border: 0.5px solid color-mix(in srgb, var(--c) 85%, transparent);
+  padding: 3px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
 }

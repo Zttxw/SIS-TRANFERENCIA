@@ -141,7 +141,7 @@ export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil }
   const pctRemitidas = totales.total > 0 ? Math.round((totales.remitidas / totales.total) * 100) : 0
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-5">
+    <div className="mx-auto max-w-[1600px] space-y-5 bg-[var(--hielo)] p-1 sm:p-2 rounded-2xl">
       {/* Barra de contexto */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs border-b border-border pb-3">
         <div className="flex items-center gap-2 flex-wrap text-muted-foreground">
@@ -155,7 +155,7 @@ export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil }
                   : 'Administración institucional'}
           </span>
           <span>·</span>
-          <span className="text-primary font-semibold">
+          <span className="text-[var(--primario)] font-semibold">
             {esDelegado ? 'Dependencias a mi cargo' : 'Archivo documental del pliego'}
           </span>
         </div>
@@ -175,7 +175,7 @@ export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil }
       <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-card to-card p-5 sm:p-6">
         <div className="flex flex-col lg:flex-row lg:items-center gap-5">
           <div className="flex-1">
-            <h1 className="flex items-center gap-2.5 text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="flex items-center gap-2.5 text-xl sm:text-2xl font-bold tracking-tight text-[var(--primario)]">
               <span className="inline-block h-10 w-12 shrink-0">
                 <CarpetaSvg tono="verde" abierta />
               </span>
@@ -213,13 +213,13 @@ export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil }
         <div className="mt-5 space-y-1.5">
           <div className="flex items-center justify-between text-mini text-muted-foreground">
             <span className="font-semibold">Avance de remisión del pliego</span>
-            <span className="font-mono font-bold text-success-fg">
+            <span className="font-mono font-bold text-[var(--secundario)]">
               {totales.remitidas}/{totales.total} ({pctRemitidas}%)
             </span>
           </div>
           <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted border border-border">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-success to-success/70 transition-all duration-500"
+              className="h-full rounded-full bg-[var(--secundario)] transition-all duration-500"
               style={{ width: `${pctRemitidas}%` }}
             />
           </div>
@@ -235,8 +235,8 @@ export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil }
             className={cn(
               'inline-flex items-center gap-1 rounded-lg px-2 py-1 transition-colors',
               abierta
-                ? 'cursor-pointer hover:bg-muted hover:text-foreground'
-                : 'font-semibold text-foreground',
+                ? 'cursor-pointer hover:bg-muted text-[var(--primario)]'
+                : 'font-semibold text-[var(--primario)]',
             )}
           >
             <Home className="h-3.5 w-3.5" />
@@ -245,7 +245,7 @@ export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil }
           {abierta && (
             <>
               <ChevronRight className="h-3.5 w-3.5" />
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-2 py-1 font-semibold text-primary">
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-2 py-1 font-semibold text-[var(--primario)]">
                 [{abierta.codigo}] {abierta.nombre}
               </span>
             </>
@@ -264,17 +264,19 @@ export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil }
                   className={cn(
                     'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-mini font-semibold transition-colors cursor-pointer',
                     soloRemitidas === f
-                      ? f === 'remitidas'
-                        ? 'border-success-border bg-success-soft text-success-fg'
-                        : f === 'pendientes'
-                          ? 'border-border bg-muted text-foreground'
-                          : 'border-primary/30 bg-primary/10 text-primary'
-                      : 'border-border bg-card text-muted-foreground hover:bg-muted',
+                      ? f === 'todas'
+                        ? 'border-[var(--primario)] bg-[var(--primario)] text-white shadow-xs'
+                        : f === 'remitidas'
+                          ? 'border-[var(--secundario)] bg-[var(--secundario)]/15 text-[#1D7A6A] dark:text-[#6ee7b7]'
+                          : f === 'en_firma'
+                            ? 'border-[var(--acento)] bg-[var(--acento)]/20 text-[#7A5A06] dark:text-[#fcd34d]'
+                            : 'border-border bg-muted text-foreground'
+                      : 'border-border bg-card/70 text-muted-foreground hover:bg-muted',
                   )}
                 >
-                  {f === 'remitidas' && <span className="h-2 w-2 rounded-full bg-success" />}
+                  {f === 'remitidas' && <span className="h-2 w-2 rounded-full bg-[var(--secundario)]" />}
                   {f === 'pendientes' && <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />}
-                  {f === 'en_firma' && <span className="h-2 w-2 rounded-full bg-warning" />}
+                  {f === 'en_firma' && <span className="h-2 w-2 rounded-full bg-[#C9A02A]" />}
                   {f === 'todas'
                     ? 'Todas'
                     : f === 'en_firma'
@@ -307,23 +309,40 @@ export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil }
         </Card>
       ) : (
         <div className="space-y-7">
-          {porNivel.map((grupo) => (
-            <section key={grupo.nivel} className="space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                <span className="h-px flex-1 bg-border" />
-                <span className="px-2 text-foreground">{grupo.nombre}</span>
-                <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-mini text-foreground">
-                  {grupo.dependencias.length}
-                </span>
-                <span className="h-px flex-1 bg-border" />
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
-                {grupo.dependencias.map((dep) => (
-                  <TarjetaCarpeta key={dep.id} dependencia={dep} onAbrir={() => setAbierta(dep)} />
-                ))}
-              </div>
-            </section>
-          ))}
+          {porNivel.map((grupo) => {
+            const nivelClass = grupo.nivel === 1 ? 'nivel-1' : grupo.nivel === 2 ? 'nivel-2' : 'nivel-3'
+            // Distribución adaptativa para eliminar huecos:
+            // - Nivel 1 (5 dependencias): 5 columnas en desktop -> 1 fila completa sin huecos.
+            // - Nivel 2 (12 dependencias): 4 columnas en desktop (y 3 en tablet, 2 en móvil) -> 3 filas exactas de 4, 0 huecos.
+            // - Nivel 3 (47 dependencias): 4 columnas en desktop -> 11 filas completas de 4 + 3 en la última (98% de ocupación).
+            const gridClass =
+              grupo.nivel === 1
+                ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4'
+                : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4'
+
+            return (
+              <section key={grupo.nivel} className="space-y-3">
+                <div className={cn('nivel-titulo text-xs font-bold uppercase tracking-wider', nivelClass)}>
+                  <b>
+                    <span>{grupo.nombre}</span>
+                    <span className="ml-2 font-mono text-[11px] opacity-75 font-semibold">
+                      {grupo.dependencias.length}
+                    </span>
+                  </b>
+                </div>
+                <div className={gridClass}>
+                  {grupo.dependencias.map((dep) => (
+                    <TarjetaCarpeta
+                      key={dep.id}
+                      dependencia={dep}
+                      nivel={grupo.nivel}
+                      onAbrir={() => setAbierta(dep)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )
+          })}
         </div>
       )}
     </div>
@@ -360,14 +379,25 @@ function ResumenCarpeta({
 /** Carpeta cerrada en la cuadrícula: SVG + metadatos, se abre al pulsar. */
 function TarjetaCarpeta({
   dependencia,
+  nivel,
   onAbrir,
 }: {
   dependencia: DependenciaSemaforoItem
+  nivel?: number
   onAbrir: () => void
 }) {
-  const tono = tonoDeCarpeta(dependencia.estado_entrega)
   const remitida = estaRemitida(dependencia.estado_entrega)
+  const enRevision =
+    !remitida &&
+    (dependencia.estado_entrega === 'en_revision' ||
+      estaEnFirma(dependencia.estado_entrega) ||
+      dependencia.estado_entrega === 'acta_suscrita')
   const [hover, setHover] = useState(false)
+
+  const nivelNum = nivel ?? dependencia.nivel ?? 3
+  const nivelClass = nivelNum === 1 ? 'nivel-1' : nivelNum === 2 ? 'nivel-2' : 'nivel-3'
+  const estadoClass = remitida ? 'remitida' : enRevision ? 'revision' : ''
+  const tituloCompleto = `[${dependencia.codigo}] ${dependencia.nombre}`
 
   return (
     <button
@@ -377,46 +407,48 @@ function TarjetaCarpeta({
       onMouseLeave={() => setHover(false)}
       onFocus={() => setHover(true)}
       onBlur={() => setHover(false)}
+      title={tituloCompleto}
       className={cn(
-        'group relative flex flex-col items-center gap-2 rounded-2xl border bg-card p-4 text-center transition-all',
-        'hover:-translate-y-1 hover:shadow-lg cursor-pointer',
-        tono === 'verde'
-          ? 'border-success-border hover:border-success'
-          : tono === 'ambar'
-            ? 'border-warning-border hover:border-warning'
-            : 'border-border hover:border-muted-foreground/40',
+        'tarjeta group relative flex flex-col items-center gap-2 text-center transition-all',
+        'hover:-translate-y-1 hover:shadow-md cursor-pointer pt-6 pb-3 px-3',
+        nivelClass,
+        estadoClass,
       )}
     >
-      {/* Insignia de estado */}
-      <span
-        className={cn(
-          'absolute right-2.5 top-2.5 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-microdato font-bold',
-          remitida
-            ? 'border-success-border bg-success-soft text-success-fg'
-            : tono === 'ambar'
-              ? 'border-warning-border bg-warning-soft text-warning-fg'
-              : 'border-border bg-muted text-muted-foreground',
-        )}
-      >
-        {remitida ? <CheckCircle2 className="h-3 w-3" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
-        {remitida
-          ? 'Remitida'
-          : dependencia.estado_entrega === 'acta_suscrita'
-            ? 'Acta suscrita'
-            : estaEnFirma(dependencia.estado_entrega)
+      {/* Indicador de estado discreto: solo punto de 4px y texto en esquina top: 6px; right: 8px */}
+      <div className="absolute top-[6px] right-[8px] flex items-center gap-1.5 pointer-events-none">
+        <span
+          className={cn(
+            'h-1 w-1 rounded-full shrink-0',
+            remitida
+              ? 'bg-[var(--secundario)]'
+              : enRevision
+                ? 'bg-[#C9A02A]'
+                : 'bg-muted-foreground/60',
+          )}
+        />
+        <span
+          className={cn(
+            'estado text-[10.5px] leading-none whitespace-nowrap',
+            remitida
+              ? ''
+              : enRevision
+                ? ''
+                : 'text-muted-foreground font-normal',
+          )}
+        >
+          {remitida
+            ? 'Remitida'
+            : enRevision
               ? 'En revisión y firma'
               : 'En preparación'}
-      </span>
-
-      {/* Carpeta SVG */}
-      <div className="h-20 w-24 drop-shadow-sm">
-        <CarpetaSvg tono={tono} abierta={hover} />
+        </span>
       </div>
 
-      {/* Alerta de observaciones */}
+      {/* Alerta de observaciones si las hay */}
       {dependencia.observaciones > 0 && (
         <span
-          className="absolute left-2.5 top-2.5 inline-flex items-center gap-0.5 rounded-full bg-info-soft px-1.5 py-0.5 text-microdato font-bold text-info-fg"
+          className="absolute left-2 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-info-soft px-1.5 py-0.5 text-microdato font-bold text-info-fg"
           title="Observaciones del coordinador"
         >
           <MessageSquareText className="h-3 w-3" />
@@ -424,11 +456,16 @@ function TarjetaCarpeta({
         </span>
       )}
 
-      <div className="min-w-0 w-full">
-        <p className="font-mono text-mini font-bold text-primary">[{dependencia.codigo}]</p>
+      {/* Carpeta SVG con color del nivel o de estado vía currentColor */}
+      <div className="carpeta h-20 w-24 drop-shadow-xs transition-transform duration-200">
+        <CarpetaSvg tono="custom" abierta={hover} />
+      </div>
+
+      {/* Debajo de la carpeta va solo el nombre de la dependencia (sin el código [01]) */}
+      <div className="min-w-0 w-full mt-0.5">
         <p
           className="truncate text-xs font-semibold uppercase leading-tight text-foreground"
-          title={dependencia.nombre}
+          title={tituloCompleto}
         >
           {dependencia.nombre}
         </p>
