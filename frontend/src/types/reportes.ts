@@ -2,8 +2,13 @@
  * Tipos del módulo de Reportes (F5) — espejo de ReportesService del backend.
  */
 
-export type ClaveReporte = 'matriz-anexos' | 'conciliacion-patrimonial' | 'observaciones'
+export type ClaveReporte = 'matriz-anexos' | 'conciliacion-patrimonial' | 'observaciones' | 'verificacion'
 export type FormatoExport = 'excel' | 'pdf'
+
+export interface ReporteVerificacion {
+  generado_en?: string
+  [key: string]: unknown
+}
 
 export interface MetricasMatriz {
   total_dependencias: number
