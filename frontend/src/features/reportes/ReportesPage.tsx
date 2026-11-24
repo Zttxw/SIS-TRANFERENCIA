@@ -8,7 +8,6 @@ import {
   Check,
   CheckCheck,
   CheckCircle2,
-  ChevronRight,
   Clock,
   Filter,
   Layers,
@@ -475,23 +474,20 @@ function MatrizView() {
     },
     {
       id: 'acciones_movil',
-      header: 'Detalle',
+      header: '',
       align: 'right',
-      className: 'table-cell sm:hidden w-20 text-right',
+      className: 'table-cell sm:hidden w-18 text-right',
       cell: (f) => (
-        <Button
+        <button
           type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 text-xs font-semibold px-2 text-primary border-primary/30 hover:bg-primary/5 active:bg-primary/10 shadow-2xs whitespace-nowrap inline-flex items-center gap-1"
+          className="text-xs font-semibold text-primary hover:text-primary/80 hover:underline cursor-pointer transition-colors p-0 whitespace-nowrap bg-transparent border-0"
           onClick={(e) => {
             e.stopPropagation()
             setFilaDetalle(f)
           }}
         >
-          <span>Ver más</span>
-          <ChevronRight className="h-3 w-3" />
-        </Button>
+          Ver más
+        </button>
       ),
     },
     {
