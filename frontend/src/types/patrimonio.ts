@@ -32,14 +32,8 @@ export interface BienPatrimonial {
   descripcion: string | null
   marca: string | null
   modelo: string | null
-  color: string | null
   serie: string | null
-  dimension: string | null
-  caracteristicas: string | null
-  codigo_patrimonial_anterior: string | null
-  ubicacion: string | null
   estado_siga: string | null
-  valor: string | number | null
   fuente: string
   fuente_referencia: string | null
   extraido_en: string | null
@@ -62,17 +56,11 @@ export interface BienPatrimonial {
 export interface VerificarBienPayload {
   estado: EstadoVerificacionBien
   estado_conservacion?: EstadoConservacion | null
-  color?: string | null
-  dimension?: string | null
-  caracteristicas?: string | null
-  codigo_patrimonial_anterior?: string | null
-  ubicacion?: string | null
   observacion?: string | null
 }
 
 export interface ResumenPatrimonial {
   total_bienes: number
-  valor_total: number
   confirmados: number
   pendientes: number
   no_ubicados: number

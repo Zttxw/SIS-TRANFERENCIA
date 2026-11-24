@@ -1,4 +1,4 @@
-{{-- Cuerpo del Anexo 04. Requiere: $cabecera, $grupos. --}}
+{{-- Cuerpo del Anexo 04. Requiere: $cabecera, $grupos. La columna de observaciones solo se imprime si el grupo tiene alguna. --}}
 @forelse ($grupos as $grupo)
     <div class="seccion-titulo">Servidor Responsable de los Bienes</div>
     <table>
@@ -12,8 +12,10 @@
         <thead>
             <tr>
                 <th class="celda-n">N°</th><th>Código patrimonial</th><th>Denominación</th><th>Estado</th>
-                <th>Marca</th><th>Modelo</th><th>Color</th><th>Serie</th><th>Dimensión</th>
-                <th>Características</th><th>Cód. anterior</th><th>Ubicación</th>
+                <th>Marca</th><th>Modelo</th><th>Serie</th>
+                @if ($grupo['tiene_observaciones'])
+                    <th>Observaciones</th>
+                @endif
             </tr>
         </thead>
         <tbody>
@@ -25,12 +27,10 @@
                     <td>{{ $bien['estado'] ?? '' }}</td>
                     <td>{{ $bien['marca'] ?? '' }}</td>
                     <td>{{ $bien['modelo'] ?? '' }}</td>
-                    <td>{{ $bien['color'] ?? '' }}</td>
                     <td>{{ $bien['serie'] ?? '' }}</td>
-                    <td>{{ $bien['dimension'] ?? '' }}</td>
-                    <td>{{ $bien['caracteristicas'] ?? '' }}</td>
-                    <td class="mono">{{ $bien['codigo_patrimonial_anterior'] ?? '' }}</td>
-                    <td>{{ $bien['ubicacion'] ?? '' }}</td>
+                    @if ($grupo['tiene_observaciones'])
+                        <td>{{ $bien['observacion'] }}</td>
+                    @endif
                 </tr>
             @endforeach
         </tbody>

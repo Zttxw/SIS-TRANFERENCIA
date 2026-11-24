@@ -5,26 +5,32 @@ declare(strict_types=1);
 namespace App\Modules\Acervo\Services;
 
 /**
- * Referencia de origen de una fila de acervo digital del SGD:
- * `TDTV_REMITOS CO_DEP_EMI=00025,00092 CO_TIP_DOC_ADM=011 NU_ANN=2026`.
+ * Referencia de origen de una serie digital del SGD (sección A del Anexo 03):
+ * - emitidos:  `TDTV_REMITOS CO_DEP_EMI=00025,00092 CO_TIP_DOC_ADM=011 NU_ANN=2026`
+ * - recibidos: `TDTV_DESTINOS CO_DEP_DES=00025 CO_TIP_DOC_ADM=011 NU_ANN=2026`
  *
- * Desde la directiva 2026 una fila pertenece a un centro de costo que puede
- * reunir varias dependencias del SGD, por eso `CO_DEP_EMI` admite una lista.
+ * Una serie pertenece a un centro de costo que puede reunir varias
+ * dependencias del SGD, por eso la lista de dependencias admite varios códigos.
  */
 final class AcervoReferenciaSgd
 {
-    private const PATRON = '/CO_DEP_EMI=(?<deps>[^\s]+)\s+CO_TIP_DOC_ADM=(?<tipo>\S+)\s+NU_ANN=(?<anio>\d{4})/';
+    public const EMITIDOS = 'emitidos';
+
+    public const RECIBIDOS = 'recibidos';
+
+    private const PATRON = '/^(?<tabla>TDTV_REMITOS|TDTV_DESTINOS)\s+CO_DEP_(?:EMI|DES)=(?<deps>[^\s]+)\s+CO_TIP_DOC_ADM=(?<tipo>\S+)\s+NU_ANN=(?<anio>\d{4})/';
 
     /** @param  list<string>  $dependencias */
-    public static function construir(array $dependencias, ?string $tipo, string $anio): string
+    public static function construir(string $sentido, array $dependencias, ?string $tipo, string $anio): string
     {
         $codigos = array_values(array_unique($dependencias));
         sort($codigos);
+        $origen = $sentido === self::RECIBIDOS ? 'TDTV_DESTINOS CO_DEP_DES' : 'TDTV_REMITOS CO_DEP_EMI';
 
-        return 'TDTV_REMITOS CO_DEP_EMI='.implode(',', $codigos)." CO_TIP_DOC_ADM={$tipo} NU_ANN={$anio}";
+        return "{$origen}=".implode(',', $codigos)." CO_TIP_DOC_ADM={$tipo} NU_ANN={$anio}";
     }
 
-    /** @return array{deps: list<string>, tipo: string, anio: string}|null */
+    /** @return array{sentido: string, deps: list<string>, tipo: string, anio: string}|null */
     public static function leer(string $referencia): ?array
     {
         if (preg_match(self::PATRON, $referencia, $m) !== 1) {
@@ -32,6 +38,7 @@ final class AcervoReferenciaSgd
         }
 
         return [
+            'sentido' => $m['tabla'] === 'TDTV_DESTINOS' ? self::RECIBIDOS : self::EMITIDOS,
             'deps' => array_values(array_filter(explode(',', $m['deps']), fn (string $codigo) => $codigo !== '')),
             'tipo' => $m['tipo'],
             'anio' => $m['anio'],
@@ -47,6 +54,6 @@ final class AcervoReferenciaSgd
             return $a;
         }
 
-        return self::construir(array_merge($ra['deps'], $rb['deps']), $ra['tipo'], $ra['anio']);
+        return self::construir($ra['sentido'], array_merge($ra['deps'], $rb['deps']), $ra['tipo'], $ra['anio']);
     }
 }

@@ -4,7 +4,7 @@ import { CalendarRange, ChevronDown, ChevronRight } from 'lucide-react'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
-import { agruparAcervoPorAnio } from './agrupar-por-anio'
+import { agruparAcervoPorSeccion } from './agrupar-por-anio'
 import { AcervoCabecera, AcervoRegistro } from './AcervoRegistro'
 import type { AcervoDocumental } from '@/types/acervo'
 
@@ -24,10 +24,10 @@ interface AcervoPorAnioProps {
 }
 
 /**
- * Vista del Anexo 03 agrupada por año (requisito del formato oficial, F4). Cada
- * año es una sección colapsable con sus series. Deriva el año sin tocar backend
- * (ver `agruparAcervoPorAnio`). Trae todas las series de la dependencia (no la
- * página actual), por eso la página la alimenta con `per_page` alto.
+ * Vista del Anexo 03 con la estructura del formato oficial: sección A (digital,
+ * SGD) y sección B (física), cada una con bloques colapsables por año. Trae
+ * todas las series de la dependencia (no la página actual), por eso la página
+ * la alimenta con `per_page` alto.
  */
 export function AcervoPorAnio({
   series,
@@ -41,14 +41,15 @@ export function AcervoPorAnio({
   accionNuevo,
   total,
 }: AcervoPorAnioProps) {
-  const grupos = useMemo(() => agruparAcervoPorAnio(series ?? []), [series])
+  const secciones = useMemo(() => agruparAcervoPorSeccion(series ?? []), [series])
+  const totalAnios = new Set(series?.map((serie) => serie.anio)).size
   const [colapsados, setColapsados] = useState<Set<string>>(new Set())
 
-  const alternar = (etiqueta: string) =>
+  const alternar = (clave: string) =>
     setColapsados((prev) => {
       const next = new Set(prev)
-      if (next.has(etiqueta)) next.delete(etiqueta)
-      else next.add(etiqueta)
+      if (next.has(clave)) next.delete(clave)
+      else next.add(clave)
       return next
     })
 
@@ -69,55 +70,61 @@ export function AcervoPorAnio({
       }
     >
       {(filas) => (
-        <div className="space-y-3">
-          {grupos.map((grupo) => {
-            const abierto = !colapsados.has(grupo.etiqueta)
-            return (
-              <Card key={grupo.etiqueta} className="overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => alternar(grupo.etiqueta)}
-                  className="flex w-full items-center justify-between gap-2 border-b bg-muted/30 px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
-                  aria-expanded={abierto}
-                >
-                  <span className="flex items-center gap-2 font-semibold text-foreground">
-                    {abierto ? (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <CalendarRange className="h-4 w-4 text-primary" />
-                    {grupo.etiqueta}
-                  </span>
-                  <span className="text-nota text-muted-foreground">
-                    {grupo.series.length} serie{grupo.series.length !== 1 ? 's' : ''}
-                  </span>
-                </button>
+        <div className="space-y-5">
+          {secciones.map((seccion) => (
+            <section key={seccion.tipo} className="space-y-3" aria-label={seccion.titulo}>
+              <h3 className="px-1 text-sm font-semibold text-foreground">{seccion.titulo}</h3>
+              {seccion.grupos.map((grupo) => {
+                const clave = `${seccion.tipo}-${grupo.etiqueta}`
+                const abierto = !colapsados.has(clave)
+                return (
+                  <Card key={clave} className="overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => alternar(clave)}
+                      className="flex w-full items-center justify-between gap-2 border-b bg-muted/30 px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
+                      aria-expanded={abierto}
+                    >
+                      <span className="flex items-center gap-2 font-semibold text-foreground">
+                        {abierto ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <CalendarRange className="h-4 w-4 text-primary" />
+                        {grupo.etiqueta}
+                      </span>
+                      <span className="text-nota text-muted-foreground">
+                        {grupo.series.length} serie{grupo.series.length !== 1 ? 's' : ''}
+                      </span>
+                    </button>
 
-                {abierto && (
-                  <table className="w-full table-fixed border-collapse text-left text-xs">
-                    <AcervoCabecera />
-                    <tbody className="divide-y">
-                    {grupo.series.map((registro) => (
-                      <AcervoRegistro
-                        key={registro.id}
-                        registro={registro}
-                        esModificable={esModificable}
-                        eliminando={eliminando}
-                        onEditar={onEditar}
-                        onEliminar={onEliminar}
-                      />
-                    ))}
-                    </tbody>
-                  </table>
-                )}
-              </Card>
-            )
-          })}
+                    {abierto && (
+                      <table className="w-full table-fixed border-collapse text-left text-xs">
+                        <AcervoCabecera />
+                        <tbody className="divide-y">
+                        {grupo.series.map((registro) => (
+                          <AcervoRegistro
+                            key={registro.id}
+                            registro={registro}
+                            esModificable={esModificable}
+                            eliminando={eliminando}
+                            onEditar={onEditar}
+                            onEliminar={onEliminar}
+                          />
+                        ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </Card>
+                )
+              })}
+            </section>
+          ))}
 
           <p className="px-1 text-nota text-muted-foreground">
-            {filas.length} serie{filas.length !== 1 ? 's' : ''} en {grupos.length} año
-            {grupos.length !== 1 ? 's' : ''}.
+            {filas.length} serie{filas.length !== 1 ? 's' : ''} en {totalAnios} año
+            {totalAnios !== 1 ? 's' : ''}.
             {typeof total === 'number' && total > filas.length && (
               <span className="text-warning-fg">
                 {' '}

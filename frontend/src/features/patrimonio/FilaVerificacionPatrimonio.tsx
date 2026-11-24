@@ -6,7 +6,6 @@ import { Save, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { FormField } from '@/components/ui/form-field'
-import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { aOpcionesSelect, ESTADOS_CONSERVACION } from '@/lib/catalogos'
@@ -27,11 +26,6 @@ const verificarSchema = z
   .object({
     estado: z.enum(['confirmado', 'con_observacion', 'no_ubicado']),
     estado_conservacion: z.enum(['bueno', 'regular', 'malo', 'inservible']).optional().nullable(),
-    ubicacion: z.string().optional().nullable(),
-    color: z.string().optional().nullable(),
-    dimension: z.string().optional().nullable(),
-    caracteristicas: z.string().optional().nullable(),
-    codigo_patrimonial_anterior: z.string().optional().nullable(),
     observacion: z.string().optional().nullable(),
   })
   .refine(
@@ -61,10 +55,9 @@ interface FilaVerificacionPatrimonioProps {
 
 /**
  * Sub-formulario de verificación física del Anexo 04 que se despliega **dentro de
- * la tabla** (fila expandible), en lugar de un modal. Permite confirmar el estado
- * y completar los campos SIGA que se capturan al verificar (ubicación, color,
- * dimensión, características, código anterior) sin perder de vista el resto del
- * inventario. Guarda en línea y la fila se colapsa.
+ * la tabla** (fila expandible), en lugar de un modal. Registra el resultado, el
+ * estado de conservación y la observación (que se imprime en el PDF del anexo)
+ * sin perder de vista el resto del inventario. Guarda en línea y la fila se colapsa.
  */
 export function FilaVerificacionPatrimonio({
   bien,
@@ -85,11 +78,6 @@ export function FilaVerificacionPatrimonio({
     defaultValues: {
       estado: 'confirmado',
       estado_conservacion: 'bueno',
-      ubicacion: '',
-      color: '',
-      dimension: '',
-      caracteristicas: '',
-      codigo_patrimonial_anterior: '',
       observacion: '',
     },
   })
@@ -102,11 +90,6 @@ export function FilaVerificacionPatrimonio({
     reset({
       estado: (v && v.estado !== 'pendiente' ? v.estado : 'confirmado') as FormValues['estado'],
       estado_conservacion: (v?.estado_conservacion ?? 'bueno') as EstadoConservacion,
-      ubicacion: bien.ubicacion ?? '',
-      color: bien.color ?? '',
-      dimension: bien.dimension ?? '',
-      caracteristicas: bien.caracteristicas ?? '',
-      codigo_patrimonial_anterior: bien.codigo_patrimonial_anterior ?? '',
       observacion: v?.observacion ?? '',
     })
   }, [bien, reset])
@@ -115,11 +98,6 @@ export function FilaVerificacionPatrimonio({
     onGuardar({
       estado: values.estado as EstadoVerificacionBien,
       estado_conservacion: (values.estado_conservacion as EstadoConservacion) || null,
-      ubicacion: values.ubicacion || null,
-      color: values.color || null,
-      dimension: values.dimension || null,
-      caracteristicas: values.caracteristicas || null,
-      codigo_patrimonial_anterior: values.codigo_patrimonial_anterior || null,
       observacion: values.observacion || null,
     })
   }
@@ -138,7 +116,7 @@ export function FilaVerificacionPatrimonio({
             <span className="text-nota text-muted-foreground">{bien.denominacion}</span>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField
               label="Resultado de la verificación"
               htmlFor={`estado-${bien.id}`}
@@ -173,39 +151,7 @@ export function FilaVerificacionPatrimonio({
                 )}
               />
             </FormField>
-
-            <FormField
-              label="Ubicación física"
-              htmlFor={`ubi-${bien.id}`}
-              hint="Ambiente u oficina donde se encontró el bien al momento del cotejo."
-            >
-              <Input id={`ubi-${bien.id}`} placeholder="Ej. Oficina 2.º piso, Área de Tesorería" {...register('ubicacion')} />
-            </FormField>
-
-            <FormField label="Color" htmlFor={`color-${bien.id}`}>
-              <Input id={`color-${bien.id}`} placeholder="Ej. Negro / Gris" {...register('color')} />
-            </FormField>
-
-            <FormField label="Dimensión" htmlFor={`dim-${bien.id}`}>
-              <Input id={`dim-${bien.id}`} placeholder="Ej. 1.20 × 0.60 m" {...register('dimension')} />
-            </FormField>
-
-            <FormField
-              label="Código patrimonial anterior"
-              htmlFor={`cpa-${bien.id}`}
-              hint="Código previo del bien si fue recodificado en el SIGA. Opcional."
-            >
-              <Input id={`cpa-${bien.id}`} placeholder="Opcional" {...register('codigo_patrimonial_anterior')} />
-            </FormField>
           </div>
-
-          <FormField label="Características adicionales" htmlFor={`carac-${bien.id}`}>
-            <Input
-              id={`carac-${bien.id}`}
-              placeholder="Rasgos físicos relevantes para identificar el bien..."
-              {...register('caracteristicas')}
-            />
-          </FormField>
 
           <FormField
             label={`Observaciones y sustento ${requiereObs ? '' : '(opcional)'}`}

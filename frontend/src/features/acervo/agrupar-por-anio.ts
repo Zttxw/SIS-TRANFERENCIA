@@ -1,11 +1,5 @@
-import type { AcervoDocumental } from '@/types/acervo'
-
-export function rangoAniosAcervo(serie: AcervoDocumental): { desde: number | null; hasta: number | null } {
-  const anios = serie.periodo?.match(/\b(?:19|20)\d{2}\b/g) ?? []
-  const desde = serie.desde_anio ?? serie.anio ?? (anios[0] ? Number(anios[0]) : null)
-  const hasta = serie.hasta_anio ?? (anios[1] ? Number(anios[1]) : desde)
-  return { desde, hasta }
-}
+import { SECCIONES_ACERVO } from '@/lib/catalogos'
+import type { AcervoDocumental, TipoAcervo } from '@/types/acervo'
 
 export interface GrupoAnio {
   /** Año de agrupación, o null para «sin año declarado». */
@@ -13,53 +7,51 @@ export interface GrupoAnio {
   /** Etiqueta legible del grupo (p. ej. «2024» o «Sin año»). */
   etiqueta: string
   series: AcervoDocumental[]
-  /** Total de unidades sumadas en el grupo (si la unidad es homogénea sirve). */
-  totalUnidades: number
+}
+
+export interface SeccionAcervo {
+  tipo: TipoAcervo
+  titulo: string
+  grupos: GrupoAnio[]
 }
 
 /**
- * Deriva el «año de agrupación» de una serie documental (Anexo 03), sin tocar el
- * backend. Prioridad: `anio` explícito → inicio de rango `desde_anio` → primer
- * año de 4 dígitos hallado en el texto `periodo` → null (sin año).
- */
-export function anioDeAgrupacion(serie: AcervoDocumental): number | null {
-  if (typeof serie.anio === 'number') return serie.anio
-  if (typeof serie.desde_anio === 'number') return serie.desde_anio
-  if (serie.periodo) {
-    const m = serie.periodo.match(/\b(19|20)\d{2}\b/)
-    if (m) return Number(m[0])
-  }
-  return null
-}
-
-/**
- * Agrupa las series por año de agrupación, ordenadas de más reciente a más
- * antiguo; el grupo «sin año» va al final. El formato oficial del Anexo 03 lista
- * el acervo por año (2023–2026), pero no se hardcodea el rango: se usan los años
- * realmente presentes.
+ * Agrupa las series por año, de más reciente a más antiguo; el grupo «sin año»
+ * va al final. No se fija un rango de años: se usan los realmente presentes.
  */
 export function agruparAcervoPorAnio(series: AcervoDocumental[]): GrupoAnio[] {
   const mapa = new Map<number | null, AcervoDocumental[]>()
 
   for (const serie of series) {
-    const anio = anioDeAgrupacion(serie)
-    const grupo = mapa.get(anio)
+    const grupo = mapa.get(serie.anio)
     if (grupo) grupo.push(serie)
-    else mapa.set(anio, [serie])
+    else mapa.set(serie.anio, [serie])
   }
 
-  const grupos: GrupoAnio[] = Array.from(mapa.entries()).map(([anio, items]) => ({
-    anio,
-    etiqueta: anio === null ? 'Sin año declarado' : String(anio),
-    series: items,
-    totalUnidades: items.reduce((acc, s) => acc + (s.cantidad_unidades ?? 0), 0),
-  }))
+  return Array.from(mapa.entries())
+    .map(([anio, items]) => ({
+      anio,
+      etiqueta: anio === null ? 'Sin año declarado' : String(anio),
+      series: items,
+    }))
+    .sort((a, b) => {
+      if (a.anio === null) return 1
+      if (b.anio === null) return -1
+      return b.anio - a.anio
+    })
+}
 
-  grupos.sort((a, b) => {
-    if (a.anio === null) return 1
-    if (b.anio === null) return -1
-    return b.anio - a.anio
-  })
-
-  return grupos
+/**
+ * Estructura del formato oficial del Anexo 03: sección A (digital, SGD) y
+ * sección B (física), cada una con sus bloques por año. Omite las secciones
+ * sin series.
+ */
+export function agruparAcervoPorSeccion(series: AcervoDocumental[]): SeccionAcervo[] {
+  return SECCIONES_ACERVO
+    .map(({ value, label }) => ({
+      tipo: value,
+      titulo: label,
+      grupos: agruparAcervoPorAnio(series.filter((serie) => serie.tipo === value)),
+    }))
+    .filter((seccion) => seccion.grupos.length > 0)
 }

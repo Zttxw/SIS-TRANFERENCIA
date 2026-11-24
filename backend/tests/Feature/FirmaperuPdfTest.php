@@ -57,12 +57,13 @@ class FirmaperuPdfTest extends TestCase
                 'tipo' => 'fisico',
                 'serie_documental' => $serie,
                 'anio' => 2026,
-                'cantidad_unidades' => 1,
+                'folios' => 1,
             ]);
         }
         $this->mock(PdfService::class, function (MockInterface $mock): void {
             $mock->shouldReceive('binario')->once()->withArgs(function (string $vista, array $datos): bool {
-                $series = collect($datos['grupos'])->flatMap(fn (array $grupo): array => $grupo['series']);
+                $series = collect($datos['secciones'])->flatMap(fn (array $seccion): array => $seccion['grupos'])
+                    ->flatMap(fn (array $grupo): array => $grupo['series']);
                 $this->assertSame(['SERIE CORRECTA'], $series->pluck('serie_documental')->all());
                 $this->assertTrue($datos['contexto']['es_borrador']);
 

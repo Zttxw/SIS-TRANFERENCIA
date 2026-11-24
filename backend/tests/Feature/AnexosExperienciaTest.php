@@ -42,10 +42,8 @@ class AnexosExperienciaTest extends TestCase
         $this->postJson('/api/patrimonio/bienes/'.$bien->id.'/verificar', [
             'estado' => 'confirmado',
             'estado_conservacion' => 'bueno',
-            'ubicacion' => 'Oficina de administración',
         ])->assertOk()
             ->assertJsonPath('data.id', $bien->id)
-            ->assertJsonPath('data.ubicacion', 'Oficina de administración')
             ->assertJsonPath('data.verificacion.estado', 'confirmado')
             ->assertJsonPath('data.verificacion.verificado_por.id', auth()->id())
             ->assertJsonPath('data.dependencia.id', $this->dep->id);
@@ -82,9 +80,9 @@ class AnexosExperienciaTest extends TestCase
     {
         $autor = auth()->user();
         $datos = [
-            'dependencia_id' => $this->dep->id, 'tipo' => 'fisico',
-            'serie_documental' => 'Informes', 'cantidad_unidades' => 2,
-            'unidad_conservacion' => 'Archivadores',
+            'dependencia_id' => $this->dep->id, 'serie_documental' => 'Informes emitidos',
+            'anio' => 2026, 'folios' => 2, 'unidad_conservacion' => 'Archivadores de Palanca',
+            'ubicacion' => 'Estante 1',
         ];
         $id = $this->postJson('/api/acervo', $datos)->assertCreated()->json('data.id');
         $editor = User::factory()->create();
@@ -94,11 +92,11 @@ class AnexosExperienciaTest extends TestCase
         ]);
         Sanctum::actingAs($editor);
 
-        $this->putJson('/api/acervo/'.$id, [...$datos, 'cantidad_unidades' => 3])->assertOk();
+        $this->putJson('/api/acervo/'.$id, [...$datos, 'folios' => 3])->assertOk();
 
         $this->getJson('/api/acervo?dependencia_id='.$this->dep->id)->assertOk()
             ->assertJsonPath('data.0.registrado_por.id', $autor->id);
-        $this->assertDatabaseHas('acervo_documental', ['id' => $id, 'registrado_por_id' => $autor->id, 'cantidad_unidades' => 3]);
+        $this->assertDatabaseHas('acervo_documental', ['id' => $id, 'registrado_por_id' => $autor->id, 'folios' => 3]);
     }
 
     public function test_bienes_no_patrimoniales_muestran_quien_los_registro(): void

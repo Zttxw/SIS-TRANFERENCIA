@@ -98,23 +98,7 @@ class PatrimonioService
                     : EstadoConservacion::from((string) $datos['estado_conservacion']))
                 : null;
 
-            // Completar datos físicos del bien tomados de la plantilla oficial
-            // (Anexo 04): solo se sobrescriben los que llegan explícitamente.
-            $bien->fill(array_filter(
-                [
-                    'color' => $datos['color'] ?? null,
-                    'dimension' => $datos['dimension'] ?? null,
-                    'caracteristicas' => $datos['caracteristicas'] ?? null,
-                    'codigo_patrimonial_anterior' => $datos['codigo_patrimonial_anterior'] ?? null,
-                    'ubicacion' => $datos['ubicacion'] ?? null,
-                ],
-                static fn ($v) => $v !== null,
-            ));
-            if ($bien->isDirty()) {
-                $bien->save();
-            }
-
-            $verificacion = VerificacionBien::updateOrCreate(
+            VerificacionBien::updateOrCreate(
                 ['bien_patrimonial_id' => $bien->id],
                 [
                     'verificado_por_id' => $usuario->id,
@@ -140,7 +124,6 @@ class PatrimonioService
         }
 
         $total = (clone $query)->count();
-        $valorTotal = (clone $query)->sum('valor') ?? 0.0;
 
         $confirmados = (clone $query)->whereHas('verificacion', fn ($q) => $q->where('estado', EstadoVerificacionBien::CONFIRMADO->value))->count();
         $noUbicados = (clone $query)->whereHas('verificacion', fn ($q) => $q->where('estado', EstadoVerificacionBien::NO_UBICADO->value))->count();
@@ -153,7 +136,6 @@ class PatrimonioService
 
         return [
             'total_bienes' => $total,
-            'valor_total' => (float) $valorTotal,
             'confirmados' => $confirmados,
             'pendientes' => max(0, $pendientes),
             'no_ubicados' => $noUbicados,

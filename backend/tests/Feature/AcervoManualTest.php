@@ -21,82 +21,75 @@ class AcervoManualTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function datosFisicos(): array
+    private ProcesoTransferencia $proceso;
+
+    private Dependencia $dep;
+
+    protected function setUp(): void
     {
+        parent::setUp();
+
         $this->seed(RolesPermisosSeeder::class);
-        $proceso = ProcesoTransferencia::factory()->create();
-        $dep = Dependencia::factory()->create(['proceso_transferencia_id' => $proceso->id]);
+        $this->proceso = ProcesoTransferencia::factory()->create();
+        $this->dep = Dependencia::factory()->create(['proceso_transferencia_id' => $this->proceso->id]);
         $usuario = User::factory()->create();
         AsignacionRol::factory()->rol(Rol::SERVIDOR)->create([
-            'user_id' => $usuario->id, 'dependencia_id' => $dep->id,
-            'proceso_transferencia_id' => $proceso->id,
+            'user_id' => $usuario->id, 'dependencia_id' => $this->dep->id,
+            'proceso_transferencia_id' => $this->proceso->id,
         ]);
         Sanctum::actingAs($usuario);
+    }
 
+    /** @return array<string, mixed> */
+    private function serieFisica(): array
+    {
         return [
-            'dependencia_id' => $dep->id, 'tipo' => 'fisico',
-            'serie_documental' => 'Informes técnicos', 'cantidad_unidades' => 1,
+            'dependencia_id' => $this->dep->id,
+            'serie_documental' => 'Oficios emitidos',
+            'anio' => 2024,
+            'folios' => 250,
             'unidad_conservacion' => 'Archivadores de Palanca',
-            'identificacion_archivador' => 'OTI-2026-TOMO-01', 'total_folios' => 250,
+            'ubicacion' => 'Estante 3, nivel 2',
         ];
     }
 
-    #[TestWith([null, 'sgd', 'Sistema de Gestión Documental (SGD)'])]
-    #[TestWith(['', 'sgd', 'Sistema de Gestión Documental (SGD)'])]
-    #[TestWith(['   ', 'sgd', 'Sistema de Gestión Documental (SGD)'])]
-    #[TestWith(['Repositorio OTI', 'sgd', 'Repositorio OTI'])]
-    #[TestWith([null, 'manual', null])]
-    public function test_ubicacion_sgd_se_muestra_en_listado_y_pdf_solo_si_esta_vacia(
-        ?string $ubicacion, string $fuente, ?string $esperada,
-    ): void {
-        $datos = $this->datosFisicos();
-        $registro = AcervoDocumental::create([
-            ...$datos,
-            'proceso_transferencia_id' => ProcesoTransferencia::where('estado', 'abierto')->value('id'),
-            'tipo' => 'digital', 'fuente' => $fuente, 'ubicacion' => $ubicacion,
+    /** @param  array<string, mixed>  $atributos */
+    private function serieSgd(array $atributos = []): AcervoDocumental
+    {
+        return AcervoDocumental::create([
+            'proceso_transferencia_id' => $this->proceso->id,
+            'dependencia_id' => $this->dep->id,
+            'tipo' => AcervoDocumental::TIPO_DIGITAL,
+            'serie_documental' => 'Informe recibidos',
+            'anio' => 2026,
+            'folios' => 40,
+            'unidad_conservacion' => AcervoDocumental::UNIDAD_ARCHIVO_DIGITAL,
+            'fuente' => 'sgd',
+            'fuente_referencia' => 'TDTV_DESTINOS CO_DEP_DES=00025 CO_TIP_DOC_ADM=011 NU_ANN=2026',
+            ...$atributos,
         ]);
-
-        $this->getJson('/api/acervo?dependencia_id='.$datos['dependencia_id'])->assertOk()
-            ->assertJsonPath('data.0.id', $registro->id)
-            ->assertJsonPath('data.0.ubicacion', $esperada);
-
-        $pdf = app(AcervoPdf::class)->datos($datos['dependencia_id']);
-        $this->assertSame($esperada, $pdf['grupos'][0]['series'][0]['ubicacion']);
     }
 
-    public function test_detalle_fisico_se_guarda_y_se_busca_pero_pdf_respeta_columnas_del_formato(): void
+    public function test_la_serie_registrada_a_mano_siempre_va_a_la_seccion_fisica(): void
     {
-        $datos = $this->datosFisicos();
-
-        $id = $this->postJson('/api/acervo', $datos)->assertCreated()
-            ->assertJsonPath('data.total_folios', 250)->json('data.id');
+        $id = $this->postJson('/api/acervo', [...$this->serieFisica(), 'tipo' => 'digital', 'fuente' => 'sgd'])
+            ->assertCreated()
+            ->assertJsonPath('data.folios', 250)
+            ->json('data.id');
 
         $this->assertDatabaseHas('acervo_documental', [
-            'id' => $id, 'identificacion_archivador' => 'OTI-2026-TOMO-01',
-            'total_folios' => 250, 'cantidad_unidades' => 1,
+            'id' => $id, 'proceso_transferencia_id' => $this->proceso->id, 'tipo' => 'fisico',
+            'fuente' => 'manual', 'serie_documental' => 'Oficios emitidos', 'anio' => 2024,
+            'folios' => 250, 'unidad_conservacion' => 'Archivadores de Palanca', 'ubicacion' => 'Estante 3, nivel 2',
         ]);
-        $this->getJson('/api/acervo?dependencia_id='.$datos['dependencia_id'].'&search=TOMO-01')
-            ->assertOk()->assertJsonPath('data.0.id', $id);
-        $pdf = app(AcervoPdf::class)->datos($datos['dependencia_id']);
-        $html = view('pdf.partials.anexo03', $pdf)->render();
-        $this->assertStringNotContainsString('Archivador: OTI-2026-TOMO-01', $html);
-        $this->assertStringNotContainsString('250 folios', $html);
     }
 
-    public function test_folios_se_pueden_corregir_y_se_limpian_al_cambiar_a_digital(): void
+    public function test_las_cinco_columnas_del_formato_son_obligatorias(): void
     {
-        $datos = $this->datosFisicos();
-        $id = $this->postJson('/api/acervo', $datos)->assertCreated()->json('data.id');
+        $this->postJson('/api/acervo', ['dependencia_id' => $this->dep->id])->assertUnprocessable()
+            ->assertJsonValidationErrors(['serie_documental', 'anio', 'folios', 'unidad_conservacion', 'ubicacion']);
 
-        $this->putJson('/api/acervo/'.$id, [...$datos, 'total_folios' => 300])->assertOk()
-            ->assertJsonPath('data.total_folios', 300);
-        $this->assertDatabaseHas('acervo_documental', ['id' => $id, 'total_folios' => 300]);
-
-        unset($datos['total_folios'], $datos['identificacion_archivador']);
-        $this->putJson('/api/acervo/'.$id, [...$datos, 'tipo' => 'digital'])->assertOk()
-            ->assertJsonPath('data.total_folios', null)
-            ->assertJsonPath('data.identificacion_archivador', null);
-        $this->assertDatabaseHas('acervo_documental', ['id' => $id, 'tipo' => 'digital', 'total_folios' => null, 'identificacion_archivador' => null]);
+        $this->assertDatabaseCount('acervo_documental', 0);
     }
 
     #[TestWith([0])]
@@ -106,64 +99,62 @@ class AcervoManualTest extends TestCase
     #[TestWith([2147483648])]
     public function test_folios_invalidos_devuelven_422_sin_guardar(int|float|string $folios): void
     {
-        $datos = $this->datosFisicos();
-
-        $this->postJson('/api/acervo', [...$datos, 'total_folios' => $folios])->assertUnprocessable()
-            ->assertJsonValidationErrors('total_folios');
+        $this->postJson('/api/acervo', [...$this->serieFisica(), 'folios' => $folios])->assertUnprocessable()
+            ->assertJsonValidationErrors('folios');
 
         $this->assertDatabaseCount('acervo_documental', 0);
     }
 
-    public function test_digital_no_acepta_identificacion_fisica_ni_folios(): void
+    public function test_la_serie_fisica_se_corrige_sin_cambiar_de_centro_de_costo(): void
     {
-        $datos = $this->datosFisicos();
+        $id = $this->postJson('/api/acervo', $this->serieFisica())->assertCreated()->json('data.id');
 
-        $this->postJson('/api/acervo', [...$datos, 'tipo' => 'digital'])->assertUnprocessable()
-            ->assertJsonValidationErrors(['identificacion_archivador', 'total_folios']);
+        $this->putJson('/api/acervo/'.$id, [...$this->serieFisica(), 'folios' => 300, 'anio' => 2025])->assertOk()
+            ->assertJsonPath('data.folios', 300)
+            ->assertJsonPath('data.anio', 2025);
 
-        $this->assertDatabaseCount('acervo_documental', 0);
+        $this->assertDatabaseHas('acervo_documental', ['id' => $id, 'dependencia_id' => $this->dep->id, 'folios' => 300, 'anio' => 2025]);
     }
 
-    #[TestWith([null, null, null, '2023 - 2024', 2023, 2024, '2023'])]
-    #[TestWith([2026, null, null, '2026', 2026, 2026, '2026'])]
-    #[TestWith([null, 2021, 2022, '2023 - 2024', 2021, 2022, '2021'])]
-    public function test_pdf_recupera_rango_de_anios_y_agrupa_registros_anteriores(
-        ?int $anio, ?int $desde, ?int $hasta, string $periodo,
-        int $desdeEsperado, int $hastaEsperado, string $grupoEsperado,
-    ): void {
-        $datos = $this->datosFisicos();
-        $this->postJson('/api/acervo', [
-            ...$datos, 'anio' => $anio, 'desde_anio' => $desde,
-            'hasta_anio' => $hasta, 'periodo' => $periodo,
-        ])->assertCreated();
+    public function test_las_series_del_sgd_no_se_editan_ni_eliminan(): void
+    {
+        $serie = $this->serieSgd();
 
-        $pdf = app(AcervoPdf::class)->datos($datos['dependencia_id']);
+        $this->putJson('/api/acervo/'.$serie->id, [...$this->serieFisica(), 'folios' => 1])->assertUnprocessable()
+            ->assertJsonPath('message', 'Las series del SGD se actualizan desde el SGD y no pueden modificarse.');
+        $this->deleteJson('/api/acervo/'.$serie->id)->assertUnprocessable();
 
-        $this->assertSame($grupoEsperado, $pdf['grupos'][0]['anio']);
-        $this->assertSame($desdeEsperado, $pdf['grupos'][0]['series'][0]['desde_anio']);
-        $this->assertSame($hastaEsperado, $pdf['grupos'][0]['series'][0]['hasta_anio']);
+        $this->assertDatabaseHas('acervo_documental', ['id' => $serie->id, 'folios' => 40, 'deleted_at' => null]);
     }
 
-    public function test_registro_de_archivador_historico_no_necesita_existir_en_sgd_y_se_busca_por_periodo(): void
+    public function test_pdf_separa_la_seccion_digital_de_la_fisica_y_agrupa_por_anio_descendente(): void
     {
-        $this->seed(RolesPermisosSeeder::class);
-        $proceso = ProcesoTransferencia::factory()->create();
-        $dep = Dependencia::factory()->create(['proceso_transferencia_id' => $proceso->id]);
-        $usuario = User::factory()->create();
-        AsignacionRol::factory()->rol(Rol::SERVIDOR)->create(['user_id' => $usuario->id,
-            'dependencia_id' => $dep->id, 'proceso_transferencia_id' => $proceso->id]);
-        Sanctum::actingAs($usuario);
-        $datos = ['dependencia_id' => $dep->id, 'tipo' => 'fisico', 'serie_documental' => 'Informes técnicos',
-            'periodo' => '2020 - 2024', 'cantidad_unidades' => 6, 'unidad_conservacion' => 'Archivadores',
-            'ubicacion' => 'Estante 2', 'fuente' => 'sgd'];
-        $id = $this->postJson('/api/acervo', $datos)->assertCreated()->assertJsonPath('data.fuente', 'manual')->json('data.id');
-        $this->assertDatabaseHas('acervo_documental', ['id' => $id, 'proceso_transferencia_id' => $proceso->id,
-            'fuente' => 'manual', 'periodo' => '2020 - 2024', 'tipo' => 'fisico', 'cantidad_unidades' => 6]);
+        $this->serieSgd();
+        $this->serieSgd(['serie_documental' => 'Informe emitidos', 'anio' => 2025]);
+        $this->postJson('/api/acervo', $this->serieFisica())->assertCreated();
+
+        $pdf = app(AcervoPdf::class)->datos($this->dep->id);
+
+        [$digital, $fisica] = $pdf['secciones'];
+        $this->assertSame(['A', 'B'], [$digital['letra'], $fisica['letra']]);
+        $this->assertSame(['2026', '2025'], array_column($digital['grupos'], 'anio'));
+        $this->assertSame([
+            'serie_documental' => 'Informe recibidos', 'folios' => 40,
+            'unidad_conservacion' => 'Archivo Digital', 'ubicacion' => 'Sistema de Gestión Documental (SGD)',
+        ], $digital['grupos'][0]['series'][0]);
+        $this->assertSame(['2024'], array_column($fisica['grupos'], 'anio'));
+        $this->assertSame('Oficios emitidos', $fisica['grupos'][0]['series'][0]['serie_documental']);
+    }
+
+    public function test_la_busqueda_encuentra_por_anio_y_ubicacion_solo_en_el_proceso_activo(): void
+    {
+        $id = $this->postJson('/api/acervo', $this->serieFisica())->assertCreated()->json('data.id');
         $anterior = ProcesoTransferencia::factory()->cerrado()->create();
-        AcervoDocumental::create(['proceso_transferencia_id' => $anterior->id,
-            ...$datos, 'serie_documental' => 'Proceso anterior', 'fuente' => 'manual']);
-        $this->getJson('/api/acervo?dependencia_id='.$dep->id.'&search=2024')->assertOk()
-            ->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $id);
-        $this->getJson('/api/acervo?dependencia_id='.$dep->id)->assertOk()->assertJsonCount(1, 'data');
+        AcervoDocumental::create([...$this->serieFisica(), 'proceso_transferencia_id' => $anterior->id, 'tipo' => 'fisico']);
+
+        foreach (['2024', 'Estante 3'] as $termino) {
+            $this->getJson('/api/acervo?dependencia_id='.$this->dep->id.'&search='.urlencode($termino))->assertOk()
+                ->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $id);
+        }
     }
 }

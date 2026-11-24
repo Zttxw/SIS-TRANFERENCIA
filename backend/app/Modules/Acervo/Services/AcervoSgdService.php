@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Acervo\Services;
 
 use App\Modules\Acervo\Models\AcervoDocumental;
+use App\Modules\Organization\Services\IngestaDocumentalSgd;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Carbon;
@@ -13,14 +14,15 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Consulta en vivo (SOLO LECTURA) de los documentos individuales del SGD que
- * respaldan una fila-resumen del acervo digital (Anexo 03). La ingesta sólo
- * materializa el conteo por dependencia + tipo + año (ver {@see IngestaDocumentalSgd});
- * aquí se listan los documentos uno a uno y se sirve el PDF principal por
- * streaming desde {@code TDTV_ARCHIVO_DOC.BL_DOC}, sin copiar binarios al sistema.
+ * respaldan una serie digital del Anexo 03 (sección A). La ingesta sólo
+ * materializa el resumen por centro de costo + tipo + sentido + año (ver
+ * {@see IngestaDocumentalSgd}); aquí se listan los documentos uno a uno y se
+ * sirve el PDF principal por streaming desde {@code TDTV_ARCHIVO_DOC.BL_DOC},
+ * sin copiar binarios al sistema.
  *
- * El puente con la fila de acervo es su `fuente_referencia`, que la ingesta
- * guarda como «TDTV_REMITOS CO_DEP_EMI=00019 CO_TIP_DOC_ADM=003 NU_ANN=2026».
- * De ahí se derivan dependencia (código SGD), tipo documental y año.
+ * El puente con la serie es su `fuente_referencia` (ver {@see AcervoReferenciaSgd}):
+ * de ahí salen las dependencias del SGD, el tipo documental, el año y si la
+ * serie reúne documentos emitidos (TDTV_REMITOS) o recibidos (TDTV_DESTINOS).
  */
 class AcervoSgdService
 {
@@ -38,20 +40,14 @@ class AcervoSgdService
     }
 
     /**
-     * Lista paginada de los documentos del SGD de una fila-resumen de acervo
-     * digital. Filtra por dependencia emisora + tipo + año y, opcionalmente, por
-     * texto en el asunto. Agrega el tamaño del PDF (DATALENGTH) sin traer el binario.
+     * Lista paginada de los documentos del SGD de una serie digital. Filtra por
+     * los criterios de la serie y, opcionalmente, por texto en el asunto. Agrega el tamaño del PDF (DATALENGTH) sin traer el binario.
      *
      * @return array{data: list<array<string, mixed>>, meta: array<string, int>}
      */
     public function documentos(AcervoDocumental $acervo, ?string $busqueda, int $page, int $perPage): array
     {
-        $ref = $this->referencia($acervo);
-
-        $deps = implode(',', array_fill(0, count($ref['deps']), '?'));
-        $where = "r.NU_ANN = ? AND r.ES_ELI = '0' AND r.ES_DOC_EMI NOT IN ('9')
-                  AND r.CO_DEP_EMI IN ({$deps}) AND r.CO_TIP_DOC_ADM = ?";
-        $bindings = [$ref['anio'], ...$ref['deps'], $ref['tipo']];
+        [$where, $bindings] = $this->filtroSerie($this->referencia($acervo));
 
         if ($busqueda !== null && $busqueda !== '') {
             $where .= ' AND r.DE_ASU LIKE ?';
@@ -105,7 +101,7 @@ class AcervoSgdService
 
     /**
      * Streaming del PDF principal (TDTV_ARCHIVO_DOC.BL_DOC) de un documento. Valida
-     * que el documento pertenezca a la fila-resumen (misma dependencia, tipo y año);
+     * que el documento pertenezca a la serie (mismos criterios que su listado);
      * así el `emi` no permite pedir documentos arbitrarios fuera del ámbito ya
      * autorizado por el controller. Devuelve 404 si el documento no existe en el
      * universo de la fila, y 404 si existe pero no tiene binario.
@@ -113,15 +109,12 @@ class AcervoSgdService
     public function streamPdf(AcervoDocumental $acervo, string $emi): StreamedResponse
     {
         $ref = $this->referencia($acervo);
+        [$where, $bindings] = $this->filtroSerie($ref);
         $conn = DB::connection($this->conexionSgd);
-        $deps = implode(',', array_fill(0, count($ref['deps']), '?'));
 
         $pertenece = $conn->selectOne(
-            "SELECT TOP 1 r.NU_EMI
-             FROM {$this->esquema}.TDTV_REMITOS r
-             WHERE r.NU_ANN = ? AND r.ES_ELI = '0'
-               AND r.CO_DEP_EMI IN ({$deps}) AND r.CO_TIP_DOC_ADM = ? AND r.NU_EMI = ?",
-            [$ref['anio'], ...$ref['deps'], $ref['tipo'], $emi]
+            "SELECT TOP 1 r.NU_EMI FROM {$this->esquema}.TDTV_REMITOS r WHERE {$where} AND r.NU_EMI = ?",
+            [...$bindings, $emi]
         );
 
         if ($pertenece === null) {
@@ -158,11 +151,45 @@ class AcervoSgdService
     }
 
     /**
-     * Deriva las dependencias del SGD (una o varias, si el CC las reúne), el tipo
-     * documental y el año desde el `fuente_referencia` de la fila. Exige que sea
-     * una fila digital de origen SGD.
+     * Condición SQL sobre `TDTV_REMITOS r` que delimita los documentos de la
+     * serie, con los mismos criterios que la ingesta: emitidos por las
+     * dependencias, o recibidos (leídos o atendidos) por ellas.
      *
-     * @return array{deps: list<string>, tipo: string, anio: string}
+     * @param  array{sentido: string, deps: list<string>, tipo: string, anio: string}  $ref
+     * @return array{0: string, 1: list<string>}
+     */
+    private function filtroSerie(array $ref): array
+    {
+        $deps = $this->marcadores($ref['deps']);
+
+        if ($ref['sentido'] === AcervoReferenciaSgd::RECIBIDOS) {
+            $emisionExcluida = $this->marcadores(IngestaDocumentalSgd::EMISION_EXCLUIDA);
+            $noRecibida = $this->marcadores(IngestaDocumentalSgd::RECEPCION_NO_RECIBIDA);
+
+            return [
+                "r.NU_ANN = ? AND r.ES_ELI = '0' AND r.ES_DOC_EMI NOT IN ({$emisionExcluida})
+                 AND r.CO_TIP_DOC_ADM = ?
+                 AND EXISTS (SELECT 1 FROM {$this->esquema}.TDTV_DESTINOS d
+                             WHERE d.NU_ANN = r.NU_ANN AND d.NU_EMI = r.NU_EMI AND d.ES_ELI = '0'
+                               AND d.ES_DOC_REC IS NOT NULL AND d.ES_DOC_REC NOT IN ({$noRecibida})
+                               AND d.CO_DEP_DES IN ({$deps}))",
+                [$ref['anio'], ...IngestaDocumentalSgd::EMISION_EXCLUIDA, $ref['tipo'],
+                    ...IngestaDocumentalSgd::RECEPCION_NO_RECIBIDA, ...$ref['deps']],
+            ];
+        }
+
+        return [
+            "r.NU_ANN = ? AND r.ES_ELI = '0' AND r.ES_DOC_EMI NOT IN ('9')
+             AND r.CO_DEP_EMI IN ({$deps}) AND r.CO_TIP_DOC_ADM = ?",
+            [$ref['anio'], ...$ref['deps'], $ref['tipo']],
+        ];
+    }
+
+    /**
+     * Lee la referencia SGD de la serie. Exige que sea una serie digital de
+     * origen SGD.
+     *
+     * @return array{sentido: string, deps: list<string>, tipo: string, anio: string}
      */
     private function referencia(AcervoDocumental $acervo): array
     {
@@ -175,6 +202,12 @@ class AcervoSgdService
         }
 
         return $ref;
+    }
+
+    /** @param  list<string>  $valores */
+    private function marcadores(array $valores): string
+    {
+        return implode(',', array_fill(0, count($valores), '?'));
     }
 
     private function fecha(mixed $valor): ?string

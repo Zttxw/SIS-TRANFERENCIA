@@ -26,7 +26,7 @@ export function AcervoLista({ registros, loading, error, onReintentar, esModific
       error={error}
       onReintentar={onReintentar}
       vacio={registros.length === 0}
-      fallbackVacio={<EmptyState titulo="Sin series documentales" descripcion="Agregue una serie desde «Nueva Serie Documental»." />}
+      fallbackVacio={<EmptyState titulo="Sin series documentales" descripcion="Agregue una serie desde «Nueva Serie Física»." />}
     >
       {(filas) => (
         <div className="min-w-0 overflow-hidden rounded-xl border bg-card shadow-sm">

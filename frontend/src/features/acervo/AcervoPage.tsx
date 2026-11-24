@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { Select } from '@/components/ui/select'
 import { aplicarErroresAFormulario } from '@/lib/api-errors'
+import { SECCIONES_ACERVO } from '@/lib/catalogos'
 import { useEstadoEntrega } from '@/features/dashboard/use-dashboard'
 import {
   useActualizarAcervo,
@@ -23,10 +24,9 @@ import type { AcervoDocumental, TipoAcervo } from '@/types/acervo'
 
 type VistaAcervo = 'lista' | 'anio'
 
-const FILTRO_TIPO_OPCIONES = [
-  { value: '', label: 'Todos los formatos' },
-  { value: 'fisico', label: 'Físico (Papel / Archivadores)' },
-  { value: 'digital', label: 'Digital (Repositorios / Nube)' },
+const FILTRO_SECCION_OPCIONES = [
+  { value: '', label: 'Ambas secciones' },
+  ...SECCIONES_ACERVO,
 ]
 
 export function AcervoPage() {
@@ -35,7 +35,7 @@ export function AcervoPage() {
   const [pagina, setPagina] = useState(1)
   const [busqueda, setBusqueda] = useState('')
   const [tipoFiltro, setTipoFiltro] = useState<TipoAcervo | ''>('')
-  const [vista, setVista] = useState<VistaAcervo>('lista')
+  const [vista, setVista] = useState<VistaAcervo>('anio')
 
   const esVistaAnio = vista === 'anio'
 
@@ -115,9 +115,9 @@ export function AcervoPage() {
       subtitulo="Series documentales, expedientes custodiados y archivos de gestión de la unidad (Directiva N.° 001-2026-MDSJ/A §7.3)"
       aviso={
         <aside className="space-y-1 rounded-lg border border-info-border bg-info-soft p-4 text-sm text-info-fg">
-          <p className="font-semibold">SGD disponible desde septiembre de 2025</p>
-          <p>La precarga muestra resúmenes de documentos digitales de los periodos importados, no todo el archivo histórico de la oficina ni sus documentos adjuntos.</p>
-          <p>Use «Nueva Serie Documental» para registrar sus archivadores físicos, tomos y cajas: indique serie, desde año, hasta año, cantidad y ubicación. Incluya también la documentación anterior a septiembre de 2025 que esté bajo su custodia.</p>
+          <p className="font-semibold">A. Acervo digital · B. Acervo físico</p>
+          <p>La sección A se precarga del SGD (disponible desde septiembre de 2025): una serie por tipo de documento, separada en emitidos y recibidos, con los folios registrados en el SGD. No se edita aquí.</p>
+          <p>Use «Nueva Serie Física» para la sección B: registre sus archivadores, paquetes, empastados o cajas con la serie, el año, los folios, el tipo de unidad y su ubicación. Incluya la documentación anterior a septiembre de 2025 que esté bajo su custodia.</p>
         </aside>
       }
       anexoObservable="acervo"
@@ -139,27 +139,27 @@ export function AcervoPage() {
         setBusqueda(v)
         setPagina(1)
       }}
-      placeholderBusqueda="Buscar por serie documental, periodo o ubicación..."
+      placeholderBusqueda="Buscar por serie, año, tipo de unidad o ubicación..."
       filtrosExtra={
         <>
           {toggleVista}
           <Select
             className="w-56"
-            options={FILTRO_TIPO_OPCIONES}
+            options={FILTRO_SECCION_OPCIONES}
             value={tipoFiltro}
             onChange={(v) => {
               setTipoFiltro(v as TipoAcervo | '')
               setPagina(1)
             }}
-            placeholder="Todos los formatos"
+            placeholder="Ambas secciones"
           />
         </>
       }
-      textoNuevo="Nueva Serie Documental"
+      textoNuevo="Nueva Serie Física"
       iconoNuevo={Plus}
       vacio={{
         titulo: 'Sin series documentales',
-        descripcion: 'No hay series para estos filtros. La ausencia de precarga SGD no significa que la oficina no tenga archivo físico. Registre sus archivadores desde «Nueva Serie Documental».',
+        descripcion: 'No hay series para estos filtros. La ausencia de precarga SGD no significa que la oficina no tenga archivo físico. Registre sus archivadores desde «Nueva Serie Física».',
       }}
       confirmarEliminar={confirmarEliminarSerie}
       onEliminar={(item) => eliminarMut.mutate(item.id)}
@@ -181,7 +181,7 @@ export function AcervoPage() {
                   <Can permiso="anexos.registrar">
                     <Button size="sm" className="gap-1.5" disabled={!esModificable} onClick={abrirAlta}>
                       <Plus className="h-4 w-4" />
-                      Nueva Serie Documental
+                      Nueva Serie Física
                     </Button>
                   </Can>
                 }

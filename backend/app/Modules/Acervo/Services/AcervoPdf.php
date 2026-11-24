@@ -12,9 +12,8 @@ use Illuminate\Support\Collection;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * PDF oficial del Anexo 03 (Acervo Documentario), agrupado por año como el
- * formato de la directiva. Recupera también los años de los periodos de texto
- * anteriores, igual que la vista «Por año» del frontend.
+ * PDF oficial del Anexo 03 (Acervo Documentario): sección A (digital, SGD) y
+ * sección B (física, registrada a mano), cada una con sus bloques por año.
  */
 class AcervoPdf
 {
@@ -52,52 +51,48 @@ class AcervoPdf
                     ? trim("{$dep->encargado->nombres} {$dep->encargado->apellidos}")
                     : '',
             ],
-            'grupos' => $this->agruparPorAnio($series),
+            'secciones' => [
+                [
+                    'letra' => 'A',
+                    'titulo' => 'Acervo digital (Sistema de Gestión Documental)',
+                    'grupos' => $this->agruparPorAnio($series->where('tipo', AcervoDocumental::TIPO_DIGITAL)),
+                ],
+                [
+                    'letra' => 'B',
+                    'titulo' => 'Acervo físico',
+                    'grupos' => $this->agruparPorAnio($series->where('tipo', AcervoDocumental::TIPO_FISICO)),
+                ],
+            ],
         ];
     }
 
     /**
+     * Bloques por año, del más reciente al más antiguo; «Sin año» al final.
+     *
      * @param  Collection<int, AcervoDocumental>  $series
-     * @return list<array{anio: string, series: list<array<string, mixed>>}>
+     * @return list<array{anio: string, series: list<array{serie_documental: string|null, folios: int|null, unidad_conservacion: string|null, ubicacion: string|null}>}>
      */
-    private function agruparPorAnio($series): array
+    private function agruparPorAnio(Collection $series): array
     {
-        $grupos = [];
+        return $series
+            ->groupBy(fn (AcervoDocumental $serie): string => $serie->anio !== null ? (string) $serie->anio : 'Sin año')
+            ->sortKeysUsing(function (string $a, string $b): int {
+                if ($a === 'Sin año' || $b === 'Sin año') {
+                    return ($a === 'Sin año') <=> ($b === 'Sin año');
+                }
 
-        foreach ($series as $serie) {
-            preg_match_all('/\b(?:19|20)\d{2}\b/', $serie->periodo ?? '', $coincidencias);
-            $anios = $coincidencias[0];
-            $desde = $serie->desde_anio ?? $serie->anio ?? (isset($anios[0]) ? (int) $anios[0] : null);
-            $hasta = $serie->hasta_anio ?? (isset($anios[1]) ? (int) $anios[1] : $desde);
-            $anio = $serie->anio ?? $desde;
-            $clave = $anio ? (string) $anio : 'Sin año';
-
-            $grupos[$clave][] = [
-                'serie_documental' => $serie->serie_documental,
-                'desde_anio' => $desde,
-                'hasta_anio' => $hasta,
-                'cantidad_unidades' => $serie->cantidad_unidades,
-                'unidad_conservacion' => $serie->unidad_conservacion,
-                'ubicacion' => $serie->ubicacion,
-            ];
-        }
-
-        // Orden descendente por año; «Sin año» al final.
-        uksort($grupos, function (string $a, string $b): int {
-            if ($a === 'Sin año') {
-                return 1;
-            }
-            if ($b === 'Sin año') {
-                return -1;
-            }
-
-            return (int) $b <=> (int) $a;
-        });
-
-        return array_map(
-            fn (string $anio, array $filas): array => ['anio' => $anio, 'series' => $filas],
-            array_keys($grupos),
-            array_values($grupos),
-        );
+                return (int) $b <=> (int) $a;
+            })
+            ->map(fn (Collection $filas, string $anio): array => [
+                'anio' => $anio,
+                'series' => $filas->map(fn (AcervoDocumental $serie): array => [
+                    'serie_documental' => $serie->serie_documental,
+                    'folios' => $serie->folios,
+                    'unidad_conservacion' => $serie->unidad_conservacion,
+                    'ubicacion' => $serie->ubicacion,
+                ])->values()->all(),
+            ])
+            ->values()
+            ->all();
     }
 }

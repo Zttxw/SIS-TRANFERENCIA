@@ -35,7 +35,7 @@
     @if (isset($anexo03))
         <div class="salto-pagina"></div>
         <div class="titulo-anexo-interno">Anexo 03 — Registro del Acervo Documentario</div>
-        @include('pdf.partials.anexo03', ['cabecera' => $anexo03['cabecera'], 'grupos' => $anexo03['grupos']])
+        @include('pdf.partials.anexo03', ['cabecera' => $anexo03['cabecera'], 'secciones' => $anexo03['secciones']])
     @endif
 
     {{-- Anexo 04 --}}

@@ -144,7 +144,7 @@ export function PatrimonioPage() {
 
   const bienes = paginado?.data ?? []
   const meta = paginado?.meta
-  const totalColumnas = dependenciaId ? 9 : 10
+  const totalColumnas = dependenciaId ? 8 : 9
   const esVistaServidor = vista === 'servidor'
 
   // Render de una fila de bien + su fila de verificación expandida (reutilizado
@@ -176,9 +176,6 @@ export function PatrimonioPage() {
             <div className="text-mini text-muted-foreground/80">
               {bien.modelo ? `Mod: ${bien.modelo}` : ''} {bien.serie ? `· S/N: ${bien.serie}` : ''}
             </div>
-          </td>
-          <td className="p-3 whitespace-nowrap font-mono text-muted-foreground">
-            {bien.valor != null ? `S/. ${Number(bien.valor).toFixed(2)}` : '-'}
           </td>
           <td className="p-3 max-w-[180px] text-muted-foreground truncate">
             {bien.servidor ? (
@@ -292,9 +289,6 @@ export function PatrimonioPage() {
             <div className="text-2xl font-bold text-foreground">
               {resumen?.total_bienes ?? 0}
             </div>
-            <p className="text-nota text-muted-foreground">
-              Valorizado: S/. {(resumen?.valor_total ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-            </p>
           </CardContent>
         </Card>
 
@@ -413,7 +407,6 @@ export function PatrimonioPage() {
                 <th className="p-3">Denominación del Bien (SIGA)</th>
                 {!dependenciaId && <th className="p-3">Centro de Costo</th>}
                 <th className="p-3">Marca / Modelo / Serie</th>
-                <th className="p-3">Valor (S/.)</th>
                 <th className="p-3">Custodio Asignado</th>
                 <th className="p-3">Estado Verificación</th>
                 <th className="p-3">Conservación</th>

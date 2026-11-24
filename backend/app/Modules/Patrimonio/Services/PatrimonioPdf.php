@@ -14,9 +14,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /**
  * PDF oficial del Anexo 04 (Bienes Patrimoniales). La cabecera del formato es el
  * servidor responsable de los bienes: se agrupan los bienes por `servidor_id`
- * (una cabecera + su tabla por cada custodio). El estado proviene de la
- * verificación física; las columnas físicas (color, dimensión, características,
- * código anterior, ubicación) se completan al verificar. Hoja apaisada por ancho.
+ * (una cabecera + su tabla por cada custodio). Columnas: código patrimonial,
+ * denominación, estado, marca, modelo y serie. El estado y la observación
+ * provienen de la verificación física; la columna de observaciones solo se
+ * imprime en la tabla de un servidor si alguno de sus bienes tiene observación.
  */
 class PatrimonioPdf
 {
@@ -81,8 +82,11 @@ class PatrimonioPdf
                         'cargo' => $servidor?->cargo ?? '',
                     ],
                     'bienes' => [],
+                    'tiene_observaciones' => false,
                 ];
             }
+
+            $observacion = trim((string) $bien->verificacion?->observacion);
 
             $grupos[$clave]['bienes'][] = [
                 'codigo_patrimonial' => $bien->codigo_patrimonial,
@@ -90,13 +94,13 @@ class PatrimonioPdf
                 'estado' => $bien->verificacion?->estado_conservacion?->etiqueta() ?? '',
                 'marca' => $bien->marca,
                 'modelo' => $bien->modelo,
-                'color' => $bien->color,
                 'serie' => $bien->serie,
-                'dimension' => $bien->dimension,
-                'caracteristicas' => $bien->caracteristicas,
-                'codigo_patrimonial_anterior' => $bien->codigo_patrimonial_anterior,
-                'ubicacion' => $bien->ubicacion,
+                'observacion' => $observacion,
             ];
+
+            if ($observacion !== '') {
+                $grupos[$clave]['tiene_observaciones'] = true;
+            }
         }
 
         return array_values($grupos);

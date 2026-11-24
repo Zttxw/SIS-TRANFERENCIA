@@ -9,7 +9,10 @@ use App\Modules\Acervo\Models\AcervoDocumental;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Concerns\RespetaEstadoEntrega;
 use App\Support\Enums\FuenteDato;
+use App\Support\Http\ApiResponse;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Arr;
 
 class AcervoService
 {
@@ -42,10 +45,12 @@ class AcervoService
             $term = trim((string) $filtros['search']);
             $query->where(function ($q) use ($term) {
                 $q->whereLike('serie_documental', "%{$term}%")
-                    ->orWhereLike('identificacion_archivador', "%{$term}%")
-                    ->orWhereLike('descripcion', "%{$term}%")
-                    ->orWhereLike('periodo', "%{$term}%")
+                    ->orWhereLike('unidad_conservacion', "%{$term}%")
                     ->orWhereLike('ubicacion', "%{$term}%");
+
+                if (ctype_digit($term)) {
+                    $q->orWhere('anio', (int) $term);
+                }
             });
         }
 
@@ -55,7 +60,9 @@ class AcervoService
     }
 
     /**
-     * Crea un nuevo registro de acervo documental (Anexo 03).
+     * Registra una serie física (sección B del Anexo 03).
+     *
+     * @param  array{dependencia_id: int, serie_documental: string, anio: int, folios: int, unidad_conservacion: string, ubicacion: string}  $datos
      */
     public function crear(array $datos, User $usuario, ?int $procesoId = null): AcervoDocumental
     {
@@ -64,51 +71,53 @@ class AcervoService
         $this->exigirEntregaModificable((int) $datos['dependencia_id'], $procesoId);
 
         return AcervoDocumental::create([
+            ...$datos,
             'proceso_transferencia_id' => $procesoId,
-            'dependencia_id' => (int) $datos['dependencia_id'],
             'registrado_por_id' => $usuario->id,
-            'tipo' => $datos['tipo'],
-            'serie_documental' => $datos['serie_documental'],
-            'identificacion_archivador' => $datos['tipo'] === AcervoDocumental::TIPO_FISICO ? ($datos['identificacion_archivador'] ?? null) : null,
-            'total_folios' => $datos['tipo'] === AcervoDocumental::TIPO_FISICO ? ($datos['total_folios'] ?? null) : null,
-            'anio' => $datos['anio'] ?? null,
-            'desde_anio' => $datos['desde_anio'] ?? null,
-            'hasta_anio' => $datos['hasta_anio'] ?? null,
-            'periodo' => $datos['periodo'] ?? null,
-            'cantidad_unidades' => (int) $datos['cantidad_unidades'],
-            'unidad_conservacion' => $datos['unidad_conservacion'],
-            'ubicacion' => $datos['ubicacion'] ?? null,
-            'descripcion' => $datos['descripcion'] ?? null,
-            'observaciones' => $datos['observaciones'] ?? null,
+            'tipo' => AcervoDocumental::TIPO_FISICO,
             'fuente' => FuenteDato::MANUAL->value,
         ]);
     }
 
     /**
-     * Actualiza un registro existente de acervo documental.
+     * Actualiza una serie física. La dependencia no cambia al editar.
+     *
+     * @param  array{serie_documental: string, anio: int, folios: int, unidad_conservacion: string, ubicacion: string}  $datos
      */
     public function actualizar(int $id, array $datos): AcervoDocumental
     {
-        $acervo = AcervoDocumental::findOrFail($id);
+        $acervo = $this->serieManual($id);
         $this->exigirEntregaModificable((int) $acervo->dependencia_id);
-        if ($datos['tipo'] === AcervoDocumental::TIPO_DIGITAL) {
-            $datos['identificacion_archivador'] = null;
-            $datos['total_folios'] = null;
-        }
-        $acervo->update($datos);
+        $acervo->update(Arr::only($datos, ['serie_documental', 'anio', 'folios', 'unidad_conservacion', 'ubicacion']));
 
         return $acervo->fresh(['dependencia', 'registradoPor']);
     }
 
     /**
-     * Elimina un registro de acervo documental.
+     * Elimina una serie física.
      */
     public function eliminar(int $id): bool
     {
-        $acervo = AcervoDocumental::findOrFail($id);
+        $acervo = $this->serieManual($id);
         $this->exigirEntregaModificable((int) $acervo->dependencia_id);
 
         return (bool) $acervo->delete();
+    }
+
+    /**
+     * Las series de la sección A reflejan el SGD y solo cambian al reingerirlo.
+     */
+    private function serieManual(int $id): AcervoDocumental
+    {
+        $acervo = AcervoDocumental::findOrFail($id);
+
+        if ($acervo->esImportado()) {
+            throw new HttpResponseException(
+                ApiResponse::error('Las series del SGD se actualizan desde el SGD y no pueden modificarse.', 422)
+            );
+        }
+
+        return $acervo;
     }
 
     private function resolverProcesoActivoId(): int

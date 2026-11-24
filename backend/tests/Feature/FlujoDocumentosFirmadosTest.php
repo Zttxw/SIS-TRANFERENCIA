@@ -93,7 +93,7 @@ class FlujoDocumentosFirmadosTest extends TestCase
         $this->assertStringNotContainsString('BORRADOR', $pdf);
         $this->assertSame(Storage::disk('local')->get(FirmaBorrador::firstOrFail()->pdf_path), $pdf);
         AcervoDocumental::create(['proceso_transferencia_id' => $this->dep->proceso_transferencia_id,
-            'dependencia_id' => $this->dep->id, 'tipo' => 'fisico', 'serie_documental' => 'Nueva serie', 'cantidad_unidades' => 1]);
+            'dependencia_id' => $this->dep->id, 'tipo' => 'fisico', 'serie_documental' => 'Nueva serie', 'folios' => 1]);
         $this->assertStringContainsString('BORRADOR', $this->get($url)->assertOk()->getContent());
         $this->getJson('/api/firmaperu/estado/anexo03/'.$this->dep->id)->assertOk()->assertJsonPath('data.pdf_generado_vigente', false);
     }

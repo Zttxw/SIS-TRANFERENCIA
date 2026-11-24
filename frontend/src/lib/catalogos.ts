@@ -58,13 +58,13 @@ export const SITUACIONES_LABORALES = [
 // Anexo 03 — Acervo documental
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Formato del acervo documental (Anexo 03). */
-export const TIPOS_ACERVO = [
-  { value: 'fisico', label: 'Físico (Papel / Archivadores)' },
-  { value: 'digital', label: 'Digital (Repositorios / Nube)' },
+/** Secciones del Anexo 03: A digital (SGD) y B física (registro manual). */
+export const SECCIONES_ACERVO = [
+  { value: 'digital', label: 'A. Acervo digital (SGD)' },
+  { value: 'fisico', label: 'B. Acervo físico' },
 ] as const satisfies readonly OpcionCatalogo[]
 
-/** Unidades de conservación sugeridas para el acervo físico (Anexo 03). */
+/** Tipos de unidades de conservación del formato oficial del Anexo 03. */
 export const UNIDADES_CONSERVACION = [
   { value: 'Archivadores de Palanca', label: 'Archivadores de Palanca' },
   { value: 'Paquetes', label: 'Paquetes' },
@@ -72,12 +72,7 @@ export const UNIDADES_CONSERVACION = [
   { value: 'Fólderes', label: 'Fólderes' },
   { value: 'Cajas Archivadoras', label: 'Cajas Archivadoras' },
   { value: 'Archivo Digital', label: 'Archivo Digital' },
-  { value: 'Otro', label: 'Otro' },
-  { value: 'Tomos / Archivadores', label: 'Tomos / Archivadores' },
-  { value: 'Folders', label: 'Folders' },
-  { value: 'Cajas de archivo', label: 'Cajas de archivo' },
-  { value: 'Legajos', label: 'Legajos' },
-  { value: 'GB', label: 'GB (digital)' },
+  { value: 'Otro', label: 'Otro (especificar)' },
 ] as const satisfies readonly OpcionCatalogo[]
 
 // ─────────────────────────────────────────────────────────────────────────────

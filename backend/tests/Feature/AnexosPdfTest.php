@@ -11,10 +11,13 @@ use App\Modules\NoPatrimonial\Models\BienNoPatrimonial;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Organization\Models\Servidor;
 use App\Modules\Patrimonio\Models\BienPatrimonial;
+use App\Modules\Patrimonio\Models\VerificacionBien;
+use App\Modules\Patrimonio\Services\PatrimonioPdf;
 use App\Modules\Personal\Models\Personal;
 use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Enums\EstadoEntrega;
+use App\Support\Enums\EstadoVerificacionBien;
 use App\Support\Enums\Rol;
 use Database\Seeders\RolesPermisosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -74,9 +77,7 @@ class AnexosPdfTest extends TestCase
             'tipo' => 'fisico',
             'serie_documental' => 'OFICIOS',
             'anio' => 2024,
-            'desde_anio' => 2024,
-            'hasta_anio' => 2024,
-            'cantidad_unidades' => 3,
+            'folios' => 3,
             'unidad_conservacion' => 'Cajas Archivadoras',
         ]);
 
@@ -103,6 +104,51 @@ class AnexosPdfTest extends TestCase
         ]);
 
         $this->assertEsPdf($this->get("/api/patrimonio/pdf?dependencia_id={$this->dep->id}"));
+    }
+
+    public function test_pdf_anexo_04_muestra_observaciones_solo_en_el_grupo_que_las_tiene(): void
+    {
+        $this->actuar(Rol::SERVIDOR);
+        $conObservacion = $this->bienDeServidor('41414141', '740895000001');
+        $sinObservacion = $this->bienDeServidor('42424242', '740895000002');
+        VerificacionBien::create([
+            'bien_patrimonial_id' => $conObservacion->id,
+            'estado' => EstadoVerificacionBien::NO_UBICADO,
+            'observacion' => 'No se encontró en la oficina',
+        ]);
+        VerificacionBien::create([
+            'bien_patrimonial_id' => $sinObservacion->id,
+            'estado' => EstadoVerificacionBien::CONFIRMADO,
+        ]);
+
+        $grupos = app(PatrimonioPdf::class)->datos($this->dep->id)['grupos'];
+
+        $this->assertTrue($grupos[0]['tiene_observaciones']);
+        $this->assertSame('No se encontró en la oficina', $grupos[0]['bienes'][0]['observacion']);
+        $this->assertFalse($grupos[1]['tiene_observaciones']);
+        $this->assertSame(
+            ['codigo_patrimonial', 'denominacion', 'estado', 'marca', 'modelo', 'serie', 'observacion'],
+            array_keys($grupos[1]['bienes'][0]),
+        );
+    }
+
+    private function bienDeServidor(string $dni, string $codigoPatrimonial): BienPatrimonial
+    {
+        $servidor = Servidor::create([
+            'proceso_transferencia_id' => $this->proceso->id,
+            'dependencia_id' => $this->dep->id,
+            'dni' => $dni,
+            'nombres' => 'Servidor',
+            'apellidos' => $dni,
+        ]);
+
+        return BienPatrimonial::create([
+            'proceso_transferencia_id' => $this->proceso->id,
+            'dependencia_id' => $this->dep->id,
+            'servidor_id' => $servidor->id,
+            'codigo_patrimonial' => $codigoPatrimonial,
+            'denominacion' => 'Escritorio de madera',
+        ]);
     }
 
     public function test_pdf_anexo_05_personal(): void

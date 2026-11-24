@@ -138,7 +138,7 @@ class ReasignacionCentrosCosto
     }
 
     /**
-     * El acervo digital del SGD es un resumen por dependencia, serie y periodo.
+     * El acervo digital del SGD es un resumen por dependencia, serie y año.
      * Si dos dependencias del SGD caen en el mismo CC, sus filas se suman en
      * una sola y la referencia conserva todos los códigos de origen.
      *
@@ -161,7 +161,7 @@ class ReasignacionCentrosCosto
                     ->where('tipo', $fila->tipo)
                     ->where('fuente', 'sgd')
                     ->where('serie_documental', $fila->serie_documental)
-                    ->where('periodo', $fila->periodo)
+                    ->where('anio', $fila->anio)
                     ->whereNull('deleted_at')
                     ->first() : null;
 
@@ -173,7 +173,7 @@ class ReasignacionCentrosCosto
 
                 $fusionadas++;
                 DB::table('acervo_documental')->where('id', $existente->id)->update([
-                    'cantidad_unidades' => (int) $existente->cantidad_unidades + (int) $fila->cantidad_unidades,
+                    'folios' => (int) $existente->folios + (int) $fila->folios,
                     'fuente_referencia' => AcervoReferenciaSgd::fusionar((string) $existente->fuente_referencia, (string) $fila->fuente_referencia),
                     'updated_at' => $ahora,
                 ]);

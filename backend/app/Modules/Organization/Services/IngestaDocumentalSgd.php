@@ -14,6 +14,7 @@ use App\Support\Enums\FuenteDato;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Ingesta documental de SOLO LECTURA del SGD hacia las tablas de trabajo
@@ -37,7 +38,7 @@ use Illuminate\Support\Facades\DB;
 class IngestaDocumentalSgd
 {
     /** Estados de emisión del remito que lo sacan del universo (R03). */
-    private const EMISION_EXCLUIDA = ['5', '7', '8', '9'];
+    public const EMISION_EXCLUIDA = ['5', '7', '8', '9'];
 
     /**
      * Estados de recepción (TDTV_DESTINOS.ES_DOC_REC) que indican que el destino
@@ -45,6 +46,12 @@ class IngestaDocumentalSgd
      * (5) o anulado (9). El resto (no leído '0', recibido '1') queda pendiente.
      */
     private const RECEPCION_RESUELTA = ['2', '3', '4', '5', '9'];
+
+    /**
+     * Estados de recepción que NO cuentan como documento recibido en el acervo:
+     * no leído (0) y anulado (9).
+     */
+    public const RECEPCION_NO_RECIBIDA = ['0', '9'];
 
     public function __construct(
         private readonly string $esquema,
@@ -87,18 +94,13 @@ class IngestaDocumentalSgd
     }
 
     /**
-     * Acervo digital (Anexo 03): una fila-resumen por dependencia emisora, tipo
-     * documental y AÑO, con el conteo de documentos emitidos. Agregado en SQL
-     * Server con GROUP BY; no trae documentos individuales.
+     * Acervo digital (sección A del Anexo 03): una serie por centro de costo,
+     * tipo documental, sentido (emitidos/recibidos) y AÑO, con la suma de folios
+     * que el SGD registra en sus documentos. Todo se agrega en SQL Server.
      *
-     * Se ingieren TODOS los años presentes en el SGD (que arrancó en sep-2025),
-     * no solo el año del proceso: el acervo refleja todo el archivo digital que la
-     * oficina generó desde que existe el SGD. La vista «Por año» del Anexo 03 ya
-     * agrupa por el año de cada fila.
-     */
-    /**
-     * Las filas se agrupan por destino (centro de costo): si varias dependencias
-     * del SGD caen en el mismo CC, sus conteos se suman en una sola fila.
+     * Abarca todos los años del SGD (que arrancó en sep-2025), no solo el del
+     * proceso. Si varias dependencias del SGD caen en el mismo CC, sus series se
+     * suman en una sola fila. Las series del SGD que ya no aparecen se retiran.
      *
      * @param  list<string>|null  $codigos  dependencias del SGD (modo piloto)
      */
@@ -107,7 +109,81 @@ class IngestaDocumentalSgd
         ?array $codigos,
         Carbon $extraidoEn,
     ): int {
-        $sql = "SELECT r.NU_ANN AS anio, r.CO_DEP_EMI AS dep, r.CO_TIP_DOC_ADM AS tipo, COUNT(*) AS total
+        $depPorCodigo = $this->dependenciasPorCodigo($proceso);
+        $tiposPorCodigo = TipoDocumentalSgd::query()->pluck('descripcion', 'codigo');
+
+        /** @var array<string, array{dependencia_id: int, serie: string, anio: string, sentido: string, tipo: ?string, folios: int, deps: list<string>}> $grupos */
+        $grupos = [];
+        $filasPorSentido = [
+            AcervoReferenciaSgd::EMITIDOS => $this->seriesEmitidas($codigos),
+            AcervoReferenciaSgd::RECIBIDOS => $this->seriesRecibidas($codigos),
+        ];
+
+        foreach ($filasPorSentido as $sentido => $filas) {
+            foreach ($filas as $fila) {
+                $depCodigo = $this->texto($fila->dep);
+                $dependenciaId = $depCodigo !== null ? ($depPorCodigo[$depCodigo] ?? null) : null;
+                $anioFila = $this->texto($fila->anio);
+                if ($dependenciaId === null || $anioFila === null) {
+                    continue; // Dependencia fuera del proceso; se omite (incidencia silenciosa).
+                }
+
+                $tipoCodigo = $this->texto($fila->tipo);
+                $serie = $this->nombreSerie($tipoCodigo !== null ? ($tiposPorCodigo[$tipoCodigo] ?? "Tipo {$tipoCodigo}") : null, $sentido);
+
+                $clave = "{$dependenciaId}|{$serie}|{$anioFila}";
+                $grupos[$clave] ??= ['dependencia_id' => $dependenciaId, 'serie' => $serie, 'anio' => $anioFila, 'sentido' => $sentido, 'tipo' => $tipoCodigo, 'folios' => 0, 'deps' => []];
+                $grupos[$clave]['folios'] += (int) $fila->folios;
+                $grupos[$clave]['deps'][] = $depCodigo;
+            }
+        }
+
+        $dependenciasAlcanzadas = $codigos === null
+            ? null
+            : array_values(array_unique(array_filter(array_map(fn (string $codigo) => $depPorCodigo[$codigo] ?? null, $codigos))));
+
+        return DB::transaction(function () use ($grupos, $proceso, $extraidoEn, $dependenciasAlcanzadas) {
+            $vigentes = [];
+            foreach ($grupos as $grupo) {
+                $vigentes[] = AcervoDocumental::updateOrCreate(
+                    [
+                        'proceso_transferencia_id' => $proceso->id,
+                        'dependencia_id' => $grupo['dependencia_id'],
+                        'tipo' => AcervoDocumental::TIPO_DIGITAL,
+                        'serie_documental' => $grupo['serie'],
+                        'anio' => (int) $grupo['anio'],
+                    ],
+                    [
+                        'folios' => $grupo['folios'],
+                        'unidad_conservacion' => AcervoDocumental::UNIDAD_ARCHIVO_DIGITAL,
+                        'fuente' => FuenteDato::SGD->value,
+                        'fuente_referencia' => AcervoReferenciaSgd::construir($grupo['sentido'], $grupo['deps'], $grupo['tipo'], $grupo['anio']),
+                        'extraido_en' => $extraidoEn,
+                    ],
+                )->id;
+            }
+
+            AcervoDocumental::query()
+                ->where('proceso_transferencia_id', $proceso->id)
+                ->where('fuente', FuenteDato::SGD->value)
+                ->when($dependenciasAlcanzadas !== null, fn ($q) => $q->whereIn('dependencia_id', $dependenciasAlcanzadas))
+                ->whereNotIn('id', $vigentes)
+                ->delete();
+
+            return count($grupos);
+        });
+    }
+
+    /**
+     * Documentos emitidos por dependencia, tipo y año (sin anulados).
+     *
+     * @param  list<string>|null  $codigos
+     * @return list<object>
+     */
+    private function seriesEmitidas(?array $codigos): array
+    {
+        $sql = "SELECT r.NU_ANN AS anio, r.CO_DEP_EMI AS dep, r.CO_TIP_DOC_ADM AS tipo,
+                       SUM(CAST(r.NU_FOLIOS AS BIGINT)) AS folios
                 FROM {$this->esquema}.TDTV_REMITOS r
                 WHERE r.ES_ELI = '0'
                   AND r.ES_DOC_EMI NOT IN ('9')
@@ -120,60 +196,56 @@ class IngestaDocumentalSgd
         }
         $sql .= ' GROUP BY r.NU_ANN, r.CO_DEP_EMI, r.CO_TIP_DOC_ADM';
 
-        $filas = DB::connection($this->conexionSgd)->select($sql, $bindings);
+        return DB::connection($this->conexionSgd)->select($sql, $bindings);
+    }
 
-        $depPorCodigo = $this->dependenciasPorCodigo($proceso);
-        $tiposPorCodigo = TipoDocumentalSgd::query()->pluck('descripcion', 'codigo');
+    /**
+     * Documentos recibidos por dependencia destino, tipo y año. Solo cuentan los
+     * destinos ya leídos o atendidos (los no leídos van a Documentos pendientes)
+     * y cada documento se cuenta una vez por dependencia aunque tenga copias.
+     *
+     * @param  list<string>|null  $codigos
+     * @return list<object>
+     */
+    private function seriesRecibidas(?array $codigos): array
+    {
+        $emisionExcluida = $this->marcadores(self::EMISION_EXCLUIDA);
+        $noRecibida = $this->marcadores(self::RECEPCION_NO_RECIBIDA);
 
-        /** @var array<string, array{dependencia_id: int, serie: string, anio: string, tipo: ?string, total: int, deps: list<string>}> $grupos */
-        $grupos = [];
-        foreach ($filas as $fila) {
-            $depCodigo = $this->texto($fila->dep);
-            $dependenciaId = $depCodigo !== null ? ($depPorCodigo[$depCodigo] ?? null) : null;
-            $anioFila = $this->texto($fila->anio);
-            if ($dependenciaId === null || $anioFila === null) {
-                continue; // Dependencia fuera del proceso; se omite (incidencia silenciosa).
-            }
-
-            $tipoCodigo = $this->texto($fila->tipo);
-            $serie = $tipoCodigo !== null
-                ? (($tiposPorCodigo[$tipoCodigo] ?? "Tipo {$tipoCodigo}"))
-                : 'Sin tipo documental';
-
-            $clave = "{$dependenciaId}|{$serie}|{$anioFila}";
-            $grupos[$clave] ??= ['dependencia_id' => $dependenciaId, 'serie' => $serie, 'anio' => $anioFila, 'tipo' => $tipoCodigo, 'total' => 0, 'deps' => []];
-            $grupos[$clave]['total'] += (int) $fila->total;
-            $grupos[$clave]['deps'][] = $depCodigo;
+        $sql = "SELECT DISTINCT d.NU_ANN AS anio, d.NU_EMI AS emi, d.CO_DEP_DES AS dep,
+                       r.CO_TIP_DOC_ADM AS tipo, r.NU_FOLIOS AS folios
+                FROM {$this->esquema}.TDTV_DESTINOS d
+                INNER JOIN {$this->esquema}.TDTV_REMITOS r
+                        ON r.NU_ANN = d.NU_ANN AND r.NU_EMI = d.NU_EMI
+                WHERE d.ES_ELI = '0'
+                  AND r.ES_ELI = '0'
+                  AND r.ES_DOC_EMI NOT IN ({$emisionExcluida})
+                  AND d.ES_DOC_REC IS NOT NULL
+                  AND d.ES_DOC_REC NOT IN ({$noRecibida})
+                  AND d.CO_DEP_DES IS NOT NULL
+                  AND d.NU_ANN IS NOT NULL";
+        $bindings = array_merge(self::EMISION_EXCLUIDA, self::RECEPCION_NO_RECIBIDA);
+        if ($codigos !== null) {
+            $sql .= ' AND d.CO_DEP_DES IN ('.$this->marcadores($codigos).')';
+            $bindings = array_merge($bindings, $codigos);
         }
 
-        return DB::transaction(function () use ($grupos, $proceso, $extraidoEn) {
-            foreach ($grupos as $grupo) {
-                $anioEntero = (int) $grupo['anio'];
+        return DB::connection($this->conexionSgd)->select(
+            "SELECT x.anio, x.dep, x.tipo, SUM(CAST(x.folios AS BIGINT)) AS folios
+             FROM ({$sql}) x
+             GROUP BY x.anio, x.dep, x.tipo",
+            $bindings,
+        );
+    }
 
-                AcervoDocumental::updateOrCreate(
-                    [
-                        'proceso_transferencia_id' => $proceso->id,
-                        'dependencia_id' => $grupo['dependencia_id'],
-                        'tipo' => AcervoDocumental::TIPO_DIGITAL,
-                        'serie_documental' => $grupo['serie'],
-                        'periodo' => $grupo['anio'],
-                    ],
-                    [
-                        'anio' => $anioEntero,
-                        'desde_anio' => $anioEntero,
-                        'hasta_anio' => $anioEntero,
-                        'cantidad_unidades' => $grupo['total'],
-                        'unidad_conservacion' => 'documento digital (SGD)',
-                        'descripcion' => "Documentos emitidos en {$grupo['anio']} de tipo «{$grupo['serie']}», según el SGD.",
-                        'fuente' => FuenteDato::SGD->value,
-                        'fuente_referencia' => AcervoReferenciaSgd::construir($grupo['deps'], $grupo['tipo'], $grupo['anio']),
-                        'extraido_en' => $extraidoEn,
-                    ],
-                );
-            }
+    /** «Informe emitidos», «Memorándum recibidos»: tipo documental + sentido. */
+    private function nombreSerie(?string $tipoDocumental, string $sentido): string
+    {
+        $tipo = $tipoDocumental !== null
+            ? Str::ucfirst(Str::lower(trim($tipoDocumental)))
+            : 'Documentos sin tipo';
 
-            return count($grupos);
-        });
+        return "{$tipo} {$sentido}";
     }
 
     /**

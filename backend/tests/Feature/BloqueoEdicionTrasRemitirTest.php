@@ -130,10 +130,11 @@ class BloqueoEdicionTrasRemitirTest extends TestCase
 
         $creado = $this->postJson('/api/acervo', [
             'dependencia_id' => $this->dep->id,
-            'tipo' => 'fisico',
             'serie_documental' => 'Serie de prueba',
-            'cantidad_unidades' => 3,
-            'unidad_conservacion' => 'folios',
+            'anio' => 2026,
+            'folios' => 3,
+            'unidad_conservacion' => 'Paquetes',
+            'ubicacion' => 'Estante 1',
         ])->assertStatus(201);
 
         $id = $creado->json('data.id');

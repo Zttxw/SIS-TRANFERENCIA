@@ -18,7 +18,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * Registro de acervo documentario (Anexo 03): físico o digital.
+ * Serie del acervo documentario (Anexo 03). La sección A reúne las series
+ * digitales que se precargan del SGD (tipo documental + emitidos/recibidos);
+ * la sección B, las series físicas que el centro de costo registra a mano.
+ * Cada fila pertenece a un año.
  *
  * @property string $tipo
  */
@@ -32,23 +35,18 @@ class AcervoDocumental extends BaseModel
 
     public const TIPO_FISICO = 'fisico';
 
+    public const UNIDAD_ARCHIVO_DIGITAL = 'Archivo Digital';
+
     protected $fillable = [
         'proceso_transferencia_id',
         'dependencia_id',
         'registrado_por_id',
         'tipo',
         'serie_documental',
-        'identificacion_archivador',
-        'total_folios',
         'anio',
-        'desde_anio',
-        'hasta_anio',
-        'periodo',
-        'cantidad_unidades',
+        'folios',
         'unidad_conservacion',
         'ubicacion',
-        'descripcion',
-        'observaciones',
         'fuente',
         'fuente_referencia',
         'extraido_en',
@@ -57,11 +55,8 @@ class AcervoDocumental extends BaseModel
     protected function casts(): array
     {
         return [
-            'cantidad_unidades' => 'integer',
-            'total_folios' => 'integer',
             'anio' => 'integer',
-            'desde_anio' => 'integer',
-            'hasta_anio' => 'integer',
+            'folios' => 'integer',
         ];
     }
 

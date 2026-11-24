@@ -1,5 +1,9 @@
 export type TipoAcervo = 'fisico' | 'digital'
 
+/**
+ * Serie del Anexo 03. `digital` = sección A (precargada del SGD, solo lectura);
+ * `fisico` = sección B (registrada a mano).
+ */
 export interface AcervoDocumental {
   id: number
   proceso_transferencia_id: number
@@ -8,17 +12,10 @@ export interface AcervoDocumental {
   registrado_por?: { id: number; name: string } | null
   tipo: TipoAcervo
   serie_documental: string
-  identificacion_archivador: string | null
-  total_folios: number | null
   anio: number | null
-  desde_anio: number | null
-  hasta_anio: number | null
-  periodo: string | null
-  cantidad_unidades: number
+  folios: number | null
   unidad_conservacion: string
   ubicacion: string | null
-  descripcion: string | null
-  observaciones: string | null
   fuente: string
   created_at: string
   updated_at: string
@@ -29,21 +26,14 @@ export interface AcervoDocumental {
   }
 }
 
+/** Serie física (sección B). */
 export interface GuardarAcervoPayload {
-  identificacion_archivador?: string | null
-  total_folios?: number | null
   dependencia_id: number
-  tipo: TipoAcervo
   serie_documental: string
-  anio?: number | null
-  desde_anio?: number | null
-  hasta_anio?: number | null
-  periodo?: string | null
-  cantidad_unidades: number
+  anio: number
+  folios: number
   unidad_conservacion: string
-  ubicacion?: string | null
-  descripcion?: string | null
-  observaciones?: string | null
+  ubicacion: string
 }
 
 export interface FiltrosAcervo {
@@ -54,7 +44,7 @@ export interface FiltrosAcervo {
   page?: number
 }
 
-/** Documento individual del SGD que respalda una fila-resumen de acervo digital. */
+/** Documento individual del SGD que respalda una serie digital del Anexo 03. */
 export interface DocumentoSgd {
   emi: string
   numero_documento: string | null

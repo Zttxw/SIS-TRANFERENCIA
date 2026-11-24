@@ -169,7 +169,7 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
     {
         $serie = AcervoDocumental::create(['dependencia_id' => $this->dep->id,
             'proceso_transferencia_id' => $this->dep->proceso_transferencia_id,
-            'tipo' => 'fisico', 'serie_documental' => 'Serie nueva', 'anio' => 2026, 'cantidad_unidades' => 1]);
+            'tipo' => 'fisico', 'serie_documental' => 'Serie nueva', 'anio' => 2026, 'folios' => 1]);
         $primera = $this->recibir($this->preparar());
         $serie->update(['serie_documental' => 'Contenido corregido, con la misma presencia de anexos']);
         $this->remitir()->assertConflict();
@@ -186,7 +186,7 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
         $preparacion = $this->preparar();
         AcervoDocumental::create(['dependencia_id' => $this->dep->id,
             'proceso_transferencia_id' => $this->dep->proceso_transferencia_id,
-            'tipo' => 'fisico', 'serie_documental' => 'Serie nueva', 'anio' => 2026, 'cantidad_unidades' => 1]);
+            'tipo' => 'fisico', 'serie_documental' => 'Serie nueva', 'anio' => 2026, 'folios' => 1]);
         $sesion = $this->recibir($preparacion);
         $this->assertSame('firmada', $sesion->estado);
         $this->assertDatabaseHas('firmas_anexo', ['firma_sesion_id' => $sesion->id, 'estado' => 'cancelada']);
@@ -219,7 +219,7 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
         $primera = $this->preparar('anexo03');
         AcervoDocumental::create(['dependencia_id' => $this->dep->id,
             'proceso_transferencia_id' => $this->dep->proceso_transferencia_id,
-            'tipo' => 'fisico', 'serie_documental' => 'Contenido actual', 'anio' => 2026, 'cantidad_unidades' => 1]);
+            'tipo' => 'fisico', 'serie_documental' => 'Contenido actual', 'anio' => 2026, 'folios' => 1]);
         $vigente = $this->recibir($this->preparar('anexo03'));
         $this->travel(1)->minutes();
         $this->recibir($primera);
