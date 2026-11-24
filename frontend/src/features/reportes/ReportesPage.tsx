@@ -289,14 +289,20 @@ function ModalDetalleDependencia({
           {/* Conciliación Patrimonio */}
           <div className="p-3 rounded-xl border border-border bg-card flex flex-col justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              % Patrimonio
+              Patrimonio
             </span>
             <div className="mt-1.5 flex items-baseline gap-1.5 font-mono font-bold text-xs">
-              <span className={fila.patrimonio_porcentaje === 100 ? 'text-emerald-700' : 'text-amber-700'}>
-                {fila.patrimonio_porcentaje}%
+              <span
+                className={
+                  fila.patrimonio_confirmados === fila.patrimonio_total && fila.patrimonio_total > 0
+                    ? 'text-emerald-700'
+                    : 'text-foreground'
+                }
+              >
+                {fila.patrimonio_confirmados}
               </span>
-              <span className="text-[11px] text-muted-foreground font-normal">
-                ({fila.patrimonio_confirmados}/{fila.patrimonio_total})
+              <span className="text-muted-foreground font-normal">
+                / {fila.patrimonio_total}
               </span>
             </div>
           </div>
@@ -570,9 +576,6 @@ function MatrizView() {
                 {f.patrimonio_confirmados}
               </span>
               <span className="text-muted-foreground">/ {f.patrimonio_total}</span>
-              <span className="text-[10px] font-semibold text-muted-foreground ml-1">
-                ({f.patrimonio_porcentaje}%)
-              </span>
             </div>
           )}
         </div>
