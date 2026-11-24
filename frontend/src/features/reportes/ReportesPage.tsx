@@ -1,4 +1,3 @@
-import { estaEnFirma, fueRemitida } from '@/types/transferencia'
 import { useMemo, useState } from 'react'
 import {
   AlertCircle,
@@ -7,6 +6,8 @@ import {
   Boxes,
   Building2,
   Check,
+  CheckCheck,
+  CheckCircle2,
   Clock,
   Filter,
   Layers,
@@ -22,9 +23,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  ComposedChart,
   Legend,
-  Line,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -43,43 +42,70 @@ import {
   useConciliacionPatrimonial,
   useMatrizAnexos,
   useObservacionesReporte,
-  useVerificacionReporte,
 } from './use-reportes'
 import type {
   ClaveReporte,
   FilaConciliacion,
   FilaMatriz,
   FilaObservacion,
-  FilaVerificacion,
 } from '@/types/reportes'
 
 const TABS: { clave: ClaveReporte; etiqueta: string; icono: typeof BarChart3 }[] = [
   { clave: 'matriz-anexos', etiqueta: 'Matriz de anexos', icono: BarChart3 },
   { clave: 'conciliacion-patrimonial', etiqueta: 'Conciliación patrimonial', icono: Boxes },
   { clave: 'observaciones', etiqueta: 'Observaciones', icono: MessageSquareWarning },
-  { clave: 'verificacion', etiqueta: 'Verificación por CC', icono: ShieldCheck },
 ]
 
 /* Paleta institucional (MDSJ) */
 const PALETA = {
   primario: '#003366',
-  remitida: '#16a34a',
-  verificada: '#2563eb',
-  en_revision: '#d97706',
+  consolidada: '#16a34a',
+  remitida: '#2563eb',
+  observada: '#d97706',
   borrador: '#64748b',
   patrimonio: '#0d9488',
   peligro: '#dc2626',
 }
 
-/** Chip visual de presencia de anexo (Sí / —) */
-function Presencia({ ok }: { ok: boolean }) {
-  return ok ? (
-    <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-microdato font-bold text-emerald-800 border border-emerald-200">
-      <Check className="h-3 w-3 stroke-[3]" />
-      Sí
-    </span>
-  ) : (
-    <span className="inline-flex items-center justify-center rounded bg-slate-100 px-2 py-0.5 text-microdato font-medium text-slate-400">
+function esCompletoAnexo(v: unknown): boolean {
+  return v === 'generado' || v === 'firmado' || v === 'entregado' || v === true || v === 'si'
+}
+
+function esFirmadoAnexo(v: unknown): boolean {
+  return v === 'firmado' || v === 'entregado'
+}
+
+/** Chip visual de estado de anexo (Entregado / Sí / —) */
+function Presencia({ valor }: { valor: unknown }) {
+  if (esFirmadoAnexo(valor)) {
+    return (
+      <span
+        className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-microdato font-bold text-emerald-800 border border-emerald-300 shadow-2xs"
+        title="Documento firmado y entregado conforme"
+      >
+        <CheckCheck className="h-3 w-3 stroke-[2.5] text-emerald-700" />
+        Entregado
+      </span>
+    )
+  }
+
+  if (esCompletoAnexo(valor)) {
+    return (
+      <span
+        className="inline-flex items-center gap-1 rounded bg-sky-50 px-2 py-0.5 text-microdato font-bold text-sky-800 border border-sky-200"
+        title="Documento generado en PDF y firma (en avance)"
+      >
+        <Check className="h-3 w-3 stroke-[3] text-sky-600" />
+        Sí
+      </span>
+    )
+  }
+
+  return (
+    <span
+      className="inline-flex items-center justify-center rounded bg-slate-100 px-2 py-0.5 text-microdato font-medium text-slate-400"
+      title="Documento aún no generado en PDF y firma"
+    >
       <Minus className="h-3 w-3" />
     </span>
   )
@@ -88,29 +114,25 @@ function Presencia({ ok }: { ok: boolean }) {
 /** Chip visual para estado de entrega */
 function BadgeEstado({ estado }: { estado: string }) {
   switch (estado) {
-    case 'remitida':
-    case 'recibida_etts':
-    case 'remitida_ette':
-    case 'recibida_ette':
+    case 'consolidada':
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-microdato font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-          Remitida
+          Consolidada
         </span>
       )
-    case 'verificada':
-    case 'acta_suscrita':
+    case 'remitida':
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-microdato font-semibold bg-blue-100 text-blue-800 border border-blue-200">
           <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
-          Aceptada
+          Remitida
         </span>
       )
-    case 'en_revision':
+    case 'observada':
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-microdato font-semibold bg-amber-100 text-amber-800 border border-amber-200">
           <span className="h-1.5 w-1.5 rounded-full bg-amber-600" />
-          Por revisar
+          Observada
         </span>
       )
     default:
@@ -121,6 +143,28 @@ function BadgeEstado({ estado }: { estado: string }) {
         </span>
       )
   }
+}
+
+/** Clasificación según Semáforo Institucional (Directiva N.° 001-2026-MDSJ/A)
+ * - conforme (Verde): Entregado conforme (Consolidadas)
+ * - en_plazo (Amarillo): Pendiente en el plazo (En formulación o revisión en plazo)
+ * - vencido (Rojo): Se pasó de tiempo (Fuera de plazo o con observaciones abiertas)
+ */
+type EstadoSemaforo = 'conforme' | 'en_plazo' | 'vencido'
+
+function getEstadoSemaforo(f: FilaMatriz): EstadoSemaforo {
+  // 1. Verde: Entregado conforme (Consolidadas o entrega completa suscrita)
+  if (f.estado_entrega === 'consolidada' || f.anexos_firmados === 5) {
+    return 'conforme'
+  }
+
+  // 2. Rojo: Se pasó de tiempo / Observaciones pendientes
+  if (f.estado_entrega === 'observada' || f.observaciones_abiertas > 0) {
+    return 'vencido'
+  }
+
+  // 3. Amarillo: Pendiente en el plazo (Inicia en amarillo para todas las dependencias en formulación o revisión)
+  return 'en_plazo'
 }
 
 /* =========================================================================
@@ -135,84 +179,41 @@ function MatrizView() {
   const metricas = data?.metricas
   const filas = data?.filas ?? []
 
-  // Métricas derivadas para los gráficos
-  const { datosAnexos, datosDonutEstados, datosNivel, filasFiltradas } = useMemo(() => {
+  // Métricas derivadas para el Semáforo Institucional y filtrado
+  const { semaforo, datosDonutSemaforo, filasFiltradas } = useMemo(() => {
     const total = filas.length || 1
 
-    // 1. Cumplimiento por anexo (A02 al A06)
-    const a02 = filas.filter((f) => f.anexo_02).length
-    const a03 = filas.filter((f) => f.anexo_03).length
-    const a04 = filas.filter((f) => f.anexo_04).length
-    const a05 = filas.filter((f) => f.anexo_05).length
-    const a06 = filas.filter((f) => f.anexo_06).length
+    let conforme = 0
+    let enPlazo = 0
+    let vencido = 0
 
-    const datosAnexos = [
-      {
-        anexo: 'A02 Gestión',
-        completados: a02,
-        pendientes: total - a02,
-        pct: Math.round((a02 / total) * 100),
-      },
-      {
-        anexo: 'A03 Acervo',
-        completados: a03,
-        pendientes: total - a03,
-        pct: Math.round((a03 / total) * 100),
-      },
-      {
-        anexo: 'A04 Patrimonio',
-        completados: a04,
-        pendientes: total - a04,
-        pct: Math.round((a04 / total) * 100),
-      },
-      {
-        anexo: 'A05 Personal',
-        completados: a05,
-        pendientes: total - a05,
-        pct: Math.round((a05 / total) * 100),
-      },
-      {
-        anexo: 'A06 No Patr.',
-        completados: a06,
-        pendientes: total - a06,
-        pct: Math.round((a06 / total) * 100),
-      },
+    for (const f of filas) {
+      const est = getEstadoSemaforo(f)
+      if (est === 'conforme') conforme++
+      else if (est === 'en_plazo') enPlazo++
+      else vencido++
+    }
+
+    const pctConforme = Math.round((conforme / total) * 100)
+    const pctEnPlazo = Math.round((enPlazo / total) * 100)
+    const pctVencido = Math.round((vencido / total) * 100)
+
+    const semaforo = {
+      conforme,
+      enPlazo,
+      vencido,
+      pctConforme,
+      pctEnPlazo,
+      pctVencido,
+    }
+
+    const datosDonutSemaforo = [
+      { name: 'Entregado conforme (Verde)', value: conforme, fill: '#16a34a' },
+      { name: 'Pendiente en el plazo (Amarillo)', value: enPlazo, fill: '#eab308' },
+      { name: 'Se pasó de tiempo (Rojo)', value: vencido, fill: '#dc2626' },
     ]
 
-    // 2. Donut de estados
-    const remitidas = metricas?.remitidas ?? 0
-    const aceptadas = metricas?.verificadas ?? 0
-    const porRevisar = metricas?.en_revision ?? 0
-    const borrador = metricas?.borrador ?? 0
-
-    const datosDonutEstados = [
-      { name: 'Remitidas', value: remitidas, fill: PALETA.remitida },
-      { name: 'Aceptadas (a firma)', value: aceptadas, fill: PALETA.verificada },
-      { name: 'Por revisar', value: porRevisar, fill: PALETA.en_revision },
-      { name: 'En Preparación', value: borrador, fill: PALETA.borrador },
-    ]
-
-    // 3. Por nivel organizacional
-    const niveles = [1, 2, 3, 4]
-    const datosNivel = niveles.map((nivel) => {
-      const depsNivel = filas.filter((f) => f.nivel === nivel)
-      const nTotal = depsNivel.length
-      const nCons = depsNivel.filter((f) => fueRemitida(f.estado_entrega)).length
-      const nRem = depsNivel.filter((f) => estaEnFirma(f.estado_entrega)).length
-      const nObs = depsNivel.filter((f) => f.estado_entrega === 'en_revision').length
-      const nBorr = depsNivel.filter((f) => f.estado_entrega === 'borrador').length
-      return {
-        nivel: `Nivel ${nivel}`,
-        total: nTotal,
-        remitidas: nCons,
-        aceptadas: nRem,
-        porRevisar: nObs,
-        borrador: nBorr,
-        pctAvance: nTotal > 0 ? Math.round((nCons / nTotal) * 100) : 0,
-      }
-    }).filter((n) => n.total > 0)
-
-    // 4. Filtrado interactivo de filas
+    // Filtrado interactivo de filas
     const texto = busqueda.toLowerCase().trim()
     const filtradas = filas.filter((f) => {
       const matchTexto =
@@ -221,30 +222,36 @@ function MatrizView() {
         f.nombre.toLowerCase().includes(texto) ||
         (f.encargado && f.encargado.toLowerCase().includes(texto))
 
-      const matchEstado =
-        filtroEstado === 'todos' ||
-        f.estado_entrega === filtroEstado ||
-        (filtroEstado === 'verificada' && estaEnFirma(f.estado_entrega)) ||
-        (filtroEstado === 'remitida' && fueRemitida(f.estado_entrega))
+      let matchEstado = true
+      if (filtroEstado === 'todos') {
+        matchEstado = true
+      } else if (filtroEstado === 'semaforo_verde') {
+        matchEstado = getEstadoSemaforo(f) === 'conforme'
+      } else if (filtroEstado === 'semaforo_amarillo') {
+        matchEstado = getEstadoSemaforo(f) === 'en_plazo'
+      } else if (filtroEstado === 'semaforo_rojo') {
+        matchEstado = getEstadoSemaforo(f) === 'vencido'
+      } else {
+        matchEstado = f.estado_entrega === filtroEstado
+      }
 
       let matchFaltante = true
-      if (filtroFaltante === 'sin_a02') matchFaltante = !f.anexo_02
-      if (filtroFaltante === 'sin_a03') matchFaltante = !f.anexo_03
-      if (filtroFaltante === 'sin_a04') matchFaltante = !f.anexo_04
-      if (filtroFaltante === 'sin_a05') matchFaltante = !f.anexo_05
-      if (filtroFaltante === 'sin_a06') matchFaltante = !f.anexo_06
-      if (filtroFaltante === 'con_obs') matchFaltante = f.observaciones > 0
+      if (filtroFaltante === 'sin_a02') matchFaltante = !esCompletoAnexo(f.anexo_02)
+      if (filtroFaltante === 'sin_a03') matchFaltante = !esCompletoAnexo(f.anexo_03)
+      if (filtroFaltante === 'sin_a04') matchFaltante = !esCompletoAnexo(f.anexo_04)
+      if (filtroFaltante === 'sin_a05') matchFaltante = !esCompletoAnexo(f.anexo_05)
+      if (filtroFaltante === 'sin_a06') matchFaltante = !esCompletoAnexo(f.anexo_06)
+      if (filtroFaltante === 'con_obs') matchFaltante = f.observaciones_abiertas > 0
 
       return matchTexto && matchEstado && matchFaltante
     })
 
     return {
-      datosAnexos,
-      datosDonutEstados,
-      datosNivel,
+      semaforo,
+      datosDonutSemaforo,
       filasFiltradas: filtradas,
     }
-  }, [filas, metricas, busqueda, filtroEstado, filtroFaltante])
+  }, [filas, busqueda, filtroEstado, filtroFaltante])
 
   const columnas: ColumnaTabla<FilaMatriz>[] = [
     {
@@ -259,18 +266,59 @@ function MatrizView() {
     {
       id: 'nombre',
       header: 'Centro de costo',
-      cell: (f) => (
-        <div className="max-w-[260px]">
-          <div className="font-medium text-foreground uppercase text-nota truncate">
-            {f.nombre}
-          </div>
-          {f.encargado && (
-            <div className="text-microdato text-muted-foreground truncate">
-              {f.encargado}
+      cell: (f) => {
+        const sem = getEstadoSemaforo(f)
+        const anexosCompletados =
+          (esCompletoAnexo(f.anexo_02) ? 1 : 0) +
+          (esCompletoAnexo(f.anexo_03) ? 1 : 0) +
+          (esCompletoAnexo(f.anexo_04) ? 1 : 0) +
+          (esCompletoAnexo(f.anexo_05) ? 1 : 0) +
+          (esCompletoAnexo(f.anexo_06) ? 1 : 0)
+        const porcentaje =
+          f.estado_entrega === 'consolidada'
+            ? 100
+            : (f.porcentaje_avance ?? Math.round((anexosCompletados / 5) * 100))
+
+        // Semáforo: Inicia en amarillo; al consolidar o 100% pasa a verde; si está fuera de plazo/vencido en rojo
+        const colorBarra =
+          porcentaje === 100 || f.estado_entrega === 'consolidada'
+            ? 'bg-emerald-600'
+            : sem === 'vencido'
+            ? 'bg-rose-600'
+            : 'bg-amber-500'
+
+        const colorTexto =
+          porcentaje === 100 || f.estado_entrega === 'consolidada'
+            ? 'text-emerald-700'
+            : sem === 'vencido'
+            ? 'text-rose-700'
+            : 'text-amber-700'
+
+        return (
+          <div className="max-w-[280px]">
+            <div className="font-semibold text-foreground uppercase text-nota truncate">
+              {f.nombre}
             </div>
-          )}
-        </div>
-      ),
+            {f.encargado && (
+              <div className="text-microdato text-muted-foreground truncate">
+                {f.encargado}
+              </div>
+            )}
+            {/* Barrita de progreso semafórico (inicia en amarillo) */}
+            <div className="flex items-center gap-1.5 mt-1">
+              <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden border border-border/60">
+                <div
+                  className={cn('h-full rounded-full transition-all duration-300', colorBarra)}
+                  style={{ width: `${porcentaje}%` }}
+                />
+              </div>
+              <span className={cn('text-microdato font-mono font-bold shrink-0 text-[10px]', colorTexto)}>
+                {porcentaje}%
+              </span>
+            </div>
+          </div>
+        )
+      },
     },
     {
       id: 'estado',
@@ -281,41 +329,41 @@ function MatrizView() {
       id: 'a02',
       header: 'A02 Gestión',
       align: 'center',
-      cell: (f) => <Presencia ok={f.anexo_02} />,
+      cell: (f) => <Presencia valor={f.anexo_02} />,
     },
     {
       id: 'a03',
       header: 'A03 Acervo',
       align: 'center',
-      cell: (f) => <Presencia ok={f.anexo_03} />,
+      cell: (f) => <Presencia valor={f.anexo_03} />,
     },
     {
       id: 'a04',
       header: 'A04 Patr.',
       align: 'center',
-      cell: (f) => <Presencia ok={f.anexo_04} />,
+      cell: (f) => <Presencia valor={f.anexo_04} />,
     },
     {
       id: 'a05',
       header: 'A05 Personal',
       align: 'center',
-      cell: (f) => <Presencia ok={f.anexo_05} />,
+      cell: (f) => <Presencia valor={f.anexo_05} />,
     },
     {
       id: 'a06',
       header: 'A06 No Patr.',
       align: 'center',
-      cell: (f) => <Presencia ok={f.anexo_06} />,
+      cell: (f) => <Presencia valor={f.anexo_06} />,
     },
     {
       id: 'obs',
       header: 'Obs.',
       align: 'center',
       cell: (f) =>
-        f.observaciones > 0 ? (
+        f.observaciones_abiertas > 0 ? (
           <span className="inline-flex items-center gap-0.5 font-mono font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded text-microdato">
             <AlertCircle className="h-3 w-3" />
-            {f.observaciones}
+            {f.observaciones_abiertas}
           </span>
         ) : (
           <span className="text-muted-foreground font-mono text-microdato">0</span>
@@ -350,317 +398,227 @@ function MatrizView() {
   return (
     <div className="space-y-6">
       {/* ========================================================
-          TARJETAS KPI SUPERIORES CON MICRO-MÉTRICAS
+          TARJETAS KPI SUPERIORES CON MICRO-MÉTRICAS INTUITIVAS (X/TOTAL)
           ======================================================== */}
-      {metricas && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <Card className="border shadow-xs bg-card">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-microdato font-bold uppercase tracking-wider">Dependencias</span>
-                <Building2 className="h-3.5 w-3.5 text-primary" />
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-foreground font-mono">
-                {metricas.total_dependencias}
-              </div>
-              <p className="text-microdato text-muted-foreground mt-0.5">100% supervisadas</p>
-            </CardContent>
-          </Card>
+      {metricas && (() => {
+        const total = metricas.total_dependencias || filas.length || 1
+        const totalEvaluadas = metricas.consolidadas + metricas.remitidas + metricas.observadas
+        const denObs = totalEvaluadas > 0 ? totalEvaluadas : total
 
-          <Card className="border shadow-xs bg-card">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-microdato font-bold uppercase tracking-wider">Remitidas</span>
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-emerald-600 font-mono">
-                {metricas.remitidas}
-              </div>
-              <div className="w-full bg-slate-100 h-1.5 rounded-full mt-1 overflow-hidden">
-                <div
-                  className="bg-emerald-600 h-full rounded-full"
-                  style={{
-                    width: `${metricas.total_dependencias ? (metricas.remitidas / metricas.total_dependencias) * 100 : 0}%`,
-                  }}
-                />
-              </div>
-            </CardContent>
-          </Card>
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+            {/* Dependencias */}
+            <Card className="border border-slate-200/80 shadow-2xs bg-slate-50/70">
+              <CardContent className="p-2.5 sm:p-3">
+                <div className="flex items-center justify-between text-slate-600">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Dependencias</span>
+                  <Building2 className="h-3.5 w-3.5 text-slate-700" />
+                </div>
+                <div className="mt-1 text-xl sm:text-2xl font-black text-slate-900 font-mono">
+                  {metricas.total_dependencias}
+                </div>
+                <p className="text-[11px] text-slate-600 mt-0.5 font-medium truncate">100% supervisadas</p>
+              </CardContent>
+            </Card>
 
-          <Card className="border shadow-xs bg-card">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-microdato font-bold uppercase tracking-wider">Aceptadas (a firma)</span>
-                <Clock className="h-3.5 w-3.5 text-blue-600" />
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-blue-600 font-mono">
-                {metricas.verificadas}
-              </div>
-              <p className="text-microdato text-blue-700 font-medium mt-0.5">En revisión</p>
-            </CardContent>
-          </Card>
+            {/* Consolidadas */}
+            <Card className="border border-emerald-200/70 shadow-2xs bg-emerald-50/50">
+              <CardContent className="p-2.5 sm:p-3">
+                <div className="flex items-center justify-between text-emerald-800">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Consolidadas</span>
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                </div>
+                <div className="mt-1 flex items-baseline gap-1 font-mono">
+                  <span className="text-xl sm:text-2xl font-black text-emerald-700">{metricas.consolidadas}</span>
+                  <span className="text-[11px] font-semibold text-emerald-700/70">/ {total}</span>
+                </div>
+                <p className="text-[11px] text-emerald-800 font-medium mt-0.5 truncate">
+                  {Math.round((metricas.consolidadas / total) * 100)}% conformes
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card className="border shadow-xs bg-card">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-microdato font-bold uppercase tracking-wider">Por revisar</span>
-                <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-amber-600 font-mono">
-                {metricas.en_revision}
-              </div>
-              <p className="text-microdato text-amber-700 font-medium mt-0.5">Con observaciones</p>
-            </CardContent>
-          </Card>
+            {/* Remitidas */}
+            <Card className="border border-blue-200/70 shadow-2xs bg-blue-50/50">
+              <CardContent className="p-2.5 sm:p-3">
+                <div className="flex items-center justify-between text-blue-800">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Remitidas</span>
+                  <Clock className="h-3.5 w-3.5 text-blue-600" />
+                </div>
+                <div className="mt-1 flex items-baseline gap-1 font-mono">
+                  <span className="text-xl sm:text-2xl font-black text-blue-700">{metricas.remitidas}</span>
+                  <span className="text-[11px] font-semibold text-blue-700/70">/ {total}</span>
+                </div>
+                <p className="text-[11px] text-blue-800 font-medium mt-0.5 truncate">
+                  En revisión técnica ({Math.round((metricas.remitidas / total) * 100)}%)
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card className="border shadow-xs bg-card">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-microdato font-bold uppercase tracking-wider">En Borrador</span>
-                <Minus className="h-3.5 w-3.5 text-slate-400" />
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-slate-600 font-mono">
-                {metricas.borrador}
-              </div>
-              <p className="text-microdato text-slate-500 font-medium mt-0.5">En formulación</p>
-            </CardContent>
-          </Card>
+            {/* Observadas */}
+            <Card className="border border-amber-200/70 shadow-2xs bg-amber-50/50">
+              <CardContent className="p-2.5 sm:p-3">
+                <div className="flex items-center justify-between text-amber-800">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Observadas</span>
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                </div>
+                <div className="mt-1 flex items-baseline gap-1 font-mono">
+                  <span className="text-xl sm:text-2xl font-black text-amber-700">{metricas.observadas}</span>
+                  <span className="text-[11px] font-semibold text-amber-700/70">/ {denObs}</span>
+                </div>
+                <p className="text-[11px] text-amber-800 font-medium mt-0.5 truncate">
+                  {totalEvaluadas > 0
+                    ? `${Math.round((metricas.observadas / totalEvaluadas) * 100)}% observadas`
+                    : 'Sin observaciones'}
+                </p>
+              </CardContent>
+            </Card>
 
-          <Card className="border shadow-xs bg-card">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-microdato font-bold uppercase tracking-wider">Avance Pliego</span>
-                <TrendingUp className="h-3.5 w-3.5 text-primary" />
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-primary font-mono">
-                {metricas.porcentaje_avance}%
-              </div>
-              <p className="text-microdato text-muted-foreground mt-0.5">Meta: 100% de entrega</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            {/* En Borrador */}
+            <Card className="border border-slate-200 shadow-2xs bg-slate-50/70">
+              <CardContent className="p-2.5 sm:p-3">
+                <div className="flex items-center justify-between text-slate-700">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">En Borrador</span>
+                  <Minus className="h-3.5 w-3.5 text-slate-500" />
+                </div>
+                <div className="mt-1 flex items-baseline gap-1 font-mono">
+                  <span className="text-xl sm:text-2xl font-black text-slate-700">{metricas.borrador}</span>
+                  <span className="text-[11px] font-semibold text-slate-500">/ {total}</span>
+                </div>
+                <p className="text-[11px] text-slate-600 font-medium mt-0.5 truncate">
+                  En formulación ({Math.round((metricas.borrador / total) * 100)}%)
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Avance Pliego */}
+            <Card className="border border-sky-200/70 shadow-2xs bg-sky-50/50">
+              <CardContent className="p-2.5 sm:p-3">
+                <div className="flex items-center justify-between text-sky-800">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Avance Pliego</span>
+                  <TrendingUp className="h-3.5 w-3.5 text-sky-600" />
+                </div>
+                <div className="mt-1 text-xl sm:text-2xl font-black text-sky-800 font-mono">
+                  {metricas.porcentaje_avance}%
+                </div>
+                <p className="text-[11px] text-sky-700 mt-0.5 font-medium truncate">
+                  {metricas.consolidadas} de {total} cerradas
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )
+      })()}
 
       {/* ========================================================
-          BLOQUE DE GRÁFICOS VISUALES DINÁMICOS
+          SEMÁFORO DE CUMPLIMIENTO INSTITUCIONAL (GRÁFICO DEL PASTEL)
+          1. Verde: Entregado conforme
+          2. Amarillo: Pendiente en el plazo
+          3. Rojo: Se pasó de tiempo
           ======================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* GRÁFICO 1: Cumplimiento por Tipo de Anexo (A02 al A06) (7 Cols) */}
-        <Card className="lg:col-span-7 border shadow-xs">
-          <CardHeader className="py-2.5 px-4 border-b border-border bg-muted flex flex-row items-center justify-between">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-              <BarChart3 className="h-4 w-4 text-primary" />
-              <span>Carga de Anexos por Tipo (Completados vs Pendientes)</span>
-            </CardTitle>
-            <span className="text-microdato font-mono text-muted-foreground">
-              Total {filas.length} oficinas
-            </span>
-          </CardHeader>
-          <CardContent className="p-4">
-            <div className="h-[250px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={datosAnexos}
-                  margin={{ top: 10, right: 15, left: -15, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="anexo" tick={{ fontSize: 11 }} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11 }} tickLine={false} allowDecimals={false} />
-                  <Tooltip
-                    contentStyle={{
-                      fontSize: '12px',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                    }}
-                    formatter={(val: unknown, name: unknown) => [
-                      `${val ?? 0} oficinas`,
-                      String(name ?? ''),
-                    ]}
-                  />
-                  <Legend
-                    verticalAlign="top"
-                    height={28}
-                    iconType="circle"
-                    iconSize={8}
-                    wrapperStyle={{ fontSize: '11px' }}
-                  />
-                  <Bar
-                    dataKey="completados"
-                    name="Completados (Sí)"
-                    fill={PALETA.remitida}
-                    radius={[4, 4, 0, 0]}
-                    barSize={28}
-                  />
-                  <Bar
-                    dataKey="pendientes"
-                    name="Pendientes (—)"
-                    fill="#e2e8f0"
-                    radius={[4, 4, 0, 0]}
-                    barSize={28}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="grid grid-cols-5 gap-1 pt-3 border-t border-border text-center text-microdato">
-              {datosAnexos.map((item) => (
-                <div key={item.anexo}>
-                  <div className="font-mono font-bold text-foreground">{item.pct}%</div>
-                  <div className="text-muted-foreground truncate">{item.anexo}</div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* GRÁFICO 2: Distribución de Estados de Entrega (Donut) (5 Cols) */}
-        <Card className="lg:col-span-5 border shadow-xs">
-          <CardHeader className="py-2.5 px-4 border-b border-border bg-muted flex flex-row items-center justify-between">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4 text-primary" />
-              <span>Distribución de Estados</span>
-            </CardTitle>
-            <span className="text-microdato font-mono text-primary font-bold">
-              {metricas?.porcentaje_avance ?? 0}% Avance
-            </span>
-          </CardHeader>
-          <CardContent className="p-4 flex flex-col items-center">
-            <div className="relative w-full h-[200px] flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={datosDonutEstados}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={85}
-                    paddingAngle={3}
-                    dataKey="value"
-                    strokeWidth={1}
-                  >
-                    {datosDonutEstados.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(val: unknown, name: unknown) => [
-                      `${val ?? 0} oficinas`,
-                      String(name ?? ''),
-                    ]}
-                  />
-                  <Legend
-                    verticalAlign="bottom"
-                    height={36}
-                    iconType="circle"
-                    iconSize={8}
-                    wrapperStyle={{ fontSize: '11px' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute top-[35%] text-center pointer-events-none">
-                <span className="text-2xl font-black text-foreground font-mono">
-                  {metricas?.porcentaje_avance ?? 0}%
-                </span>
-                <p className="text-[10px] text-muted-foreground font-semibold uppercase">
-                  Cierre Pliego
+      <Card className="border shadow-xs overflow-hidden bg-card">
+            <CardHeader className="py-3 px-4 border-b border-border bg-muted flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-primary" />
+                  <span>Semáforo de Cumplimiento de Entregas</span>
+                </CardTitle>
+                <p className="text-microdato text-muted-foreground mt-0.5">
+                  Monitoreo según plazo normativo de transferencia (Directiva N.° 001-2026-MDSJ/A)
                 </p>
               </div>
-            </div>
-            <div className="w-full pt-2 border-t border-border text-center text-microdato text-muted-foreground">
-              {metricas?.remitidas ?? 0} de {metricas?.total_dependencias ?? 0} entregas remitidas
-            </div>
-          </CardContent>
-        </Card>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-background border border-border text-microdato font-mono text-muted-foreground">
+                  <Clock className="h-3 w-3 text-primary" />
+                  Plazo normativo: <strong className="text-foreground">07/11/2026</strong>
+                </span>
+                <span className="text-microdato font-mono text-muted-foreground font-semibold">
+                  Total: <strong className="text-foreground">{filas.length}</strong> dependencias
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-14 w-full max-w-2xl py-3">
+                {/* Gráfico del Pastel (Semáforo de Cumplimiento) */}
+                <div className="relative w-[260px] h-[260px] sm:w-[280px] sm:h-[280px] shrink-0 flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={datosDonutSemaforo}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={75}
+                        outerRadius={118}
+                        paddingAngle={3}
+                        dataKey="value"
+                        strokeWidth={1}
+                      >
+                        {datosDonutSemaforo.map((entry, index) => (
+                          <Cell key={`cell-semaforo-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(val: unknown, name: unknown) => [
+                          `${val ?? 0} oficinas`,
+                          String(name ?? ''),
+                        ]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute top-[38%] text-center pointer-events-none">
+                    <span className="text-4xl font-black text-foreground font-mono">
+                      {semaforo.pctConforme}%
+                    </span>
+                    <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">
+                      Cierre Conforme
+                    </p>
+                  </div>
+                </div>
 
-        {/* GRÁFICO 3: Avance por Nivel Organizacional (12 Cols) */}
-        <Card className="lg:col-span-12 border shadow-xs">
-          <CardHeader className="py-2.5 px-4 border-b border-border bg-muted flex flex-row items-center justify-between">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-              <Layers className="h-4 w-4 text-primary" />
-              <span>Avance de Entregas por Nivel Orgánico</span>
-            </CardTitle>
-            <span className="text-microdato font-mono text-muted-foreground">
-              Niveles 1 al 4
-            </span>
-          </CardHeader>
-          <CardContent className="p-4">
-            <div className="h-[200px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart
-                  data={datosNivel}
-                  margin={{ top: 10, right: 15, left: -15, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="nivel" tick={{ fontSize: 11 }} tickLine={false} />
-                  <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickLine={false} allowDecimals={false} />
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    unit="%"
-                    domain={[0, 100]}
-                    tick={{ fontSize: 11 }}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      fontSize: '12px',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                    }}
-                  />
-                  <Legend
-                    verticalAlign="top"
-                    height={28}
-                    iconType="circle"
-                    iconSize={8}
-                    wrapperStyle={{ fontSize: '11px' }}
-                  />
-                  <Bar
-                    yAxisId="left"
-                    dataKey="remitidas"
-                    name="Remitidas"
-                    fill={PALETA.remitida}
-                    radius={[3, 3, 0, 0]}
-                    barSize={20}
-                  />
-                  <Bar
-                    yAxisId="left"
-                    dataKey="aceptadas"
-                    name="Aceptadas (a firma)"
-                    fill={PALETA.verificada}
-                    radius={[3, 3, 0, 0]}
-                    barSize={20}
-                  />
-                  <Bar
-                    yAxisId="left"
-                    dataKey="porRevisar"
-                    name="Por revisar"
-                    fill={PALETA.en_revision}
-                    radius={[3, 3, 0, 0]}
-                    barSize={20}
-                  />
-                  <Bar
-                    yAxisId="left"
-                    dataKey="borrador"
-                    name="En Borrador"
-                    fill={PALETA.borrador}
-                    radius={[3, 3, 0, 0]}
-                    barSize={20}
-                  />
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="pctAvance"
-                    name="% Cierre"
-                    stroke="#dc2626"
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                {/* Leyenda y desglose del pastel */}
+                <div className="space-y-2.5 text-xs w-full sm:w-auto min-w-[220px]">
+                  <div className="flex items-center justify-between gap-4 p-2.5 rounded-lg bg-emerald-50/70 border border-emerald-200">
+                    <div className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-emerald-600 shrink-0" />
+                      <span className="text-emerald-950 font-medium">Entregado conforme</span>
+                    </div>
+                    <span className="font-mono font-bold text-emerald-800 text-sm">
+                      {semaforo.conforme}{' '}
+                      <span className="text-microdato font-normal text-emerald-700">
+                        ({semaforo.pctConforme}%)
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4 p-2.5 rounded-lg bg-amber-50/70 border border-amber-200">
+                    <div className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-amber-500 shrink-0" />
+                      <span className="text-amber-950 font-medium">Pendiente en el plazo</span>
+                    </div>
+                    <span className="font-mono font-bold text-amber-800 text-sm">
+                      {semaforo.enPlazo}{' '}
+                      <span className="text-microdato font-normal text-amber-700">
+                        ({semaforo.pctEnPlazo}%)
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4 p-2.5 rounded-lg bg-rose-50/70 border border-rose-200">
+                    <div className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-rose-600 shrink-0" />
+                      <span className="text-rose-950 font-medium">Se pasó de tiempo</span>
+                    </div>
+                    <span className="font-mono font-bold text-rose-800 text-sm">
+                      {semaforo.vencido}{' '}
+                      <span className="text-microdato font-normal text-rose-700">
+                        ({semaforo.pctVencido}%)
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
       {/* ========================================================
           BARRA DE CONTROL Y FILTRADO INTERACTIVO DE LA TABLA
@@ -680,7 +638,7 @@ function MatrizView() {
             </span>
           </div>
 
-          {/* Filtros tipo píldora */}
+          {/* Filtros tipo píldora del Semáforo */}
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
             <button
               type="button"
@@ -696,55 +654,42 @@ function MatrizView() {
             </button>
             <button
               type="button"
-              onClick={() => setFiltroEstado('remitida')}
+              onClick={() => setFiltroEstado('semaforo_verde')}
               className={cn(
                 'px-2.5 py-1 rounded-lg text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5',
-                filtroEstado === 'remitida'
-                  ? 'bg-emerald-600 text-white font-semibold'
+                filtroEstado === 'semaforo_verde'
+                  ? 'bg-emerald-600 text-white font-semibold shadow-xs'
                   : 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100',
               )}
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-              Remitidas ({metricas?.remitidas ?? 0})
+              <span className="h-2 w-2 rounded-full bg-emerald-600" />
+              Conformes ({semaforo.conforme})
             </button>
             <button
               type="button"
-              onClick={() => setFiltroEstado('verificada')}
+              onClick={() => setFiltroEstado('semaforo_amarillo')}
               className={cn(
                 'px-2.5 py-1 rounded-lg text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5',
-                filtroEstado === 'verificada'
-                  ? 'bg-blue-600 text-white font-semibold'
-                  : 'bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100',
-              )}
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
-              Aceptadas (a firma) ({metricas?.verificadas ?? 0})
-            </button>
-            <button
-              type="button"
-              onClick={() => setFiltroEstado('en_revision')}
-              className={cn(
-                'px-2.5 py-1 rounded-lg text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5',
-                filtroEstado === 'en_revision'
-                  ? 'bg-amber-600 text-white font-semibold'
+                filtroEstado === 'semaforo_amarillo'
+                  ? 'bg-amber-600 text-white font-semibold shadow-xs'
                   : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100',
               )}
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-600" />
-              Por revisar ({metricas?.en_revision ?? 0})
+              <span className="h-2 w-2 rounded-full bg-amber-500" />
+              En plazo ({semaforo.enPlazo})
             </button>
             <button
               type="button"
-              onClick={() => setFiltroEstado('borrador')}
+              onClick={() => setFiltroEstado('semaforo_rojo')}
               className={cn(
                 'px-2.5 py-1 rounded-lg text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5',
-                filtroEstado === 'borrador'
-                  ? 'bg-slate-700 text-white font-semibold'
-                  : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200',
+                filtroEstado === 'semaforo_rojo'
+                  ? 'bg-rose-600 text-white font-semibold shadow-xs'
+                  : 'bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100',
               )}
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-              Borrador ({metricas?.borrador ?? 0})
+              <span className="h-2 w-2 rounded-full bg-rose-600" />
+              Se pasó de tiempo ({semaforo.vencido})
             </button>
           </div>
 
@@ -829,7 +774,7 @@ function ConciliacionView() {
     const sinIniciar = filas.filter((f) => f.porcentaje === 0).length
 
     const datosDonutPatr = [
-      { name: '100% Verificado', value: completas, fill: PALETA.remitida },
+      { name: '100% Verificado', value: completas, fill: PALETA.consolidada },
       { name: 'En Proceso (1-99%)', value: enProceso, fill: PALETA.patrimonio },
       { name: 'Sin Iniciar (0%)', value: sinIniciar, fill: '#f87171' },
     ]
@@ -1041,7 +986,7 @@ function ConciliacionView() {
                   <Bar
                     dataKey="confirmados"
                     name="Verificados"
-                    fill={PALETA.remitida}
+                    fill={PALETA.consolidada}
                     stackId="a"
                     radius={[0, 0, 0, 0]}
                   />
@@ -1161,193 +1106,340 @@ function ConciliacionView() {
 }
 
 /* =========================================================================
-   VISTA 3: OBSERVACIONES DEL COORDINADOR ETTE (CONSTANCIA, SIN SUBSANACIÓN)
+   VISTA 3: OBSERVACIONES (ANÁLISIS DE INCIDENCIAS CON GRÁFICOS)
    ========================================================================= */
 function ObservacionesView() {
   const { data, isLoading, error, refetch } = useObservacionesReporte()
   const [busqueda, setBusqueda] = useState('')
+  const [filtroEstado, setFiltroEstado] = useState<string>('todos')
 
+  const r = data?.resumen
   const filas = data?.filas ?? []
-  const texto = busqueda.toLowerCase().trim()
-  const filtradas = texto === ''
-    ? filas
-    : filas.filter((f) =>
-        [f.codigo, f.nombre, f.descripcion, f.anexo, f.autor ?? ''].some((v) => v.toLowerCase().includes(texto)),
-      )
+
+  // Análisis gráfico de observaciones
+  const { datosPorAnexo, datosPorEstado, filasFiltradas } = useMemo(() => {
+    // 1. Observaciones por Anexo
+    const anexosMap: Record<string, number> = {}
+    filas.forEach((f) => {
+      const nom = f.anexo || 'General'
+      anexosMap[nom] = (anexosMap[nom] || 0) + 1
+    })
+    const datosPorAnexo = Object.entries(anexosMap).map(([anexo, cant]) => ({
+      anexo,
+      cantidad: cant,
+    }))
+
+    // 2. Observaciones por Estado
+    const datosPorEstado = [
+      { name: 'Abiertas', value: r?.abiertas ?? 0, fill: '#dc2626' },
+      { name: 'En Subsanación', value: r?.en_subsanacion ?? 0, fill: '#2563eb' },
+      { name: 'Subsanadas', value: r?.subsanadas ?? 0, fill: '#16a34a' },
+      { name: 'Desestimadas', value: r?.desestimadas ?? 0, fill: '#64748b' },
+    ]
+
+    // 3. Filtrado
+    const texto = busqueda.toLowerCase().trim()
+    const filtradas = filas.filter((f) => {
+      const matchTexto =
+        texto === '' ||
+        f.codigo.toLowerCase().includes(texto) ||
+        f.nombre.toLowerCase().includes(texto) ||
+        f.descripcion.toLowerCase().includes(texto)
+
+      const matchEstado =
+        filtroEstado === 'todos' || f.estado === filtroEstado
+
+      return matchTexto && matchEstado
+    })
+
+    return {
+      datosPorAnexo,
+      datosPorEstado,
+      filasFiltradas: filtradas,
+    }
+  }, [filas, r, busqueda, filtroEstado])
 
   const columnas: ColumnaTabla<FilaObservacion>[] = [
     {
       id: 'codigo',
       header: 'Código',
-      cell: (f) => <span className="whitespace-nowrap font-mono text-nota font-bold text-primary">[{f.codigo}]</span>,
+      cell: (f) => (
+        <span className="font-mono font-bold text-primary text-nota whitespace-nowrap">
+          [{f.codigo}]
+        </span>
+      ),
     },
     {
       id: 'nombre',
       header: 'Centro de costo',
-      cell: (f) => <span className="text-nota font-medium uppercase text-foreground">{f.nombre}</span>,
+      cell: (f) => (
+        <span className="font-medium text-foreground uppercase text-nota">
+          {f.nombre}
+        </span>
+      ),
     },
     {
       id: 'anexo',
       header: 'Anexo',
-      cell: (f) => <Badge variant="outline" className="text-microdato">{f.anexo}</Badge>,
+      cell: (f) => (
+        <Badge variant="outline" className="text-microdato font-mono">
+          {f.anexo}
+        </Badge>
+      ),
     },
     {
       id: 'descripcion',
-      header: 'Observación',
-      cell: (f) => <p className="max-w-[420px] whitespace-pre-wrap text-nota text-foreground">{f.descripcion}</p>,
+      header: 'Observación formulada',
+      cell: (f) => (
+        <div className="max-w-[340px]">
+          <p className="line-clamp-2 text-nota text-foreground">{f.descripcion}</p>
+          {f.autor && (
+            <p className="text-microdato text-muted-foreground mt-0.5">Por: {f.autor}</p>
+          )}
+        </div>
+      ),
     },
     {
-      id: 'autor',
-      header: 'Registró',
+      id: 'estado',
+      header: 'Estado',
       cell: (f) => (
-        <span className="text-microdato text-muted-foreground">
-          {f.autor ?? '—'}
-          {f.en_calidad_de ? <span className="block">{f.en_calidad_de}</span> : null}
+        <span
+          className={`inline-flex items-center px-2 py-0.5 rounded-full text-microdato font-semibold ${
+            f.estado === 'abierta'
+              ? 'bg-rose-100 text-rose-800'
+              : f.estado === 'en_subsanacion'
+              ? 'bg-blue-100 text-blue-800'
+              : f.estado === 'subsanada'
+              ? 'bg-emerald-100 text-emerald-800'
+              : 'bg-slate-100 text-slate-700'
+          }`}
+        >
+          {f.estado_etiqueta}
         </span>
       ),
     },
     {
       id: 'registrada',
-      header: 'Fecha',
-      cell: (f) => <span className="whitespace-nowrap font-mono text-microdato text-muted-foreground">{f.registrada_en ?? '—'}</span>,
+      header: 'Registrada',
+      cell: (f) => (
+        <span className="text-microdato text-muted-foreground whitespace-nowrap font-mono">
+          {f.registrada_en ?? '—'}
+        </span>
+      ),
+    },
+    {
+      id: 'dias',
+      header: 'Días límite',
+      align: 'right',
+      cell: (f) => (
+        <span className="font-mono text-nota font-bold text-foreground">
+          {f.dias_subsanacion ?? '—'} d
+        </span>
+      ),
     },
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-muted-foreground">
-          {data
-            ? `${data.resumen.observaciones} observaciones en ${data.resumen.centros_costo} centros de costo. Son constancia de la revisión del coordinador ETTE: no requieren subsanación.`
-            : 'Observaciones registradas por los coordinadores ETTE.'}
-        </p>
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por CC, anexo o texto…"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="h-8 pl-8 text-xs"
-          />
-        </div>
-      </div>
-      <DataTable
-        columnas={columnas}
-        filas={filtradas}
-        rowKey={(f) => `${f.dependencia_id}-${f.registrada_en}-${f.descripcion.slice(0, 20)}`}
-        loading={isLoading}
-        error={error}
-        onReintentar={() => refetch()}
-        vacio={{ titulo: 'Sin observaciones', descripcion: 'Los coordinadores ETTE no registraron observaciones en este ámbito.' }}
-      />
-    </div>
-  )
-}
+    <div className="space-y-6">
+      {/* KPIS OBSERVACIONES */}
+      {r && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+          <Card className="border shadow-xs bg-card">
+            <CardContent className="p-3.5">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-microdato font-bold uppercase tracking-wider">Abiertas</span>
+                <AlertCircle className="h-4 w-4 text-rose-600" />
+              </div>
+              <div className="mt-1 text-2xl font-extrabold text-rose-600 font-mono">
+                {r.abiertas}
+              </div>
+              <p className="text-microdato text-rose-700 font-medium mt-0.5">
+                Requieren subsanación
+              </p>
+            </CardContent>
+          </Card>
 
-/* =========================================================================
-   VISTA 4: RESULTADO DE LA VERIFICACIÓN POR CC (RF-55, COMITÉ ETTE)
-   ========================================================================= */
-function VerificacionView() {
-  const { data, isLoading, error, refetch } = useVerificacionReporte()
-  const [busqueda, setBusqueda] = useState('')
+          <Card className="border shadow-xs bg-card">
+            <CardContent className="p-3.5">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-microdato font-bold uppercase tracking-wider">En Subsanación</span>
+                <Clock className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="mt-1 text-2xl font-extrabold text-blue-600 font-mono">
+                {r.en_subsanacion}
+              </div>
+              <p className="text-microdato text-blue-700 font-medium mt-0.5">
+                En plazo de descargo
+              </p>
+            </CardContent>
+          </Card>
 
-  const filas = data?.filas ?? []
-  const texto = busqueda.toLowerCase().trim()
-  const filtradas = texto === ''
-    ? filas
-    : filas.filter((f) => [f.codigo, f.nombre, f.estado_etiqueta].some((v) => v.toLowerCase().includes(texto)))
+          <Card className="border shadow-xs bg-card">
+            <CardContent className="p-3.5">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-microdato font-bold uppercase tracking-wider">Subsanadas</span>
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div className="mt-1 text-2xl font-extrabold text-emerald-600 font-mono">
+                {r.subsanadas}
+              </div>
+              <p className="text-microdato text-emerald-700 font-medium mt-0.5">
+                Conformes por el revisor
+              </p>
+            </CardContent>
+          </Card>
 
-  const resumen = data?.resumen
-  const tarjetas = resumen
-    ? [
-        { etiqueta: 'Centros de costo', valor: resumen.centros_costo },
-        { etiqueta: 'Sin presentar', valor: resumen.sin_presentar },
-        { etiqueta: 'Por revisar', valor: resumen.en_revision },
-        { etiqueta: 'Aceptadas', valor: resumen.aceptadas },
-      ]
-    : []
-
-  const columnas: ColumnaTabla<FilaVerificacion>[] = [
-    {
-      id: 'codigo',
-      header: 'Código',
-      cell: (f) => <span className="whitespace-nowrap font-mono text-nota font-bold text-primary">[{f.codigo}]</span>,
-    },
-    {
-      id: 'nombre',
-      header: 'Centro de costo',
-      cell: (f) => <span className="text-nota font-medium uppercase text-foreground">{f.nombre}</span>,
-    },
-    { id: 'estado', header: 'Estado', cell: (f) => <BadgeEstado estado={f.estado_entrega} /> },
-    {
-      id: 'faltantes',
-      header: 'Anexos sin registros',
-      cell: (f) => <span className="text-nota">{f.anexos_faltantes.length ? f.anexos_faltantes.join(', ') : '—'}</span>,
-    },
-    {
-      id: 'bienes',
-      header: 'Bienes sin conformidad',
-      align: 'right',
-      cell: (f) => <span className="font-mono text-nota">{f.bienes_sin_conformidad}</span>,
-    },
-    {
-      id: 'observaciones',
-      header: 'Obs.',
-      align: 'right',
-      cell: (f) => <span className="font-mono text-nota">{f.observaciones}</span>,
-    },
-    {
-      id: 'aceptacion',
-      header: 'Aceptación y constancia',
-      cell: (f) =>
-        f.verificada_en ? (
-          <div className="max-w-[360px] text-microdato">
-            <p className="font-medium text-foreground">
-              {f.verificada_en} · {f.verificada_por}
-              {f.en_calidad_de ? ` (${f.en_calidad_de})` : ''}
-            </p>
-            {f.resultado_verificacion && <p className="mt-0.5 line-clamp-3 text-muted-foreground">{f.resultado_verificacion}</p>}
-          </div>
-        ) : (
-          <span className="text-microdato text-muted-foreground">Pendiente</span>
-        ),
-    },
-  ]
-
-  return (
-    <div className="space-y-4">
-      {tarjetas.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {tarjetas.map((t) => (
-            <Card key={t.etiqueta} className="border shadow-xs">
-              <CardContent className="p-4">
-                <p className="text-microdato font-bold uppercase tracking-wider text-muted-foreground">{t.etiqueta}</p>
-                <p className="mt-1 font-mono text-2xl font-extrabold text-foreground">{t.valor}</p>
-              </CardContent>
-            </Card>
-          ))}
+          <Card className="border shadow-xs bg-card">
+            <CardContent className="p-3.5">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-microdato font-bold uppercase tracking-wider">Desestimadas</span>
+                <Minus className="h-4 w-4 text-slate-500" />
+              </div>
+              <div className="mt-1 text-2xl font-extrabold text-slate-600 font-mono">
+                {r.desestimadas}
+              </div>
+              <p className="text-microdato text-slate-500 font-medium mt-0.5">
+                Cerradas sin efecto
+              </p>
+            </CardContent>
+          </Card>
         </div>
       )}
-      <div className="flex justify-end">
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            placeholder="Buscar centro de costo…"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="h-8 pl-8 text-xs"
-          />
-        </div>
+
+      {/* GRÁFICOS OBSERVACIONES */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <Card className="lg:col-span-8 border shadow-xs">
+          <CardHeader className="py-2.5 px-4 border-b border-border bg-muted">
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+              <BarChart3 className="h-4 w-4 text-primary" />
+              <span>Observaciones Agrupadas por Tipo de Anexo</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="h-[220px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={datosPorAnexo}
+                  margin={{ top: 10, right: 15, left: -15, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="anexo" tick={{ fontSize: 11 }} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11 }} tickLine={false} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{
+                      fontSize: '12px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                    }}
+                  />
+                  <Bar
+                    dataKey="cantidad"
+                    name="Observaciones"
+                    fill="#d97706"
+                    radius={[4, 4, 0, 0]}
+                    barSize={32}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-4 border shadow-xs">
+          <CardHeader className="py-2.5 px-4 border-b border-border bg-muted">
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+              <AlertCircle className="h-4 w-4 text-primary" />
+              <span>Estado de Observaciones</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 flex flex-col items-center">
+            <div className="relative w-full h-[180px] flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={datosPorEstado}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={45}
+                    outerRadius={70}
+                    paddingAngle={3}
+                    dataKey="value"
+                    strokeWidth={1}
+                  >
+                    {datosPorEstado.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(val: unknown, name: unknown) => [
+                      `${val ?? 0} obs.`,
+                      String(name ?? ''),
+                    ]}
+                  />
+                  <Legend
+                    verticalAlign="bottom"
+                    height={36}
+                    iconType="circle"
+                    iconSize={8}
+                    wrapperStyle={{ fontSize: '11px' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-      <DataTable
-        columnas={columnas}
-        filas={filtradas}
-        rowKey={(f) => f.dependencia_id}
-        loading={isLoading}
-        error={error}
-        onReintentar={() => refetch()}
-        vacio={{ titulo: 'Sin centros de costo', descripcion: 'No hay centros de costo en su ámbito.' }}
-      />
+
+      {/* TABLA Y BUSCADOR */}
+      <Card className="border shadow-xs overflow-hidden">
+        <CardHeader className="p-4 border-b border-border bg-muted space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+              <MessageSquareWarning className="h-4 w-4 text-amber-600" />
+              <span>Relación Oficial de Observaciones ({filasFiltradas.length})</span>
+            </CardTitle>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 pt-1">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por código, dependencia o texto de observación..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="pl-8 text-xs h-8 bg-background"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <select
+                value={filtroEstado}
+                onChange={(e) => setFiltroEstado(e.target.value)}
+                className="h-8 rounded-lg border border-input bg-background px-2.5 text-xs focus:ring-1 focus:ring-primary"
+              >
+                <option value="todos">Todos los estados</option>
+                <option value="abierta">Abiertas</option>
+                <option value="en_subsanacion">En subsanación</option>
+                <option value="subsanada">Subsanadas</option>
+                <option value="desestimada">Desestimadas</option>
+              </select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <DataTable<FilaObservacion & { __k: number }>
+            columnas={columnas}
+            filas={filasFiltradas.map((f, i) => ({ ...f, __k: i }))}
+            rowKey={(f) => `${f.dependencia_id}-${f.__k}`}
+            loading={isLoading}
+            error={error}
+            onReintentar={() => refetch()}
+            vacio={{
+              titulo: 'Sin observaciones registradas',
+              descripcion: 'No hay observaciones que coincidan con los filtros aplicados.',
+            }}
+          />
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -1378,7 +1470,7 @@ export function ReportesPage() {
             Consolidados de la Transferencia
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Matriz de anexos, conciliación patrimonial, observaciones del coordinador y verificación por centro de costo.
+            Matriz de anexos, conciliación patrimonial y observaciones con analítica institucional.
           </p>
         </div>
         <BotonesExport reporte={tab} />
@@ -1408,7 +1500,6 @@ export function ReportesPage() {
       {tab === 'matriz-anexos' && <MatrizView />}
       {tab === 'conciliacion-patrimonial' && <ConciliacionView />}
       {tab === 'observaciones' && <ObservacionesView />}
-      {tab === 'verificacion' && <VerificacionView />}
     </div>
   )
 }

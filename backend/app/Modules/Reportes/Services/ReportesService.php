@@ -5,19 +5,21 @@ declare(strict_types=1);
 namespace App\Modules\Reportes\Services;
 
 use App\Modules\Organization\Models\Dependencia;
-use App\Modules\Transferencia\Models\Entrega;
+use App\Modules\Transferencia\Models\DocumentoFirma;
+use App\Modules\Transferencia\Models\FirmaBorrador;
+use App\Modules\Transferencia\Models\FirmaSesion;
 use App\Modules\Transferencia\Models\Observacion;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Modules\Transferencia\Services\TransferenciaService;
-use App\Support\Enums\EstadoEntrega;
+use App\Support\Enums\EstadoObservacion;
 use Illuminate\Support\Carbon;
 
 /**
  * Consolidados de la transferencia para el módulo de Reportes (F5). Reutiliza el
  * tablero operativo (matriz de anexos + avance + patrimonio) y añade el reporte
- * de observaciones y el de verificación (RF-55). Todo acotado al ámbito del usuario (lista de dependencias).
+ * de observaciones. Todo acotado al ámbito del usuario (lista de dependencias).
  *
- * Los reportes comparten la misma acotación para que la vista, el Excel y
+ * Los tres reportes comparten la misma acotación para que la vista, el Excel y
  * el PDF rindan exactamente los mismos datos.
  */
 class ReportesService
@@ -39,9 +41,70 @@ class ReportesService
         $procesoId = $this->procesoActivoId();
         $tablero = $this->transferencia->obtenerTableroOperativo($dependenciaIds, $procesoId);
 
+        $depIds = array_column($tablero['dependencias'], 'id');
+
+        // Pre-cargar en lote borradores oficiales generados en "PDF y firma"
+        $borradores = FirmaBorrador::query()
+            ->where('proceso_transferencia_id', $procesoId)
+            ->whereIn('dependencia_id', $depIds)
+            ->get(['dependencia_id', 'tipo_documento'])
+            ->groupBy('dependencia_id')
+            ->map(fn ($items) => $items->pluck('tipo_documento')->flip()->all())
+            ->all();
+
+        // Pre-cargar en lote firmas digitales suscritas
+        $firmadas = FirmaSesion::query()
+            ->where('proceso_transferencia_id', $procesoId)
+            ->whereIn('dependencia_id', $depIds)
+            ->where('estado', 'firmada')
+            ->get(['dependencia_id', 'tipo_documento'])
+            ->groupBy('dependencia_id')
+            ->map(fn ($items) => $items->pluck('tipo_documento')->flip()->all())
+            ->all();
+
+        // Pre-cargar en lote documentos formalizados
+        $documentosFirmados = DocumentoFirma::query()
+            ->where('proceso_transferencia_id', $procesoId)
+            ->whereIn('dependencia_id', $depIds)
+            ->get(['dependencia_id', 'tipo_documento'])
+            ->groupBy('dependencia_id')
+            ->map(fn ($items) => $items->pluck('tipo_documento')->flip()->all())
+            ->all();
+
+        $resolverEstadoAnexo = function (int $depId, string $tipo, string $estadoEntrega) use ($borradores, $firmadas, $documentosFirmados): string {
+            // 1. Si la entrega general está consolidada o el documento está suscrito/formalizado => 'firmado' (Entregado)
+            if (
+                $estadoEntrega === 'consolidada'
+                || isset($firmadas[$depId][$tipo])
+                || isset($documentosFirmados[$depId][$tipo])
+            ) {
+                return 'firmado';
+            }
+
+            // 2. Si se generó el PDF oficial en "PDF y firma" => 'generado' (Sí / Avance)
+            if (isset($borradores[$depId][$tipo])) {
+                return 'generado';
+            }
+
+            // 3. Documento no generado aún => 'no_generado' (—)
+            return 'no_generado';
+        };
+
         $filas = [];
         foreach ($tablero['dependencias'] as $dep) {
-            $presencia = $this->transferencia->presenciaAnexos($dep['id'], $procesoId);
+            $estado02 = $resolverEstadoAnexo($dep['id'], 'anexo02', $dep['estado_entrega']);
+            $estado03 = $resolverEstadoAnexo($dep['id'], 'anexo03', $dep['estado_entrega']);
+            $estado04 = $resolverEstadoAnexo($dep['id'], 'anexo04', $dep['estado_entrega']);
+            $estado05 = $resolverEstadoAnexo($dep['id'], 'anexo05', $dep['estado_entrega']);
+            $estado06 = $resolverEstadoAnexo($dep['id'], 'anexo06', $dep['estado_entrega']);
+
+            $estados = [$estado02, $estado03, $estado04, $estado05, $estado06];
+            $completados = count(array_filter($estados, fn ($s) => in_array($s, ['generado', 'firmado'], true)));
+            $firmadosCount = count(array_filter($estados, fn ($s) => $s === 'firmado'));
+
+            $porcentajeAvance = $dep['estado_entrega'] === 'consolidada'
+                ? 100
+                : (int) round(($completados / 5) * 100);
 
             $filas[] = [
                 'dependencia_id' => $dep['id'],
@@ -52,12 +115,15 @@ class ReportesService
                     ? trim("{$dep['encargado']['nombres']} {$dep['encargado']['apellidos']}")
                     : null,
                 'estado_entrega' => $dep['estado_entrega'],
-                'anexo_02' => $presencia['anexo_02'],
-                'anexo_03' => $presencia['anexo_03'],
-                'anexo_04' => $presencia['anexo_04'],
-                'anexo_05' => $presencia['anexo_05'],
-                'anexo_06' => $presencia['anexo_06'],
-                'observaciones' => $dep['observaciones'],
+                'anexo_02' => $estado02,
+                'anexo_03' => $estado03,
+                'anexo_04' => $estado04,
+                'anexo_05' => $estado05,
+                'anexo_06' => $estado06,
+                'anexos_completados' => $completados,
+                'anexos_firmados' => $firmadosCount,
+                'porcentaje_avance' => $porcentajeAvance,
+                'observaciones_abiertas' => $dep['observaciones_abiertas'],
                 'patrimonio_total' => $dep['patrimonio_total'],
                 'patrimonio_confirmados' => $dep['patrimonio_confirmados'],
                 'patrimonio_porcentaje' => $dep['patrimonio_porcentaje'],
@@ -109,8 +175,8 @@ class ReportesService
     }
 
     /**
-     * Reporte 3 — Observaciones por dependencia: las que dejó el coordinador ETTE
-     * como constancia (D-07), con su anexo, autor y calidad.
+     * Reporte 3 — Observaciones por dependencia. Pliego de observaciones con su
+     * estado y, para las subsanadas, los días que tomó la subsanación.
      *
      * @param  list<int>|null  $dependenciaIds
      * @return array{generado_en: string, resumen: array<string, int>, filas: list<array<string, mixed>>}
@@ -128,98 +194,77 @@ class ReportesService
 
         $observaciones = Observacion::query()
             ->with('autor')
-            ->vigentes()
             ->where('proceso_transferencia_id', $procesoId)
-            ->whereIn('dependencia_id', $deps->keys())
             ->orderBy('created_at')
             ->get();
 
+        $resumen = ['abiertas' => 0, 'en_subsanacion' => 0, 'subsanadas' => 0, 'desestimadas' => 0];
         $filas = [];
 
         foreach ($observaciones as $obs) {
-            $dep = $deps->get($obs->dependencia_id);
+            $modelo = $obs->observable_type;
+            if (! class_exists($modelo)) {
+                continue;
+            }
+            $depId = $modelo::where('id', $obs->observable_id)->value('dependencia_id');
+            $dep = $depId ? $deps->get($depId) : null;
+
+            // Fuera del ámbito del usuario: la observación no pertenece a una
+            // dependencia visible, se omite.
+            if ($dep === null) {
+                continue;
+            }
+
+            $this->contarEstado($resumen, $obs->estado);
+
+            $dias = null;
+            if ($obs->estado === EstadoObservacion::SUBSANADA && $obs->subsanada_en) {
+                $dias = (int) $obs->created_at->diffInDays($obs->subsanada_en);
+            }
 
             $filas[] = [
                 'dependencia_id' => $dep->id,
                 'codigo' => $dep->codigo,
                 'nombre' => $dep->nombre,
-                'anexo' => $obs->etiquetaAnexo().($obs->observable_id === null ? ' (anexo completo)' : ''),
+                'anexo' => $this->etiquetaAnexo($modelo),
                 'descripcion' => $obs->descripcion,
+                'estado' => $obs->estado->value,
+                'estado_etiqueta' => $obs->estado->etiqueta(),
                 'autor' => $obs->autor?->name,
-                'en_calidad_de' => $obs->en_calidad_de?->etiqueta(),
                 'registrada_en' => $obs->created_at?->format('d/m/Y'),
+                'dias_subsanacion' => $dias,
             ];
         }
 
         return [
             'generado_en' => Carbon::now()->format('d/m/Y H:i'),
-            'resumen' => [
-                'observaciones' => count($filas),
-                'centros_costo' => count(array_unique(array_column($filas, 'dependencia_id'))),
-            ],
+            'resumen' => $resumen,
             'filas' => $filas,
         ];
     }
 
-    /**
-     * Reporte 4 — Resultado de la verificación por CC (RF-55): lo que el
-     * coordinador ETTE informa al comité. Por cada centro de costo, el estado de
-     * su entrega, los anexos sin registros (faltantes), los bienes sin
-     * conformidad (inconsistencias patrimoniales), las observaciones registradas
-     * y la constancia de aceptación (RF-54, RF-56).
-     *
-     * @param  list<int>|null  $dependenciaIds
-     * @return array{generado_en: string, resumen: array<string, int>, filas: list<array<string, mixed>>}
-     */
-    public function verificacion(?array $dependenciaIds = null): array
+    /** @param array<string, int> $resumen */
+    private function contarEstado(array &$resumen, EstadoObservacion $estado): void
     {
-        $procesoId = $this->procesoActivoId();
-        $tablero = $this->transferencia->obtenerTableroOperativo($dependenciaIds, $procesoId);
-        $entregas = Entrega::with('verificadaPor:id,name')
-            ->where('proceso_transferencia_id', $procesoId)
-            ->whereIn('dependencia_id', array_column($tablero['dependencias'], 'id'))
-            ->get()
-            ->keyBy('dependencia_id');
+        match ($estado) {
+            EstadoObservacion::ABIERTA => $resumen['abiertas']++,
+            EstadoObservacion::EN_SUBSANACION => $resumen['en_subsanacion']++,
+            EstadoObservacion::SUBSANADA => $resumen['subsanadas']++,
+            EstadoObservacion::DESESTIMADA => $resumen['desestimadas']++,
+        };
+    }
 
-        $filas = [];
-        foreach ($tablero['dependencias'] as $dep) {
-            $presencia = $this->transferencia->presenciaAnexos($dep['id'], $procesoId);
-            $faltantes = [];
-            foreach (['anexo_02', 'anexo_03', 'anexo_04', 'anexo_05', 'anexo_06'] as $anexo) {
-                if (! $presencia[$anexo]) {
-                    $faltantes[] = 'Anexo '.substr($anexo, -2);
-                }
-            }
-            $entrega = $entregas->get($dep['id']);
-
-            $filas[] = [
-                'dependencia_id' => $dep['id'],
-                'codigo' => $dep['codigo'],
-                'nombre' => $dep['nombre'],
-                'estado_entrega' => $dep['estado_entrega'],
-                'estado_etiqueta' => EstadoEntrega::from($dep['estado_entrega'])->etiqueta(),
-                'anexos_faltantes' => $faltantes,
-                'bienes_sin_conformidad' => max(0, $dep['patrimonio_total'] - $dep['patrimonio_confirmados']),
-                'observaciones' => $dep['observaciones'],
-                'verificada_en' => $entrega?->verificada_en?->format('d/m/Y H:i'),
-                'verificada_por' => $entrega?->verificadaPor?->name,
-                'en_calidad_de' => $entrega?->verificada_en_calidad_de?->etiqueta(),
-                'resultado_verificacion' => $entrega?->resultado_verificacion,
-            ];
-        }
-
-        $metricas = $tablero['metricas'];
-
-        return [
-            'generado_en' => Carbon::now()->format('d/m/Y H:i'),
-            'resumen' => [
-                'centros_costo' => $metricas['total_dependencias'],
-                'sin_presentar' => $metricas['borrador'],
-                'en_revision' => $metricas['en_revision'],
-                'aceptadas' => $metricas['verificadas'] + $metricas['remitidas'],
-            ],
-            'filas' => $filas,
-        ];
+    /** Etiqueta legible del anexo a partir del modelo observable. */
+    private function etiquetaAnexo(string $modelo): string
+    {
+        return match (class_basename($modelo)) {
+            'InformeGestion' => 'Anexo 02 — Informe de Gestión',
+            'AcervoDocumental' => 'Anexo 03 — Acervo',
+            'BienPatrimonial' => 'Anexo 04 — Patrimonio',
+            'Personal' => 'Anexo 05 — Personal',
+            'BienNoPatrimonial' => 'Anexo 06 — No Patrimonial',
+            default => class_basename($modelo),
+        };
     }
 
     private function procesoActivoId(): int

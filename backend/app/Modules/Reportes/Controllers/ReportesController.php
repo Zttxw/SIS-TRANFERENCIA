@@ -8,7 +8,6 @@ use App\Http\Controllers\Controller;
 use App\Modules\Reportes\Excel\ConciliacionPatrimonialExport;
 use App\Modules\Reportes\Excel\MatrizAnexosExport;
 use App\Modules\Reportes\Excel\ObservacionesExport;
-use App\Modules\Reportes\Excel\VerificacionExport;
 use App\Modules\Reportes\Services\ReportesService;
 use App\Support\Concerns\AutorizaAmbito;
 use App\Support\Http\ApiResponse;
@@ -21,9 +20,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Módulo de Reportes (F5). Expone los consolidados de la transferencia (matriz
- * de anexos, conciliación patrimonial, observaciones y verificación del
- * coordinador ETTE) en JSON para la vista y en
+ * Módulo de Reportes (F5). Expone tres consolidados de la transferencia (matriz
+ * de anexos, conciliación patrimonial, observaciones) en JSON para la vista y en
  * Excel/PDF para descarga. Todo acotado al ámbito del usuario: los listados usan
  * `idsDependenciaEnAmbito` (null = visión global para admin/ETTS/ETTE).
  */
@@ -36,7 +34,6 @@ class ReportesController extends Controller
         'matriz-anexos' => 'Reporte — Matriz de Anexos y Avance por Dependencia',
         'conciliacion-patrimonial' => 'Reporte — Conciliación Patrimonial (SIGA)',
         'observaciones' => 'Reporte — Observaciones por Dependencia',
-        'verificacion' => 'Reporte — Resultado de la Verificación por Centro de Costo',
     ];
 
     public function __construct(
@@ -97,7 +94,6 @@ class ReportesController extends Controller
             'matriz-anexos' => $this->reportes->matrizAnexos($ambito),
             'conciliacion-patrimonial' => $this->reportes->conciliacionPatrimonial($ambito),
             'observaciones' => $this->reportes->observaciones($ambito),
-            'verificacion' => $this->reportes->verificacion($ambito),
         };
     }
 
@@ -108,7 +104,6 @@ class ReportesController extends Controller
             'matriz-anexos' => new MatrizAnexosExport($datos),
             'conciliacion-patrimonial' => new ConciliacionPatrimonialExport($datos),
             'observaciones' => new ObservacionesExport($datos),
-            'verificacion' => new VerificacionExport($datos),
         };
     }
 
@@ -132,14 +127,17 @@ class ReportesController extends Controller
                 ['Código', 'Centro de costo', 'Nivel', 'Estado', 'A02', 'A03', 'A04', 'A05', 'A06', 'Obs.', 'Bienes', 'Verif.', '% Patr.'],
                 array_map(fn (array $f): array => [
                     $f['codigo'], $f['nombre'], $f['nivel'], ucfirst((string) $f['estado_entrega']),
-                    $f['anexo_02'] ? 'Sí' : '—', $f['anexo_03'] ? 'Sí' : '—', $f['anexo_04'] ? 'Sí' : '—',
-                    $f['anexo_05'] ? 'Sí' : '—', $f['anexo_06'] ? 'Sí' : '—',
-                    $f['observaciones'], $f['patrimonio_total'], $f['patrimonio_confirmados'],
+                    $this->etiquetaEstadoAnexo($f['anexo_02']),
+                    $this->etiquetaEstadoAnexo($f['anexo_03']),
+                    $this->etiquetaEstadoAnexo($f['anexo_04']),
+                    $this->etiquetaEstadoAnexo($f['anexo_05']),
+                    $this->etiquetaEstadoAnexo($f['anexo_06']),
+                    $f['observaciones_abiertas'], $f['patrimonio_total'], $f['patrimonio_confirmados'],
                     $f['patrimonio_porcentaje'].' %',
                 ], $datos['filas']),
                 [
                     'Dependencias' => $datos['metricas']['total_dependencias'] ?? 0,
-                    'Remitidas' => $datos['metricas']['remitidas'] ?? 0,
+                    'Consolidadas' => $datos['metricas']['consolidadas'] ?? 0,
                     '% Avance' => ($datos['metricas']['porcentaje_avance'] ?? 0).' %',
                 ],
             ],
@@ -155,29 +153,14 @@ class ReportesController extends Controller
                 ],
             ],
             'observaciones' => [
-                ['Código', 'Centro de costo', 'Anexo', 'Observación', 'Autor', 'Registrada'],
+                ['Código', 'Centro de costo', 'Anexo', 'Observación', 'Estado', 'Registrada', 'Días'],
                 array_map(fn (array $f): array => [
                     $f['codigo'], $f['nombre'], $f['anexo'], $f['descripcion'],
-                    $f['autor'] ?? '', $f['registrada_en'] ?? '',
+                    $f['estado_etiqueta'], $f['registrada_en'] ?? '', $f['dias_subsanacion'] ?? '',
                 ], $datos['filas']),
                 [
-                    'Observaciones' => $datos['resumen']['observaciones'],
-                    'Centros de costo' => $datos['resumen']['centros_costo'],
-                ],
-            ],
-            'verificacion' => [
-                ['Código', 'Centro de costo', 'Estado', 'Anexos faltantes', 'Bienes s/conf.', 'Obs.', 'Aceptada', 'Aceptó', 'Constancia'],
-                array_map(fn (array $f): array => [
-                    $f['codigo'], $f['nombre'], $f['estado_etiqueta'],
-                    implode(', ', $f['anexos_faltantes']) ?: '—', $f['bienes_sin_conformidad'],
-                    $f['observaciones'], $f['verificada_en'] ?? '',
-                    trim(($f['verificada_por'] ?? '').($f['en_calidad_de'] ? " ({$f['en_calidad_de']})" : '')),
-                    $f['resultado_verificacion'] ?? '',
-                ], $datos['filas']),
-                [
-                    'Centros de costo' => $datos['resumen']['centros_costo'],
-                    'En revisión' => $datos['resumen']['en_revision'],
-                    'Aceptadas' => $datos['resumen']['aceptadas'],
+                    'Abiertas' => $datos['resumen']['abiertas'] ?? 0,
+                    'Subsanadas' => $datos['resumen']['subsanadas'] ?? 0,
                 ],
             ],
         };
@@ -191,5 +174,17 @@ class ReportesController extends Controller
                 'filas' => $filas,
             ],
         ];
+    }
+
+    private function etiquetaEstadoAnexo(mixed $valor): string
+    {
+        if ($valor === 'firmado' || $valor === 'entregado') {
+            return 'Entregado';
+        }
+        if ($valor === 'generado' || $valor === true || $valor === 'si') {
+            return 'Sí';
+        }
+
+        return '—';
     }
 }

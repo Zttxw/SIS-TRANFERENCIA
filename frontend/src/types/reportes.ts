@@ -2,15 +2,15 @@
  * Tipos del módulo de Reportes (F5) — espejo de ReportesService del backend.
  */
 
-export type ClaveReporte = 'matriz-anexos' | 'conciliacion-patrimonial' | 'observaciones' | 'verificacion'
+export type ClaveReporte = 'matriz-anexos' | 'conciliacion-patrimonial' | 'observaciones'
 export type FormatoExport = 'excel' | 'pdf'
 
 export interface MetricasMatriz {
   total_dependencias: number
-  borrador: number
-  en_revision: number
-  verificadas: number
+  consolidadas: number
   remitidas: number
+  observadas: number
+  borrador: number
   porcentaje_avance: number
   patrimonio: {
     total_bienes: number
@@ -21,6 +21,8 @@ export interface MetricasMatriz {
   }
 }
 
+export type EstadoAnexoMatriz = 'no_generado' | 'generado' | 'firmado' | 'entregado'
+
 export interface FilaMatriz {
   dependencia_id: number
   codigo: string
@@ -28,12 +30,15 @@ export interface FilaMatriz {
   nivel: number
   encargado: string | null
   estado_entrega: string
-  anexo_02: boolean
-  anexo_03: boolean
-  anexo_04: boolean
-  anexo_05: boolean
-  anexo_06: boolean
-  observaciones: number
+  anexo_02: EstadoAnexoMatriz | boolean | string
+  anexo_03: EstadoAnexoMatriz | boolean | string
+  anexo_04: EstadoAnexoMatriz | boolean | string
+  anexo_05: EstadoAnexoMatriz | boolean | string
+  anexo_06: EstadoAnexoMatriz | boolean | string
+  anexos_completados?: number
+  anexos_firmados?: number
+  porcentaje_avance?: number
+  observaciones_abiertas: number
   patrimonio_total: number
   patrimonio_confirmados: number
   patrimonio_porcentaje: number
@@ -67,44 +72,20 @@ export interface FilaObservacion {
   nombre: string
   anexo: string
   descripcion: string
+  estado: string
+  estado_etiqueta: string
   autor: string | null
-  en_calidad_de: string | null
   registrada_en: string | null
+  dias_subsanacion: number | null
 }
 
-/** Observaciones del coordinador ETTE: constancia sin subsanación (D-07). */
 export interface ReporteObservaciones {
   generado_en: string
   resumen: {
-    observaciones: number
-    centros_costo: number
+    abiertas: number
+    en_subsanacion: number
+    subsanadas: number
+    desestimadas: number
   }
   filas: FilaObservacion[]
-}
-
-export interface FilaVerificacion {
-  dependencia_id: number
-  codigo: string
-  nombre: string
-  estado_entrega: string
-  estado_etiqueta: string
-  anexos_faltantes: string[]
-  bienes_sin_conformidad: number
-  observaciones: number
-  verificada_en: string | null
-  verificada_por: string | null
-  en_calidad_de: string | null
-  resultado_verificacion: string | null
-}
-
-/** Resultado de la revisión del coordinador por CC, para el comité ETTE (RF-55). */
-export interface ReporteVerificacion {
-  generado_en: string
-  resumen: {
-    centros_costo: number
-    sin_presentar: number
-    en_revision: number
-    aceptadas: number
-  }
-  filas: FilaVerificacion[]
 }
