@@ -15,8 +15,10 @@ use App\Modules\Patrimonio\Models\BienPatrimonial;
 use App\Modules\Personal\Models\Personal;
 use App\Modules\Transferencia\Models\Observacion;
 use App\Support\Enums\EstadoObservacion;
+use App\Support\Enums\TipoAcervo;
 use App\Support\Http\ApiResponse;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
@@ -39,7 +41,8 @@ class ObservacionService
      */
     private const ANEXOS = [
         'gestion' => InformeGestion::class,
-        'acervo' => AcervoDocumental::class,
+        'acervo_fisico' => AcervoDocumental::class,
+        'acervo_digital' => AcervoDocumental::class,
         'patrimonio' => BienPatrimonial::class,
         'personal' => Personal::class,
         'nopatrimonial' => BienNoPatrimonial::class,
@@ -65,8 +68,23 @@ class ObservacionService
     public function resolverObservable(string $anexo, int $observableId): Model
     {
         $modelo = self::ANEXOS[$anexo];
+        $tipoAcervo = self::tipoAcervo($anexo);
 
-        return $modelo::findOrFail($observableId);
+        return $modelo::query()
+            ->when($tipoAcervo !== null, fn (Builder $query) => $query->where('tipo', $tipoAcervo->value))
+            ->findOrFail($observableId);
+    }
+
+    /** Las dos claves del acervo comparten modelo: 03-A (físico) y 03-B (digital). */
+    private static function tipoAcervo(string $anexo): ?TipoAcervo
+    {
+        foreach (TipoAcervo::cases() as $tipo) {
+            if ($tipo->claveObservacion() === $anexo) {
+                return $tipo;
+            }
+        }
+
+        return null;
     }
 
     /**

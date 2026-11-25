@@ -11,6 +11,7 @@ use App\Modules\Organization\Models\Servidor;
 use App\Modules\Organization\Models\TipoDocumentalSgd;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Enums\FuenteDato;
+use App\Support\Enums\TipoAcervo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -94,7 +95,7 @@ class IngestaDocumentalSgd
     }
 
     /**
-     * Acervo digital (sección A del Anexo 03): una serie por centro de costo,
+     * Acervo digital (Anexo 03-B): una serie por centro de costo,
      * tipo documental, sentido (emitidos/recibidos) y AÑO, con su número de
      * documentos. Todo se agrega en SQL Server.
      *
@@ -149,7 +150,7 @@ class IngestaDocumentalSgd
                     [
                         'proceso_transferencia_id' => $proceso->id,
                         'dependencia_id' => $grupo['dependencia_id'],
-                        'tipo' => AcervoDocumental::TIPO_DIGITAL,
+                        'tipo' => TipoAcervo::DIGITAL->value,
                         'serie_documental' => $grupo['serie'],
                         'anio' => (int) $grupo['anio'],
                     ],

@@ -18,7 +18,8 @@ class CondicionesActa
     /** @var array<string, string> clave => denominación oficial */
     public const ITEMS = [
         'anexo_02' => 'Anexo N° 02 — Informe de Gestión',
-        'anexo_03' => 'Anexo N° 03 — Registro del Acervo Documentario',
+        'anexo_03a' => 'Anexo N° 03-A — Registro del Acervo Documentario Físico',
+        'anexo_03b' => 'Anexo N° 03-B — Registro del Acervo Documentario Digital (SGD)',
         'anexo_04' => 'Anexo N° 04 — Registro de Bienes Patrimoniales',
         'anexo_05' => 'Anexo N° 05 — Información del Personal a cargo del Centro de Costo',
         'anexo_06' => 'Anexo N° 06 — Bienes No Patrimoniales',

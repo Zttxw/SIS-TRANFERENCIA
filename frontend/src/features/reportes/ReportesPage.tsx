@@ -7,8 +7,8 @@ import {
   Building2,
   Check,
   CheckCheck,
-  CheckCircle2,
   Clock,
+  FileText,
   Filter,
   Layers,
   MessageSquareWarning,
@@ -51,6 +51,7 @@ import type {
   FilaMatriz,
   FilaObservacion,
 } from '@/types/reportes'
+import type { EstadoObservacion } from '@/types/observaciones'
 
 const TABS: { clave: ClaveReporte; etiqueta: string; icono: typeof BarChart3 }[] = [
   { clave: 'matriz-anexos', etiqueta: 'Matriz de anexos', icono: BarChart3 },
@@ -71,6 +72,13 @@ const PALETA = {
 
 function esCompletoAnexo(v: unknown): boolean {
   return v === 'generado' || v === 'firmado' || v === 'entregado' || v === true || v === 'si'
+}
+
+/** Anexos de la matriz por CC; el acervo cuenta como dos documentos (03-A y 03-B). */
+const CLAVES_ANEXOS_MATRIZ = ['anexo_02', 'anexo_03a', 'anexo_03b', 'anexo_04', 'anexo_05', 'anexo_06'] as const
+
+function contarAnexosCompletos(fila: FilaMatriz): number {
+  return CLAVES_ANEXOS_MATRIZ.filter((clave) => esCompletoAnexo(fila[clave])).length
 }
 
 function esFirmadoAnexo(v: unknown): boolean {
@@ -150,19 +158,15 @@ function BadgeEstado({ estado }: { estado: string }) {
 /** Clasificación según Semáforo Institucional (Directiva N.° 001-2026-MDSJ/A)
  * - conforme (Verde): Entregado conforme (Consolidadas)
  * - en_plazo (Amarillo): Pendiente en el plazo (En formulación o revisión en plazo)
- * - vencido (Rojo): Se pasó de tiempo (Fuera de plazo o con observaciones abiertas)
+ * - vencido (Rojo): Se pasó de tiempo
+ * Las observaciones del coordinador ETTE son constancia (D-07): no cambian el semáforo.
  */
 type EstadoSemaforo = 'conforme' | 'en_plazo' | 'vencido'
 
 function getEstadoSemaforo(f: FilaMatriz): EstadoSemaforo {
   // 1. Verde: Entregado conforme (Consolidadas o entrega completa suscrita)
-  if (f.estado_entrega === 'consolidada' || f.anexos_firmados === 5) {
+  if (f.estado_entrega === 'consolidada' || f.anexos_firmados === CLAVES_ANEXOS_MATRIZ.length) {
     return 'conforme'
-  }
-
-  // 2. Rojo: Se pasó de tiempo / Observaciones pendientes
-  if (f.estado_entrega === 'observada' || f.observaciones_abiertas > 0) {
-    return 'vencido'
   }
 
   // 3. Amarillo: Pendiente en el plazo (Inicia en amarillo para todas las dependencias en formulación o revisión)
@@ -182,17 +186,12 @@ function ModalDetalleDependencia({
   if (!fila) return null
 
   const sem = getEstadoSemaforo(fila)
-  const anexosCompletados =
-    (esCompletoAnexo(fila.anexo_02) ? 1 : 0) +
-    (esCompletoAnexo(fila.anexo_03) ? 1 : 0) +
-    (esCompletoAnexo(fila.anexo_04) ? 1 : 0) +
-    (esCompletoAnexo(fila.anexo_05) ? 1 : 0) +
-    (esCompletoAnexo(fila.anexo_06) ? 1 : 0)
+  const anexosCompletados = contarAnexosCompletos(fila)
 
   const porcentaje =
     fila.estado_entrega === 'consolidada'
       ? 100
-      : (fila.porcentaje_avance ?? Math.round((anexosCompletados / 5) * 100))
+      : (fila.porcentaje_avance ?? Math.round((anexosCompletados / CLAVES_ANEXOS_MATRIZ.length) * 100))
 
   const colorBarra =
     porcentaje === 100 || fila.estado_entrega === 'consolidada'
@@ -210,7 +209,8 @@ function ModalDetalleDependencia({
 
   const anexosLista = [
     { clave: 'A02', nombre: 'Informe de Gestión', valor: fila.anexo_02 },
-    { clave: 'A03', nombre: 'Acervo Documental', valor: fila.anexo_03 },
+    { clave: 'A03-A', nombre: 'Acervo Documentario Físico', valor: fila.anexo_03a },
+    { clave: 'A03-B', nombre: 'Acervo Documentario Digital', valor: fila.anexo_03b },
     { clave: 'A04', nombre: 'Bienes Patrimoniales', valor: fila.anexo_04 },
     { clave: 'A05', nombre: 'Personal', valor: fila.anexo_05 },
     { clave: 'A06', nombre: 'Bienes No Patrimoniales', valor: fila.anexo_06 },
@@ -272,15 +272,15 @@ function ModalDetalleDependencia({
               Observaciones
             </span>
             <div className="mt-1.5 flex items-center gap-1.5">
-              {fila.observaciones_abiertas > 0 ? (
-                <span className="inline-flex items-center gap-1 font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded text-xs border border-rose-200">
-                  <AlertCircle className="h-3.5 w-3.5" />
-                  {fila.observaciones_abiertas} abiertas
+              {fila.observaciones_vigentes > 0 ? (
+                <span className="inline-flex items-center gap-1 font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-xs border border-amber-200">
+                  <MessageSquareWarning className="h-3.5 w-3.5" />
+                  {fila.observaciones_vigentes} en el acta
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-xs font-semibold border border-emerald-200">
                   <Check className="h-3.5 w-3.5" />
-                  0 abiertas
+                  Sin observaciones
                 </span>
               )}
             </div>
@@ -393,11 +393,12 @@ function MatrizView() {
 
       let matchFaltante = true
       if (filtroFaltante === 'sin_a02') matchFaltante = !esCompletoAnexo(f.anexo_02)
-      if (filtroFaltante === 'sin_a03') matchFaltante = !esCompletoAnexo(f.anexo_03)
+      if (filtroFaltante === 'sin_a03a') matchFaltante = !esCompletoAnexo(f.anexo_03a)
+      if (filtroFaltante === 'sin_a03b') matchFaltante = !esCompletoAnexo(f.anexo_03b)
       if (filtroFaltante === 'sin_a04') matchFaltante = !esCompletoAnexo(f.anexo_04)
       if (filtroFaltante === 'sin_a05') matchFaltante = !esCompletoAnexo(f.anexo_05)
       if (filtroFaltante === 'sin_a06') matchFaltante = !esCompletoAnexo(f.anexo_06)
-      if (filtroFaltante === 'con_obs') matchFaltante = f.observaciones_abiertas > 0
+      if (filtroFaltante === 'con_obs') matchFaltante = f.observaciones_vigentes > 0
 
       return matchTexto && matchEstado && matchFaltante
     })
@@ -426,16 +427,11 @@ function MatrizView() {
       className: 'min-w-0',
       cell: (f) => {
         const sem = getEstadoSemaforo(f)
-        const anexosCompletados =
-          (esCompletoAnexo(f.anexo_02) ? 1 : 0) +
-          (esCompletoAnexo(f.anexo_03) ? 1 : 0) +
-          (esCompletoAnexo(f.anexo_04) ? 1 : 0) +
-          (esCompletoAnexo(f.anexo_05) ? 1 : 0) +
-          (esCompletoAnexo(f.anexo_06) ? 1 : 0)
+        const anexosCompletados = contarAnexosCompletos(f)
         const porcentaje =
           f.estado_entrega === 'consolidada'
             ? 100
-            : (f.porcentaje_avance ?? Math.round((anexosCompletados / 5) * 100))
+            : (f.porcentaje_avance ?? Math.round((anexosCompletados / CLAVES_ANEXOS_MATRIZ.length) * 100))
 
         // Semáforo: Inicia en amarillo; al consolidar o 100% pasa a verde; si está fuera de plazo/vencido en rojo
         const colorBarra =
@@ -510,11 +506,18 @@ function MatrizView() {
       cell: (f) => <Presencia valor={f.anexo_02} />,
     },
     {
-      id: 'a03',
-      header: 'A03 Acervo',
+      id: 'a03a',
+      header: 'A03-A Físico',
       align: 'center',
       ocultarEnMovil: true,
-      cell: (f) => <Presencia valor={f.anexo_03} />,
+      cell: (f) => <Presencia valor={f.anexo_03a} />,
+    },
+    {
+      id: 'a03b',
+      header: 'A03-B SGD',
+      align: 'center',
+      ocultarEnMovil: true,
+      cell: (f) => <Presencia valor={f.anexo_03b} />,
     },
     {
       id: 'a04',
@@ -543,10 +546,10 @@ function MatrizView() {
       align: 'center',
       ocultarEnMovil: true,
       cell: (f) =>
-        f.observaciones_abiertas > 0 ? (
-          <span className="inline-flex items-center gap-0.5 font-mono font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded text-microdato">
-            <AlertCircle className="h-3 w-3" />
-            {f.observaciones_abiertas}
+        f.observaciones_vigentes > 0 ? (
+          <span className="inline-flex items-center gap-0.5 font-mono font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded text-microdato">
+            <MessageSquareWarning className="h-3 w-3" />
+            {f.observaciones_vigentes}
           </span>
         ) : (
           <span className="text-muted-foreground font-mono text-microdato">0</span>
@@ -592,12 +595,10 @@ function MatrizView() {
         const total = Number(metricas?.total_dependencias || filas.length) || 1
         const consolidadas = Number(metricas?.consolidadas ?? filas.filter(f => f.estado_entrega === 'consolidada').length) || 0
         const remitidas = Number(metricas?.remitidas ?? filas.filter(f => f.estado_entrega === 'remitida').length) || 0
-        const observadas = Number(metricas?.observadas ?? filas.filter(f => f.estado_entrega === 'observada' || (f.observaciones_abiertas ?? 0) > 0).length) || 0
+        const observadas = Number(metricas?.observadas ?? filas.filter(f => f.observaciones_vigentes > 0).length) || 0
         const borrador = Number(metricas?.borrador ?? filas.filter(f => !f.estado_entrega || f.estado_entrega === 'borrador').length) || 0
         const pctAvance = Number(metricas?.porcentaje_avance ?? (total > 0 ? Math.round((consolidadas / total) * 100) : 0)) || 0
 
-        const totalEvaluadas = consolidadas + remitidas + observadas
-        const denObs = totalEvaluadas > 0 ? totalEvaluadas : total
 
         return (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
@@ -658,12 +659,10 @@ function MatrizView() {
                 </div>
                 <div className="mt-1 flex items-baseline gap-1 font-mono">
                   <span className="text-xl sm:text-2xl font-black text-amber-700">{observadas}</span>
-                  <span className="text-[11px] font-semibold text-amber-700/70">/ {denObs}</span>
+                  <span className="text-[11px] font-semibold text-amber-700/70">/ {total}</span>
                 </div>
                 <p className="text-[11px] text-amber-800 font-medium mt-0.5 truncate">
-                  {totalEvaluadas > 0
-                    ? `${Math.round((observadas / totalEvaluadas) * 100)}% observadas`
-                    : 'Sin observaciones'}
+                  CC con observaciones del coordinador
                 </p>
               </CardContent>
             </Card>
@@ -907,10 +906,11 @@ function MatrizView() {
               >
                 <option value="todos">Todos los anexos</option>
                 <option value="sin_a02">Falta A02 Gestión</option>
-                <option value="sin_a03">Falta A03 Acervo</option>
+                <option value="sin_a03a">Falta A03-A Acervo físico</option>
+                <option value="sin_a03b">Falta A03-B Acervo digital</option>
                 <option value="sin_a04">Falta A04 Patrimonio</option>
                 <option value="sin_a05">Falta A05 Personal</option>
-                <option value="con_obs">Con observaciones pendientes</option>
+                <option value="con_obs">Con observaciones del coordinador</option>
               </select>
             </div>
           </div>
@@ -1310,56 +1310,47 @@ function ConciliacionView() {
 /* =========================================================================
    VISTA 3: OBSERVACIONES (ANÁLISIS DE INCIDENCIAS CON GRÁFICOS)
    ========================================================================= */
+const COLOR_ESTADO_OBSERVACION: Record<EstadoObservacion, string> = {
+  registrada: 'bg-amber-100 text-amber-800',
+  retirada: 'bg-slate-100 text-slate-700',
+}
+
+/**
+ * Observaciones del coordinador ETTE (D-07, D-13): constancia de la revisión,
+ * sin subsanación. Las vigentes figuran en la sección IV del Acta 07; las
+ * retiradas se quitaron durante la revisión, antes de firmar.
+ */
 function ObservacionesView() {
   const { data, isLoading, error, refetch } = useObservacionesReporte()
   const [busqueda, setBusqueda] = useState('')
-  const [filtroEstado, setFiltroEstado] = useState<string>('todos')
+  const [filtroEstado, setFiltroEstado] = useState<EstadoObservacion | 'todos'>('todos')
 
   const r = data?.resumen
-  const filas = data?.filas ?? []
 
-  // Análisis gráfico de observaciones
   const { datosPorAnexo, datosPorEstado, filasFiltradas } = useMemo(() => {
-    // 1. Observaciones por Anexo
-    const anexosMap: Record<string, number> = {}
-    filas.forEach((f) => {
-      const nom = f.anexo || 'General'
-      anexosMap[nom] = (anexosMap[nom] || 0) + 1
-    })
-    const datosPorAnexo = Object.entries(anexosMap).map(([anexo, cant]) => ({
-      anexo,
-      cantidad: cant,
-    }))
+    const filas = data?.filas ?? []
+    const porAnexo = new Map<string, number>()
+    filas
+      .filter((f) => f.estado === 'registrada')
+      .forEach((f) => porAnexo.set(f.anexo, (porAnexo.get(f.anexo) ?? 0) + 1))
 
-    // 2. Observaciones por Estado
-    const datosPorEstado = [
-      { name: 'Abiertas', value: r?.abiertas ?? 0, fill: '#dc2626' },
-      { name: 'En Subsanación', value: r?.en_subsanacion ?? 0, fill: '#2563eb' },
-      { name: 'Subsanadas', value: r?.subsanadas ?? 0, fill: '#16a34a' },
-      { name: 'Desestimadas', value: r?.desestimadas ?? 0, fill: '#64748b' },
-    ]
-
-    // 3. Filtrado
     const texto = busqueda.toLowerCase().trim()
-    const filtradas = filas.filter((f) => {
-      const matchTexto =
-        texto === '' ||
-        f.codigo.toLowerCase().includes(texto) ||
-        f.nombre.toLowerCase().includes(texto) ||
-        f.descripcion.toLowerCase().includes(texto)
-
-      const matchEstado =
-        filtroEstado === 'todos' || f.estado === filtroEstado
-
-      return matchTexto && matchEstado
-    })
 
     return {
-      datosPorAnexo,
-      datosPorEstado,
-      filasFiltradas: filtradas,
+      datosPorAnexo: Array.from(porAnexo, ([anexo, cantidad]) => ({ anexo, cantidad })),
+      datosPorEstado: [
+        { name: 'Vigentes', value: data?.resumen.registradas ?? 0, fill: '#d97706' },
+        { name: 'Retiradas', value: data?.resumen.retiradas ?? 0, fill: '#64748b' },
+      ],
+      filasFiltradas: filas.filter((f) =>
+        (filtroEstado === 'todos' || f.estado === filtroEstado)
+        && (texto === ''
+          || f.codigo.toLowerCase().includes(texto)
+          || f.nombre.toLowerCase().includes(texto)
+          || f.descripcion.toLowerCase().includes(texto)),
+      ),
     }
-  }, [filas, r, busqueda, filtroEstado])
+  }, [data, busqueda, filtroEstado])
 
   const columnas: ColumnaTabla<FilaObservacion>[] = [
     {
@@ -1384,45 +1375,37 @@ function ObservacionesView() {
       id: 'anexo',
       header: 'Anexo',
       cell: (f) => (
-        <Badge variant="outline" className="text-microdato font-mono">
-          {f.anexo}
-        </Badge>
-      ),
-    },
-    {
-      id: 'descripcion',
-      header: 'Observación formulada',
-      cell: (f) => (
-        <div className="max-w-[340px]">
-          <p className="line-clamp-2 text-nota text-foreground">{f.descripcion}</p>
-          {f.autor && (
-            <p className="text-microdato text-muted-foreground mt-0.5">Por: {f.autor}</p>
-          )}
+        <div>
+          <Badge variant="outline" className="text-microdato font-mono">
+            {f.anexo}
+          </Badge>
+          <p className="text-microdato text-muted-foreground mt-0.5">{f.detalle}</p>
         </div>
       ),
     },
     {
-      id: 'estado',
-      header: 'Estado',
+      id: 'descripcion',
+      header: 'Observación',
       cell: (f) => (
-        <span
-          className={`inline-flex items-center px-2 py-0.5 rounded-full text-microdato font-semibold ${
-            f.estado === 'abierta'
-              ? 'bg-rose-100 text-rose-800'
-              : f.estado === 'en_subsanacion'
-              ? 'bg-blue-100 text-blue-800'
-              : f.estado === 'subsanada'
-              ? 'bg-emerald-100 text-emerald-800'
-              : 'bg-slate-100 text-slate-700'
-          }`}
-        >
-          {f.estado_etiqueta}
-        </span>
+        <p className="max-w-[340px] line-clamp-2 text-nota text-foreground">{f.descripcion}</p>
+      ),
+    },
+    {
+      id: 'firmante',
+      header: 'Firmante ETTE',
+      ocultarEnMovil: true,
+      cell: (f) => (
+        <div className="text-nota">
+          <p className="text-foreground">{f.autor ?? '—'}</p>
+          {f.en_calidad_de && <p className="text-microdato text-muted-foreground">{f.en_calidad_de}</p>}
+          {f.registrada_por && <p className="text-microdato text-muted-foreground">Registró: {f.registrada_por}</p>}
+        </div>
       ),
     },
     {
       id: 'registrada',
-      header: 'Registrada',
+      header: 'Fecha',
+      ocultarEnMovil: true,
       cell: (f) => (
         <span className="text-microdato text-muted-foreground whitespace-nowrap font-mono">
           {f.registrada_en ?? '—'}
@@ -1430,81 +1413,46 @@ function ObservacionesView() {
       ),
     },
     {
-      id: 'dias',
-      header: 'Días límite',
-      align: 'right',
+      id: 'estado',
+      header: 'Estado',
       cell: (f) => (
-        <span className="font-mono text-nota font-bold text-foreground">
-          {f.dias_subsanacion ?? '—'} d
+        <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-microdato font-semibold', COLOR_ESTADO_OBSERVACION[f.estado])}>
+          {f.estado_etiqueta}
         </span>
       ),
     },
   ]
 
+  const kpis = r
+    ? [
+        { titulo: 'Vigentes', valor: r.registradas, nota: 'Constan en el Acta 07', Icono: MessageSquareWarning, color: 'text-amber-600' },
+        { titulo: 'CC observados', valor: r.centros_observados, nota: 'Con al menos una vigente', Icono: Building2, color: 'text-primary' },
+        { titulo: 'Retiradas', valor: r.retiradas, nota: 'Quitadas antes de firmar', Icono: Minus, color: 'text-slate-600' },
+        { titulo: 'Total', valor: r.total, nota: 'Registradas en el proceso', Icono: FileText, color: 'text-foreground' },
+      ]
+    : []
+
   return (
     <div className="space-y-6">
-      {/* KPIS OBSERVACIONES */}
-      {r && (
+      <aside className="rounded-lg border border-info-border bg-info-soft p-3 text-xs text-info-fg">
+        Las observaciones del coordinador ETTE son constancia de la revisión: no se subsanan ni devuelven la entrega.
+        Las vigentes figuran en la sección IV del Acta 07 de cada centro de costo.
+      </aside>
+
+      {kpis.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-          <Card className="border shadow-xs bg-card">
-            <CardContent className="p-3.5">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-microdato font-bold uppercase tracking-wider">Abiertas</span>
-                <AlertCircle className="h-4 w-4 text-rose-600" />
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-rose-600 font-mono">
-                {r.abiertas}
-              </div>
-              <p className="text-microdato text-rose-700 font-medium mt-0.5">
-                Requieren subsanación
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border shadow-xs bg-card">
-            <CardContent className="p-3.5">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-microdato font-bold uppercase tracking-wider">En Subsanación</span>
-                <Clock className="h-4 w-4 text-blue-600" />
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-blue-600 font-mono">
-                {r.en_subsanacion}
-              </div>
-              <p className="text-microdato text-blue-700 font-medium mt-0.5">
-                En plazo de descargo
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border shadow-xs bg-card">
-            <CardContent className="p-3.5">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-microdato font-bold uppercase tracking-wider">Subsanadas</span>
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-emerald-600 font-mono">
-                {r.subsanadas}
-              </div>
-              <p className="text-microdato text-emerald-700 font-medium mt-0.5">
-                Conformes por el revisor
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border shadow-xs bg-card">
-            <CardContent className="p-3.5">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-microdato font-bold uppercase tracking-wider">Desestimadas</span>
-                <Minus className="h-4 w-4 text-slate-500" />
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-slate-600 font-mono">
-                {r.desestimadas}
-              </div>
-              <p className="text-microdato text-slate-500 font-medium mt-0.5">
-                Cerradas sin efecto
-              </p>
-            </CardContent>
-          </Card>
+          {kpis.map(({ titulo, valor, nota, Icono, color }) => (
+            <Card key={titulo} className="border shadow-xs bg-card">
+              <CardContent className="p-3.5">
+                <div className="flex items-center justify-between text-muted-foreground">
+                  <span className="text-microdato font-bold uppercase tracking-wider">{titulo}</span>
+                  <Icono className={cn('h-4 w-4', color)} />
+                </div>
+                <div className={cn('mt-1 text-2xl font-extrabold font-mono', color)}>{valor}</div>
+                <p className="text-microdato text-muted-foreground font-medium mt-0.5">{nota}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
 
@@ -1514,7 +1462,7 @@ function ObservacionesView() {
           <CardHeader className="py-2.5 px-4 border-b border-border bg-muted">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
               <BarChart3 className="h-4 w-4 text-primary" />
-              <span>Observaciones Agrupadas por Tipo de Anexo</span>
+              <span>Observaciones vigentes por anexo</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4">
@@ -1551,7 +1499,7 @@ function ObservacionesView() {
           <CardHeader className="py-2.5 px-4 border-b border-border bg-muted">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
               <AlertCircle className="h-4 w-4 text-primary" />
-              <span>Estado de Observaciones</span>
+              <span>Vigentes y retiradas</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 flex flex-col items-center">
@@ -1568,8 +1516,8 @@ function ObservacionesView() {
                     dataKey="value"
                     strokeWidth={1}
                   >
-                    {datosPorEstado.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    {datosPorEstado.map((entry) => (
+                      <Cell key={entry.name} fill={entry.fill} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -1598,7 +1546,7 @@ function ObservacionesView() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
               <MessageSquareWarning className="h-4 w-4 text-amber-600" />
-              <span>Relación Oficial de Observaciones ({filasFiltradas.length})</span>
+              <span>Relación de observaciones ({filasFiltradas.length})</span>
             </CardTitle>
           </div>
 
@@ -1615,23 +1563,21 @@ function ObservacionesView() {
             <div className="flex items-center gap-1.5">
               <select
                 value={filtroEstado}
-                onChange={(e) => setFiltroEstado(e.target.value)}
+                onChange={(e) => setFiltroEstado(e.target.value as EstadoObservacion | 'todos')}
                 className="h-8 rounded-lg border border-input bg-background px-2.5 text-xs focus:ring-1 focus:ring-primary"
               >
                 <option value="todos">Todos los estados</option>
-                <option value="abierta">Abiertas</option>
-                <option value="en_subsanacion">En subsanación</option>
-                <option value="subsanada">Subsanadas</option>
-                <option value="desestimada">Desestimadas</option>
+                <option value="registrada">Vigentes</option>
+                <option value="retirada">Retiradas</option>
               </select>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <DataTable<FilaObservacion & { __k: number }>
+          <DataTable<FilaObservacion>
             columnas={columnas}
-            filas={filasFiltradas.map((f, i) => ({ ...f, __k: i }))}
-            rowKey={(f) => `${f.dependencia_id}-${f.__k}`}
+            filas={filasFiltradas}
+            rowKey={(f) => f.id}
             loading={isLoading}
             error={error}
             onReintentar={() => refetch()}

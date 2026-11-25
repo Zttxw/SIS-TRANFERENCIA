@@ -1,5 +1,6 @@
 import {
   Archive,
+  HardDrive,
   ClipboardList,
   FileCheck2,
   FolderTree,
@@ -71,12 +72,20 @@ export function anexosDeLaDependencia(dep: DependenciaSemaforoItem): AnexoArchiv
       detalle: 'Memoria, funciones, logros y dificultades',
     },
     {
-      codigo: 'Anexo 03',
-      nombre: 'Acervo Documental',
+      codigo: 'Anexo 03-A',
+      nombre: 'Acervo Documentario Físico',
       icono: Archive,
-      tipoFirma: 'anexo03',
+      tipoFirma: 'anexo03a',
       estado: estadoRemision,
-      detalle: 'Inventario de archivos y series documentales',
+      detalle: 'Archivadores, paquetes y cajas bajo custodia',
+    },
+    {
+      codigo: 'Anexo 03-B',
+      nombre: 'Acervo Documentario Digital',
+      icono: HardDrive,
+      tipoFirma: 'anexo03b',
+      estado: estadoRemision,
+      detalle: 'Documentos emitidos y recibidos en el SGD',
     },
     {
       codigo: 'Anexo 04',

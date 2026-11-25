@@ -9,6 +9,7 @@ use App\Modules\Acervo\Models\AcervoDocumental;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Concerns\RespetaEstadoEntrega;
 use App\Support\Enums\FuenteDato;
+use App\Support\Enums\TipoAcervo;
 use App\Support\Http\ApiResponse;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -60,7 +61,7 @@ class AcervoService
     }
 
     /**
-     * Registra una serie física (sección B del Anexo 03).
+     * Registra una serie física (Anexo 03-A).
      *
      * @param  array{dependencia_id: int, serie_documental: string, anio: int, folios: int, unidad_conservacion: string, ubicacion: string}  $datos
      */
@@ -74,7 +75,7 @@ class AcervoService
             ...$datos,
             'proceso_transferencia_id' => $procesoId,
             'registrado_por_id' => $usuario->id,
-            'tipo' => AcervoDocumental::TIPO_FISICO,
+            'tipo' => TipoAcervo::FISICO,
             'fuente' => FuenteDato::MANUAL->value,
         ]);
     }
@@ -105,7 +106,7 @@ class AcervoService
     }
 
     /**
-     * Las series de la sección A reflejan el SGD y solo cambian al reingerirlo.
+     * Las series digitales (Anexo 03-B) reflejan el SGD y solo cambian al reingerirlo.
      */
     private function serieManual(int $id): AcervoDocumental
     {

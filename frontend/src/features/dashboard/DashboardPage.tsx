@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Archive,
+  HardDrive,
   ArrowRight,
   BarChart3,
   Building2,
@@ -111,7 +112,8 @@ export function DashboardPage() {
   const {
     dependencia,
     anexo02_gestion,
-    anexo03_acervo,
+    anexo03a_acervo_fisico,
+    anexo03b_acervo_digital,
     anexo04_patrimonio,
     anexo05_personal,
     anexo06_nopatrimonial,
@@ -180,19 +182,34 @@ export function DashboardPage() {
       completado: anexo02_gestion.estado === 'completado',
     },
     {
-      id: 'anexo03',
-      tipoFirma: 'anexo03' as TipoDocumentoFirma,
-      codigo: 'Anexo 03',
-      nombre: 'Acervo Documental',
+      id: 'anexo03a',
+      tipoFirma: 'anexo03a' as TipoDocumentoFirma,
+      codigo: 'Anexo 03-A',
+      nombre: 'Acervo Documentario Físico',
       icono: Archive,
-      fuente: 'SGD / Manual',
+      fuente: 'Manual',
       colorFuente: 'bg-purple-50 text-purple-700 border-purple-200',
-      resumen: `${anexo03_acervo.total_series} series documentales registradas`,
-      detalle: 'Inventario físico de archivos y cajas de gestión',
-      ruta: '/acervo',
+      resumen: `${anexo03a_acervo_fisico.total_series} series físicas registradas`,
+      detalle: 'Archivadores, paquetes, empastados y cajas bajo custodia',
+      ruta: '/acervo-fisico',
       accion: 'Ver / Completar',
-      completado: anexo03_acervo.total_series > 0,
-      estado: anexo03_acervo.total_series > 0 ? 'Registrado' : 'Pendiente',
+      completado: anexo03a_acervo_fisico.total_series > 0,
+      estado: anexo03a_acervo_fisico.total_series > 0 ? 'Registrado' : 'Pendiente',
+    },
+    {
+      id: 'anexo03b',
+      tipoFirma: 'anexo03b' as TipoDocumentoFirma,
+      codigo: 'Anexo 03-B',
+      nombre: 'Acervo Documentario Digital',
+      icono: HardDrive,
+      fuente: 'SGD',
+      colorFuente: 'bg-purple-50 text-purple-700 border-purple-200',
+      resumen: `${anexo03b_acervo_digital.total_series} series del SGD`,
+      detalle: 'Documentos emitidos y recibidos en el SGD (solo lectura)',
+      ruta: '/acervo-digital',
+      accion: 'Ver',
+      completado: anexo03b_acervo_digital.total_series > 0,
+      estado: anexo03b_acervo_digital.total_series > 0 ? 'Precargado' : 'Sin documentos en el SGD',
     },
     {
       id: 'anexo04',
@@ -342,7 +359,7 @@ export function DashboardPage() {
         estadoEntrega={estadoEntrega}
         esEditable={esEditable}
         anexos={filasAnexos
-          .filter((a) => ['anexo02', 'anexo03', 'anexo04', 'anexo05'].includes(a.id))
+          .filter((a) => ['anexo02', 'anexo03a', 'anexo04', 'anexo05'].includes(a.id))
           .map((a) => ({ nombre: a.nombre, ruta: a.ruta, completado: a.completado }))}
       />
 

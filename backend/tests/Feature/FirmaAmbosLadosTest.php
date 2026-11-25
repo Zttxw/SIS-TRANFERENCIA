@@ -71,7 +71,7 @@ class FirmaAmbosLadosTest extends TestCase
         $this->entregaEn($this->dep);
         $this->coordinador = $this->usuario(Rol::DELEGADO_ETTE, $this->dep->id);
         $this->responsable = $this->usuario(Rol::RESPONSABLE_CENTRO_COSTO, $this->dep->id);
-        $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03', 'dependencia_id' => $this->dep->id])->assertCreated();
+        $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03a', 'dependencia_id' => $this->dep->id])->assertCreated();
     }
 
     private function usuario(Rol $rol, ?int $dependenciaId): User
@@ -88,7 +88,7 @@ class FirmaAmbosLadosTest extends TestCase
     {
         Sanctum::actingAs($operador ?? $this->responsable);
 
-        return $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo03',
+        return $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo03a',
             'dependencia_id' => $this->dep->id, 'lado' => $lado->value]);
     }
 
@@ -119,7 +119,7 @@ class FirmaAmbosLadosTest extends TestCase
     {
         Sanctum::actingAs($operador ?? $this->responsable);
 
-        return $this->postJson('/api/firmaperu/subir-manual', ['tipo_documento' => 'anexo03', 'dependencia_id' => $this->dep->id,
+        return $this->postJson('/api/firmaperu/subir-manual', ['tipo_documento' => 'anexo03a', 'dependencia_id' => $this->dep->id,
             'signed_file' => UploadedFile::fake()->createWithContent('escaneo.pdf', self::PDF.'firma-a-mano')]);
     }
 
@@ -127,7 +127,7 @@ class FirmaAmbosLadosTest extends TestCase
     {
         Sanctum::actingAs($this->responsable);
 
-        return $this->getJson('/api/firmaperu/estado/anexo03/'.$this->dep->id)->assertOk();
+        return $this->getJson('/api/firmaperu/estado/anexo03a/'.$this->dep->id)->assertOk();
     }
 
     public function test_el_coordinador_firma_en_la_sesion_del_responsable_con_su_certificado(): void
@@ -240,7 +240,7 @@ class FirmaAmbosLadosTest extends TestCase
         $this->entregaEn($hijo);
         Sanctum::actingAs($this->responsable);
 
-        $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo03', 'dependencia_id' => $hijo->id,
+        $this->postJson('/api/firmaperu/preparar', ['tipo_documento' => 'anexo03a', 'dependencia_id' => $hijo->id,
             'lado' => 'ette'])->assertForbidden();
     }
 

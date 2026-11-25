@@ -29,8 +29,8 @@ class MatrizAnexosExport implements FromArray, ShouldAutoSize, WithHeadings, Wit
     {
         return [
             'Código', 'Centro de costo', 'Nivel', 'Encargado', 'Estado entrega',
-            'A02', 'A03', 'A04', 'A05', 'A06',
-            'Obs. abiertas', 'Bienes', 'Verificados', '% Patrimonio',
+            'A02', 'A03-A', 'A03-B', 'A04', 'A05', 'A06',
+            'Obs. vigentes', 'Bienes', 'Verificados', '% Patrimonio',
         ];
     }
 
@@ -44,11 +44,12 @@ class MatrizAnexosExport implements FromArray, ShouldAutoSize, WithHeadings, Wit
             $f['encargado'] ?? '',
             ucfirst((string) $f['estado_entrega']),
             $this->etiquetaEstadoAnexo($f['anexo_02'] ?? null),
-            $this->etiquetaEstadoAnexo($f['anexo_03'] ?? null),
+            $this->etiquetaEstadoAnexo($f['anexo_03a'] ?? null),
+            $this->etiquetaEstadoAnexo($f['anexo_03b'] ?? null),
             $this->etiquetaEstadoAnexo($f['anexo_04'] ?? null),
             $this->etiquetaEstadoAnexo($f['anexo_05'] ?? null),
             $this->etiquetaEstadoAnexo($f['anexo_06'] ?? null),
-            $f['observaciones_abiertas'],
+            $f['observaciones_vigentes'],
             $f['patrimonio_total'],
             $f['patrimonio_confirmados'],
             $f['patrimonio_porcentaje'].' %',

@@ -24,7 +24,8 @@ import { ACTA_QUERY_KEY } from './use-acta'
 /** Ítems de la sección III, con su denominación oficial. */
 const ITEMS: { clave: ItemActa; nombre: string; admiteNoAplica: boolean }[] = [
   { clave: 'anexo_02', nombre: 'Anexo 02 — Informe de Gestión', admiteNoAplica: false },
-  { clave: 'anexo_03', nombre: 'Anexo 03 — Acervo Documentario', admiteNoAplica: false },
+  { clave: 'anexo_03a', nombre: 'Anexo 03-A — Acervo Documentario Físico', admiteNoAplica: false },
+  { clave: 'anexo_03b', nombre: 'Anexo 03-B — Acervo Documentario Digital (SGD)', admiteNoAplica: false },
   { clave: 'anexo_04', nombre: 'Anexo 04 — Bienes Patrimoniales', admiteNoAplica: false },
   { clave: 'anexo_05', nombre: 'Anexo 05 — Personal a cargo', admiteNoAplica: false },
   { clave: 'anexo_06', nombre: 'Anexo 06 — Bienes No Patrimoniales', admiteNoAplica: true },

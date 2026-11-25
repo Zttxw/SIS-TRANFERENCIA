@@ -24,7 +24,7 @@ class DocumentoFirmaFactory extends Factory
         return [
             'proceso_transferencia_id' => ProcesoTransferencia::factory(),
             'dependencia_id' => Dependencia::factory(),
-            'tipo_documento' => 'anexo03',
+            'tipo_documento' => 'anexo03a',
             'version' => 1,
             'contenido_sha256' => hash('sha256', 'contenido de prueba'),
         ];

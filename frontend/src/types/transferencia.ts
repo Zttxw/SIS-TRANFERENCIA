@@ -94,7 +94,10 @@ export interface EstadoEntregaResponse {
     existe: boolean
     estado: string
   }
-  anexo03_acervo: {
+  anexo03a_acervo_fisico: {
+    total_series: number
+  }
+  anexo03b_acervo_digital: {
     total_series: number
   }
   anexo04_patrimonio: {
@@ -252,7 +255,7 @@ export interface CentroConsolidado {
   remitida_por: string | null
   remitida_en: string | null
   enviado_tarde: boolean
-  anexos: { anexo02: boolean; anexo03: number; anexo04: number; anexo05: number; anexo06: number }
+  anexos: { anexo02: boolean; anexo03a: number; anexo03b: number; anexo04: number; anexo05: number; anexo06: number }
   observaciones: number
 }
 

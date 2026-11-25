@@ -11,6 +11,7 @@ use App\Modules\Acervo\Services\AcervoPdf;
 use App\Modules\Acervo\Services\AcervoService;
 use App\Modules\Acervo\Services\AcervoSgdService;
 use App\Support\Concerns\AutorizaAmbito;
+use App\Support\Enums\TipoAcervo;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,15 +27,16 @@ class AcervoController extends Controller
     ) {}
 
     /**
-     * Descarga el PDF oficial del Anexo 03 (acervo agrupado por año).
+     * Descarga el PDF oficial del Anexo 03-A (físico) o 03-B (digital SGD),
+     * con las series agrupadas por año.
      */
-    public function pdf(Request $request): StreamedResponse
+    public function pdf(Request $request, TipoAcervo $tipo): StreamedResponse
     {
         $dependenciaId = (int) $request->input('dependencia_id');
         abort_unless($dependenciaId > 0, 422, 'Debe especificar dependencia_id.');
         $this->autorizarDependencia($request->user(), $dependenciaId);
 
-        return $this->acervoPdf->descargar($dependenciaId);
+        return $this->acervoPdf->descargar($dependenciaId, $tipo);
     }
 
     public function index(Request $request): JsonResponse

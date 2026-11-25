@@ -15,13 +15,17 @@ use App\Support\Services\ContextoTransferencia;
 /**
  * Suscripción de la entrega de un CC (D-05, plan §3.1): con la entrega cerrada
  * para revisión, los anexos 02 al 07 se firman en la sesión del responsable
- * (el coordinador ETTE, presencialmente: firmar es aprobar) y, cuando los seis
+ * (el coordinador ETTE, presencialmente: firmar es aprobar) y, cuando todos
  * tienen firma vigente de ambos lados en una misma cadena, el acta queda
  * `suscrita` y la entrega pasa a `acta_suscrita`, lista para remitir.
  */
 class SuscripcionEntrega
 {
-    public const DOCUMENTOS = ['anexo02', 'anexo03', 'anexo04', 'anexo05', 'anexo06', 'anexo07'];
+    /** El acervo se firma en dos documentos: 03-A (físico) y 03-B (digital SGD). */
+    public const DOCUMENTOS = ['anexo02', 'anexo03a', 'anexo03b', 'anexo04', 'anexo05', 'anexo06', 'anexo07'];
+
+    /** Anexos que el Acta 07 encadena en su huella (todos menos ella misma). */
+    public const ANEXOS_DEL_ACTA = ['anexo02', 'anexo03a', 'anexo03b', 'anexo04', 'anexo05', 'anexo06'];
 
     public function __construct(
         private readonly CadenaFirmas $cadena,
@@ -29,6 +33,16 @@ class SuscripcionEntrega
         private readonly ContextoTransferencia $contexto,
         private readonly CronogramaService $cronograma,
     ) {}
+
+    /** Nombre legible de un tipo de documento, p. ej. «anexo03a» → «Anexo 03-A». */
+    public static function etiqueta(string $tipo): string
+    {
+        if (preg_match('/^anexo(\d{2})([ab]?)$/', $tipo, $partes) !== 1) {
+            return $tipo;
+        }
+
+        return 'Anexo '.$partes[1].($partes[2] !== '' ? '-'.strtoupper($partes[2]) : '');
+    }
 
     /**
      * Firmas que faltan por documento y por lado.

@@ -65,10 +65,10 @@ class FirmaperuSesionTest extends TestCase
     private function preparar(Dependencia $dep, ?string $previo = null): array
     {
         if (! $previo) {
-            $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id])->assertCreated();
+            $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03a', 'dependencia_id' => $dep->id])->assertCreated();
         }
 
-        return $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'anexo03',
+        return $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'anexo03a',
             'dependencia_id' => $dep->id, 'documento_previo_id' => $previo])->assertCreated()->json('data');
     }
 
@@ -109,8 +109,8 @@ class FirmaperuSesionTest extends TestCase
         Storage::disk('local')->assertExists($sesion->pdf_path);
         $this->getJson('/api/firmaperu/sesiones/'.$sesion->id)->assertOk()->assertJsonPath('data.documento_id', $sesion->id)
             ->assertJsonMissingPath('data.param_token_hash')->assertJsonMissingPath('data.pdf_path');
-        $this->getJson('/api/firmaperu/estado/anexo03/'.$dep->id)->assertOk()->assertJsonPath('data.firmado', true);
-        $this->get('/api/firmaperu/documentos/'.$sesion->id.'/descargar')->assertOk()->assertDownload('ANEXO03-firmado.pdf');
+        $this->getJson('/api/firmaperu/estado/anexo03a/'.$dep->id)->assertOk()->assertJsonPath('data.firmado', true);
+        $this->get('/api/firmaperu/documentos/'.$sesion->id.'/descargar')->assertOk()->assertDownload('ANEXO03A-firmado.pdf');
     }
 
     public function test_parametros_y_subida_no_permiten_reutilizar_token(): void
@@ -162,18 +162,18 @@ class FirmaperuSesionTest extends TestCase
         $sesion = FirmaSesion::factory()->create(['proceso_transferencia_id' => $dep->proceso_transferencia_id,
             'dependencia_id' => $ajena->id, 'estado' => 'firmada']);
 
-        $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'anexo03', 'dependencia_id' => $ajena->id])->assertForbidden();
+        $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'anexo03a', 'dependencia_id' => $ajena->id])->assertForbidden();
         $this->getJson('/api/firmaperu/sesiones/'.$sesion->id)->assertForbidden();
-        $this->getJson('/api/firmaperu/estado/anexo03/'.$ajena->id)->assertForbidden();
+        $this->getJson('/api/firmaperu/estado/anexo03a/'.$ajena->id)->assertForbidden();
         $this->getJson('/api/firmaperu/documentos/'.$sesion->id.'/descargar')->assertForbidden();
     }
 
     public function test_el_servidor_no_firma_los_anexos_de_su_oficina(): void
     {
         $dep = $this->iniciarUsuario(Rol::SERVIDOR);
-        $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id])->assertCreated();
+        $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03a', 'dependencia_id' => $dep->id])->assertCreated();
 
-        $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id])->assertForbidden();
+        $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'anexo03a', 'dependencia_id' => $dep->id])->assertForbidden();
         $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'anexo07', 'dependencia_id' => $dep->id])->assertForbidden();
         $this->assertDatabaseCount('firma_sesiones', 0);
     }
@@ -182,7 +182,7 @@ class FirmaperuSesionTest extends TestCase
     {
         $dep = $this->iniciarUsuario(Rol::ADMINISTRADOR);
 
-        $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id])->assertForbidden();
+        $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'anexo03a', 'dependencia_id' => $dep->id])->assertForbidden();
         $this->assertDatabaseCount('firma_sesiones', 0);
     }
 
@@ -213,7 +213,7 @@ class FirmaperuSesionTest extends TestCase
             ->assertUnprocessable();
 
         $this->getJson('/api/firmaperu/sesiones/'.$preparacion['sesion_id'])->assertJsonPath('data.estado', 'rechazada');
-        $this->getJson('/api/firmaperu/estado/anexo03/'.$dep->id)->assertJsonPath('data.firmado', false);
+        $this->getJson('/api/firmaperu/estado/anexo03a/'.$dep->id)->assertJsonPath('data.firmado', false);
         $this->getJson('/api/firmaperu/documentos/'.$preparacion['sesion_id'].'/descargar')->assertNotFound();
         Storage::disk('local')->assertMissing('firmaperu/'.$preparacion['sesion_id'].'/firmado.pdf');
     }
@@ -241,7 +241,7 @@ class FirmaperuSesionTest extends TestCase
         FirmaSesion::factory()->create(['proceso_transferencia_id' => $anterior->id,
             'dependencia_id' => $dep->id, 'estado' => 'firmada']);
 
-        $this->getJson('/api/firmaperu/estado/anexo03/'.$dep->id)->assertOk()->assertJsonPath('data.firmado', false);
+        $this->getJson('/api/firmaperu/estado/anexo03a/'.$dep->id)->assertOk()->assertJsonPath('data.firmado', false);
     }
 
     public function test_no_descarga_archivo_firmado_alterado_en_almacenamiento(): void
@@ -314,9 +314,9 @@ class FirmaperuSesionTest extends TestCase
 
         $id = $preparacion['sesion_id'];
         $this->getJson('/api/firmaperu/sesiones/'.$id)->assertJsonPath('data.estado', 'pendiente_validacion')->assertJsonPath('data.documento_id', null);
-        $this->getJson('/api/firmaperu/estado/anexo03/'.$dep->id)->assertJsonPath('data.firmado', false)
+        $this->getJson('/api/firmaperu/estado/anexo03a/'.$dep->id)->assertJsonPath('data.firmado', false)
             ->assertJsonPath('data.pendiente_validacion', true)->assertJsonPath('data.sesion_pendiente_id', $id);
-        $this->get('/api/firmaperu/documentos/'.$id.'/recibido')->assertOk()->assertDownload('ANEXO03-recibido-sin-verificar.pdf');
+        $this->get('/api/firmaperu/documentos/'.$id.'/recibido')->assertOk()->assertDownload('ANEXO03A-recibido-sin-verificar.pdf');
         $this->getJson('/api/firmaperu/documentos/'.$id.'/descargar')->assertNotFound();
         $this->post($this->subir($parametros), ['signed_file' => UploadedFile::fake()->createWithContent('firmado.pdf', self::PDF)])->assertConflict();
 
@@ -326,7 +326,7 @@ class FirmaperuSesionTest extends TestCase
         });
         $this->artisan('firmaperu:validar-pendientes', ['--id' => $id])->assertSuccessful();
         $this->assertDatabaseHas('firma_sesiones', ['id' => $id, 'estado' => 'firmada', 'mensaje' => null]);
-        $this->get('/api/firmaperu/documentos/'.$id.'/descargar')->assertOk()->assertDownload('ANEXO03-firmado.pdf');
+        $this->get('/api/firmaperu/documentos/'.$id.'/descargar')->assertOk()->assertDownload('ANEXO03A-firmado.pdf');
     }
 
     public function test_descarga_de_recibidos_pendientes_respeta_ambito(): void

@@ -96,18 +96,19 @@ class ReportesService
             $estadoEntrega = (string) ($dep['estado_entrega'] ?? 'borrador');
 
             $estado02 = $resolverEstadoAnexo($depId, 'anexo02', $estadoEntrega);
-            $estado03 = $resolverEstadoAnexo($depId, 'anexo03', $estadoEntrega);
+            $estado03a = $resolverEstadoAnexo($depId, 'anexo03a', $estadoEntrega);
+            $estado03b = $resolverEstadoAnexo($depId, 'anexo03b', $estadoEntrega);
             $estado04 = $resolverEstadoAnexo($depId, 'anexo04', $estadoEntrega);
             $estado05 = $resolverEstadoAnexo($depId, 'anexo05', $estadoEntrega);
             $estado06 = $resolverEstadoAnexo($depId, 'anexo06', $estadoEntrega);
 
-            $estados = [$estado02, $estado03, $estado04, $estado05, $estado06];
+            $estados = [$estado02, $estado03a, $estado03b, $estado04, $estado05, $estado06];
             $completados = count(array_filter($estados, fn ($s) => in_array($s, ['generado', 'firmado'], true)));
             $firmadosCount = count(array_filter($estados, fn ($s) => $s === 'firmado'));
 
             $porcentajeAvance = $estadoEntrega === 'consolidada'
                 ? 100
-                : (int) round(($completados / 5) * 100);
+                : (int) round(($completados / count($estados)) * 100);
 
             $encargadoNombre = null;
             if (! empty($dep['encargado']) && is_array($dep['encargado'])) {
@@ -124,14 +125,15 @@ class ReportesService
                 'encargado' => $encargadoNombre,
                 'estado_entrega' => $estadoEntrega,
                 'anexo_02' => $estado02,
-                'anexo_03' => $estado03,
+                'anexo_03a' => $estado03a,
+                'anexo_03b' => $estado03b,
                 'anexo_04' => $estado04,
                 'anexo_05' => $estado05,
                 'anexo_06' => $estado06,
                 'anexos_completados' => $completados,
                 'anexos_firmados' => $firmadosCount,
                 'porcentaje_avance' => $porcentajeAvance,
-                'observaciones_abiertas' => (int) ($dep['observaciones_abiertas'] ?? 0),
+                'observaciones_vigentes' => (int) ($dep['observaciones'] ?? 0),
                 'patrimonio_total' => (int) ($dep['patrimonio_total'] ?? 0),
                 'patrimonio_confirmados' => (int) ($dep['patrimonio_confirmados'] ?? 0),
                 'patrimonio_porcentaje' => (float) ($dep['patrimonio_porcentaje'] ?? 0),
@@ -141,7 +143,7 @@ class ReportesService
         $totalDeps = count($filas);
         $consolidadasCount = (int) ($tablero['metricas']['consolidadas'] ?? count(array_filter($filas, fn ($f) => $f['estado_entrega'] === 'consolidada')));
         $remitidasCount = (int) ($tablero['metricas']['remitidas'] ?? count(array_filter($filas, fn ($f) => $f['estado_entrega'] === 'remitida')));
-        $observadasCount = (int) ($tablero['metricas']['observadas'] ?? count(array_filter($filas, fn ($f) => $f['estado_entrega'] === 'observada' || ($f['observaciones_abiertas'] ?? 0) > 0)));
+        $observadasCount = count(array_filter($filas, fn (array $f): bool => $f['observaciones_vigentes'] > 0));
         $borradorCount = (int) ($tablero['metricas']['borrador'] ?? count(array_filter($filas, fn ($f) => in_array($f['estado_entrega'], ['borrador', null, ''], true))));
         $porcentajeAvanceGlobal = $totalDeps > 0 ? (float) round(($consolidadasCount / $totalDeps) * 100, 1) : 0.0;
 
@@ -209,96 +211,50 @@ class ReportesService
     }
 
     /**
-     * Reporte 3 — Observaciones por dependencia. Pliego de observaciones con su
-     * estado y, para las subsanadas, los días que tomó la subsanación.
+     * Reporte 3 — Observaciones del coordinador ETTE por centro de costo (D-07,
+     * D-13). Son constancia: no se subsanan; solo pueden estar registradas
+     * (vigentes, figuran en el Acta 07) o retiradas durante la revisión.
      *
      * @param  list<int>|null  $dependenciaIds
-     * @return array{generado_en: string, resumen: array<string, int>, filas: list<array<string, mixed>>}
+     * @return array{generado_en: string, resumen: array{total: int, registradas: int, retiradas: int, centros_observados: int}, filas: list<array<string, mixed>>}
      */
     public function observaciones(?array $dependenciaIds = null): array
     {
-        $procesoId = $this->procesoActivoId();
-
-        // Mapa dependencia_id → código/nombre dentro del ámbito.
-        $depQuery = Dependencia::query()->where('proceso_transferencia_id', $procesoId);
-        if ($dependenciaIds !== null) {
-            $depQuery->whereIn('id', $dependenciaIds);
-        }
-        $deps = $depQuery->get(['id', 'codigo', 'nombre'])->keyBy('id');
-
         $observaciones = Observacion::query()
-            ->with('autor')
-            ->where('proceso_transferencia_id', $procesoId)
+            ->with(['autor:id,name', 'registradaPor:id,name', 'dependencia:id,codigo,nombre'])
+            ->where('proceso_transferencia_id', $this->procesoActivoId())
+            ->when($dependenciaIds !== null, fn ($query) => $query->whereIn('dependencia_id', $dependenciaIds))
             ->orderBy('created_at')
-            ->get();
+            ->orderBy('id')
+            ->get()
+            ->filter(fn (Observacion $observacion): bool => $observacion->dependencia !== null);
 
-        $resumen = ['abiertas' => 0, 'en_subsanacion' => 0, 'subsanadas' => 0, 'desestimadas' => 0];
-        $filas = [];
-
-        foreach ($observaciones as $obs) {
-            $modelo = $obs->observable_type;
-            if (! class_exists($modelo)) {
-                continue;
-            }
-            $depId = $modelo::where('id', $obs->observable_id)->value('dependencia_id');
-            $dep = $depId ? $deps->get($depId) : null;
-
-            // Fuera del ámbito del usuario: la observación no pertenece a una
-            // dependencia visible, se omite.
-            if ($dep === null) {
-                continue;
-            }
-
-            $this->contarEstado($resumen, $obs->estado);
-
-            $dias = null;
-            if ($obs->estado === EstadoObservacion::SUBSANADA && $obs->subsanada_en) {
-                $dias = (int) $obs->created_at->diffInDays($obs->subsanada_en);
-            }
-
-            $filas[] = [
-                'dependencia_id' => $dep->id,
-                'codigo' => $dep->codigo,
-                'nombre' => $dep->nombre,
-                'anexo' => $this->etiquetaAnexo($modelo),
-                'descripcion' => $obs->descripcion,
-                'estado' => $obs->estado->value,
-                'estado_etiqueta' => $obs->estado->etiqueta(),
-                'autor' => $obs->autor?->name,
-                'registrada_en' => $obs->created_at?->format('d/m/Y'),
-                'dias_subsanacion' => $dias,
-            ];
-        }
+        $vigentes = $observaciones->where('estado', EstadoObservacion::REGISTRADA);
 
         return [
             'generado_en' => Carbon::now()->format('d/m/Y H:i'),
-            'resumen' => $resumen,
-            'filas' => $filas,
+            'resumen' => [
+                'total' => $observaciones->count(),
+                'registradas' => $vigentes->count(),
+                'retiradas' => $observaciones->count() - $vigentes->count(),
+                'centros_observados' => $vigentes->pluck('dependencia_id')->unique()->count(),
+            ],
+            'filas' => $observaciones->map(fn (Observacion $observacion): array => [
+                'id' => $observacion->id,
+                'dependencia_id' => $observacion->dependencia_id,
+                'codigo' => $observacion->dependencia->codigo,
+                'nombre' => $observacion->dependencia->nombre,
+                'anexo' => $observacion->etiquetaAnexo(),
+                'detalle' => $observacion->observable_id === null ? 'Anexo completo' : 'Registro N° '.$observacion->observable_id,
+                'descripcion' => $observacion->descripcion,
+                'estado' => $observacion->estado->value,
+                'estado_etiqueta' => $observacion->estado->etiqueta(),
+                'autor' => $observacion->autor?->name,
+                'en_calidad_de' => $observacion->en_calidad_de?->etiqueta(),
+                'registrada_por' => $observacion->registradaPor?->name,
+                'registrada_en' => $observacion->created_at?->format('d/m/Y'),
+            ])->values()->all(),
         ];
-    }
-
-    /** @param array<string, int> $resumen */
-    private function contarEstado(array &$resumen, EstadoObservacion $estado): void
-    {
-        match ($estado) {
-            EstadoObservacion::ABIERTA => $resumen['abiertas']++,
-            EstadoObservacion::EN_SUBSANACION => $resumen['en_subsanacion']++,
-            EstadoObservacion::SUBSANADA => $resumen['subsanadas']++,
-            EstadoObservacion::DESESTIMADA => $resumen['desestimadas']++,
-        };
-    }
-
-    /** Etiqueta legible del anexo a partir del modelo observable. */
-    private function etiquetaAnexo(string $modelo): string
-    {
-        return match (class_basename($modelo)) {
-            'InformeGestion' => 'Anexo 02 — Informe de Gestión',
-            'AcervoDocumental' => 'Anexo 03 — Acervo',
-            'BienPatrimonial' => 'Anexo 04 — Patrimonio',
-            'Personal' => 'Anexo 05 — Personal',
-            'BienNoPatrimonial' => 'Anexo 06 — No Patrimonial',
-            default => class_basename($modelo),
-        };
     }
 
     private function procesoActivoId(): int

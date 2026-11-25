@@ -31,12 +31,12 @@
         @include('pdf.partials.anexo02', ['informe' => $anexo02['informe'], 'nivelCheck' => $anexo02['nivelCheck']])
     @endif
 
-    {{-- Anexo 03 --}}
-    @if (isset($anexo03))
+    {{-- Anexos 03-A (acervo físico) y 03-B (acervo digital SGD) --}}
+    @foreach ($acervo ?? [] as $anexo03)
         <div class="salto-pagina"></div>
-        <div class="titulo-anexo-interno">Anexo 03 — Registro del Acervo Documentario</div>
-        @include('pdf.partials.anexo03', ['cabecera' => $anexo03['cabecera'], 'secciones' => $anexo03['secciones']])
-    @endif
+        <div class="titulo-anexo-interno">{{ $anexo03['titulo'] }}</div>
+        @include('pdf.partials.anexo03', ['cabecera' => $anexo03['cabecera'], 'columnaCantidad' => $anexo03['columna_cantidad'], 'grupos' => $anexo03['grupos']])
+    @endforeach
 
     {{-- Anexo 04 --}}
     @if (isset($anexo04))

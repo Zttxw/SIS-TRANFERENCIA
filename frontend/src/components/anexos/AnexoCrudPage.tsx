@@ -1,18 +1,17 @@
 import { useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 
 import { Can } from '@/auth/Can'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { DataTable, type ColumnaTabla } from '@/components/ui/data-table'
-import { Input } from '@/components/ui/input'
 import type { Permiso } from '@/auth/permisos'
 import type { PaginationMeta } from '@/types/api'
 import type { ClaveAnexoObservable } from '@/types/observaciones'
 import type { EstadoEntrega } from '@/types/transferencia'
 import { AnexoLayout, type DependenciaResumenAnexo } from './AnexoLayout'
+import { BarraBusquedaAnexo } from './BarraBusquedaAnexo'
 
 /** Props del modal de alta/edición que renderiza el patrón. */
 export interface RenderModalArgs<T> {
@@ -96,7 +95,7 @@ interface AnexoCrudPageProps<T> {
 }
 
 /**
- * Patrón declarativo para los anexos de listado (03, 05, 06, documentos…).
+ * Patrón declarativo para los anexos de listado (03-A, 05, 06, documentos…).
  * Recibe columnas, filtros, datos y el modal; aplica por sí mismo:
  *  - el marco de anexo (`AnexoLayout`: header, chip, alerta de bloqueo, panel),
  *  - el bloqueo por estado de entrega (`esModificable` → botones deshabilitados),
@@ -230,22 +229,7 @@ export function AnexoCrudPage<T>({
     >
       {/* Barra de búsqueda + filtros */}
       {aviso}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={placeholderBusqueda}
-                value={busqueda}
-                onChange={(e) => onBuscar(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            {filtrosExtra && <div className="flex flex-wrap items-center gap-2">{filtrosExtra}</div>}
-          </div>
-        </CardContent>
-      </Card>
+      <BarraBusquedaAnexo busqueda={busqueda} onBuscar={onBuscar} placeholder={placeholderBusqueda} filtrosExtra={filtrosExtra} />
 
       {/* Cuerpo: vista alternativa (si se pasa) o la tabla por defecto */}
       {vistaAlternativa ? (

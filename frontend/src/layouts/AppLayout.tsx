@@ -46,7 +46,8 @@ export function AppLayout() {
   const rutasAnexos = [
     '/organigrama',
     '/gestion',
-    '/acervo',
+    '/acervo-fisico',
+    '/acervo-digital',
     '/patrimonio',
     '/personal',
     '/nopatrimonial',

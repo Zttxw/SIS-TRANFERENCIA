@@ -36,25 +36,26 @@ class FirmaperuPdfTest extends TestCase
 
     public static function anexosDisponibles(): array
     {
-        return ['centros de costo' => ['anexo01'], 'informe' => ['anexo02'], 'acervo' => ['anexo03'], 'patrimonio' => ['anexo04'],
+        return ['centros de costo' => ['anexo01'], 'informe' => ['anexo02'], 'acervo físico' => ['anexo03a'], 'acervo digital' => ['anexo03b'], 'patrimonio' => ['anexo04'],
             'personal' => ['anexo05'], 'no patrimonial' => ['anexo06']];
     }
 
-    public function test_pdf_de_acervo_excluye_registros_de_otro_proceso_y_dependencia(): void
+    public function test_pdf_del_acervo_fisico_excluye_series_digitales_de_otro_proceso_y_dependencia(): void
     {
         $proceso = ProcesoTransferencia::factory()->create();
         $otroProceso = ProcesoTransferencia::factory()->create(['estado' => 'cerrado']);
         $dependencia = Dependencia::factory()->create(['proceso_transferencia_id' => $proceso->id]);
         $otraDependencia = Dependencia::factory()->create(['proceso_transferencia_id' => $proceso->id]);
         foreach ([
-            [$proceso->id, $dependencia->id, 'SERIE CORRECTA'],
-            [$otroProceso->id, $dependencia->id, 'OTRO PROCESO'],
-            [$proceso->id, $otraDependencia->id, 'OTRA OFICINA'],
-        ] as [$procesoId, $dependenciaId, $serie]) {
+            [$proceso->id, $dependencia->id, 'SERIE CORRECTA', 'fisico'],
+            [$proceso->id, $dependencia->id, 'SERIE DEL SGD', 'digital'],
+            [$otroProceso->id, $dependencia->id, 'OTRO PROCESO', 'fisico'],
+            [$proceso->id, $otraDependencia->id, 'OTRA OFICINA', 'fisico'],
+        ] as [$procesoId, $dependenciaId, $serie, $tipo]) {
             AcervoDocumental::create([
                 'proceso_transferencia_id' => $procesoId,
                 'dependencia_id' => $dependenciaId,
-                'tipo' => 'fisico',
+                'tipo' => $tipo,
                 'serie_documental' => $serie,
                 'anio' => 2026,
                 'folios' => 1,
@@ -62,8 +63,7 @@ class FirmaperuPdfTest extends TestCase
         }
         $this->mock(PdfService::class, function (MockInterface $mock): void {
             $mock->shouldReceive('binario')->once()->withArgs(function (string $vista, array $datos): bool {
-                $series = collect($datos['secciones'])->flatMap(fn (array $seccion): array => $seccion['grupos'])
-                    ->flatMap(fn (array $grupo): array => $grupo['series']);
+                $series = collect($datos['grupos'])->flatMap(fn (array $grupo): array => $grupo['series']);
                 $this->assertSame(['SERIE CORRECTA'], $series->pluck('serie_documental')->all());
                 $this->assertTrue($datos['contexto']['es_borrador']);
 
@@ -71,7 +71,7 @@ class FirmaperuPdfTest extends TestCase
             })->andReturn('%PDF-prueba');
         });
 
-        $pdf = app(FirmaperuPdfService::class)->generar('anexo03', $dependencia->id, User::factory()->make());
+        $pdf = app(FirmaperuPdfService::class)->generar('anexo03a', $dependencia->id, User::factory()->make());
 
         $this->assertSame('%PDF-prueba', $pdf);
     }

@@ -23,6 +23,7 @@ use Database\Seeders\RolesPermisosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tests\TestCase;
 
 /**
@@ -68,7 +69,9 @@ class AnexosPdfTest extends TestCase
         $this->assertStringStartsWith('%PDF', $r->streamedContent());
     }
 
-    public function test_pdf_anexo_03_acervo(): void
+    #[TestWith(['fisico'])]
+    #[TestWith(['digital'])]
+    public function test_pdf_anexo_03a_y_03b_acervo(string $tipo): void
     {
         $this->actuar(Rol::SERVIDOR);
         AcervoDocumental::create([
@@ -81,7 +84,7 @@ class AnexosPdfTest extends TestCase
             'unidad_conservacion' => 'Cajas Archivadoras',
         ]);
 
-        $this->assertEsPdf($this->get("/api/acervo/pdf?dependencia_id={$this->dep->id}"));
+        $this->assertEsPdf($this->get("/api/acervo/{$tipo}/pdf?dependencia_id={$this->dep->id}"));
     }
 
     public function test_pdf_anexo_04_patrimonio_por_servidor(): void

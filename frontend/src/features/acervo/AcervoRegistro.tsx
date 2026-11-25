@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react'
-import { ChevronDown, FolderArchive, HardDrive, Pencil, Trash2 } from 'lucide-react'
+import { ChevronDown, Pencil, Trash2 } from 'lucide-react'
 
 import { Can } from '@/auth/Can'
 import { UsuarioRegistro } from '@/components/anexos/UsuarioRegistro'
@@ -12,18 +12,19 @@ interface Props {
   registro: AcervoDocumental
   esModificable: boolean
   eliminando?: boolean
-  onEditar: (registro: AcervoDocumental) => void
-  onEliminar: (registro: AcervoDocumental) => void
+  /** Solo las series físicas (Anexo 03-A) se editan y eliminan. */
+  onEditar?: (registro: AcervoDocumental) => void
+  onEliminar?: (registro: AcervoDocumental) => void
 }
 
 const COLUMNAS = 7
 
 interface CabeceraProps {
-  /** Rótulo de la columna de volumen; en la lista mixta se usa uno genérico. */
-  etiquetaCantidad?: string
+  /** Rótulo de la columna de volumen: folios (03-A) o documentos (03-B). */
+  etiquetaCantidad: string
 }
 
-export function AcervoCabecera({ etiquetaCantidad = 'Cantidad' }: CabeceraProps) {
+export function AcervoCabecera({ etiquetaCantidad }: CabeceraProps) {
   return (
     <thead className="border-b bg-muted/40 text-left text-xs font-medium text-muted-foreground">
       <tr>
@@ -40,13 +41,12 @@ export function AcervoCabecera({ etiquetaCantidad = 'Cantidad' }: CabeceraProps)
 }
 
 /**
- * Fila del Anexo 03. Las series del SGD (sección A) son de solo lectura y
- * despliegan sus documentos en vivo; las físicas (sección B) se editan.
+ * Fila del acervo. Las series del SGD (Anexo 03-B) son de solo lectura y
+ * despliegan sus documentos en vivo; las físicas (Anexo 03-A) se editan.
  */
 export function AcervoRegistro({ registro, esModificable, eliminando, onEditar, onEliminar }: Props) {
   const [abierto, setAbierto] = useState(false)
   const delSgd = registro.fuente === 'sgd'
-  const Icono = delSgd ? HardDrive : FolderArchive
   const detalleId = `acervo-detalle-${registro.id}`
   const cantidad = delSgd ? registro.numero_documentos : registro.folios
 
@@ -61,13 +61,7 @@ export function AcervoRegistro({ registro, esModificable, eliminando, onEditar, 
           ) : (
             <span className="text-xs font-medium text-foreground">{registro.serie_documental}</span>
           )}
-          <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-mini text-muted-foreground">
-            <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium', delSgd ? 'bg-info-soft text-info-fg' : 'bg-muted text-muted-foreground')}>
-              <Icono className="h-3 w-3 shrink-0" />
-              {delSgd ? 'A · Digital SGD' : 'B · Físico'}
-            </span>
-            <span className="sm:hidden">{registro.anio ?? 'Sin año'}</span>
-          </p>
+          <p className="mt-1 text-mini text-muted-foreground sm:hidden">{registro.anio ?? 'Sin año'}</p>
         </td>
         <td className="hidden p-3 text-xs text-muted-foreground sm:table-cell">{registro.anio ?? '—'}</td>
         <td className="p-3 text-right text-xs">
@@ -85,7 +79,7 @@ export function AcervoRegistro({ registro, esModificable, eliminando, onEditar, 
               <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:bg-muted hover:text-foreground" onClick={() => setAbierto(!abierto)} aria-expanded={abierto} aria-controls={detalleId} aria-label={abierto ? 'Ocultar documentos' : 'Ver documentos'}>
                 <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', abierto && 'rotate-180')} />
               </Button>
-            ) : (
+            ) : onEditar && onEliminar && (
               <Can permiso="anexos.registrar">
                 <Button type="button" size="sm" className="h-8 gap-1.5 border border-primary bg-primary px-2 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary-hover sm:px-3" disabled={!esModificable} onClick={() => onEditar(registro)} aria-label={`Editar ${registro.serie_documental}`}>
                   <Pencil className="h-3.5 w-3.5" />

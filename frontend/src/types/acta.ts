@@ -17,7 +17,7 @@ export interface IntervinientesActa {
 }
 
 /** Ítems de la sección III del Acta 07. */
-export type ItemActa = 'anexo_02' | 'anexo_03' | 'anexo_04' | 'anexo_05' | 'anexo_06' | 'otros'
+export type ItemActa = 'anexo_02' | 'anexo_03a' | 'anexo_03b' | 'anexo_04' | 'anexo_05' | 'anexo_06' | 'otros'
 
 export type CondicionAnexoActa = 'entregado' | 'no_entregado' | 'no_aplica'
 

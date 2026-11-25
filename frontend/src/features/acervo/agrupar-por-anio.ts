@@ -1,5 +1,4 @@
-import { SECCIONES_ACERVO } from '@/lib/catalogos'
-import type { AcervoDocumental, TipoAcervo } from '@/types/acervo'
+import type { AcervoDocumental } from '@/types/acervo'
 
 export interface GrupoAnio {
   /** Año de agrupación, o null para «sin año declarado». */
@@ -7,12 +6,6 @@ export interface GrupoAnio {
   /** Etiqueta legible del grupo (p. ej. «2024» o «Sin año»). */
   etiqueta: string
   series: AcervoDocumental[]
-}
-
-export interface SeccionAcervo {
-  tipo: TipoAcervo
-  titulo: string
-  grupos: GrupoAnio[]
 }
 
 /**
@@ -39,19 +32,4 @@ export function agruparAcervoPorAnio(series: AcervoDocumental[]): GrupoAnio[] {
       if (b.anio === null) return -1
       return b.anio - a.anio
     })
-}
-
-/**
- * Estructura del formato oficial del Anexo 03: sección A (digital, SGD) y
- * sección B (física), cada una con sus bloques por año. Omite las secciones
- * sin series.
- */
-export function agruparAcervoPorSeccion(series: AcervoDocumental[]): SeccionAcervo[] {
-  return SECCIONES_ACERVO
-    .map(({ value, label }) => ({
-      tipo: value,
-      titulo: label,
-      grupos: agruparAcervoPorAnio(series.filter((serie) => serie.tipo === value)),
-    }))
-    .filter((seccion) => seccion.grupos.length > 0)
 }

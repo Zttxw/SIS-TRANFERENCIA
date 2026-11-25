@@ -11,6 +11,7 @@ use App\Support\Concerns\HasFuenteDato;
 use App\Support\Concerns\TieneEvidencias;
 use App\Support\Concerns\TieneObservaciones;
 use App\Support\Enums\FuenteDato;
+use App\Support\Enums\TipoAcervo;
 use App\Support\Models\BaseModel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -18,22 +19,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * Serie del acervo documentario (Anexo 03). La sección A reúne las series
- * digitales que se precargan del SGD (tipo documental + emitidos/recibidos),
- * medidas en número de documentos; la sección B, las series físicas que el
- * centro de costo registra a mano, medidas en folios. Cada fila es de un año.
+ * Serie del acervo documentario. Las físicas (Anexo 03-A) las registra a mano
+ * el centro de costo, medidas en folios; las digitales (Anexo 03-B) se
+ * precargan del SGD (tipo documental + emitidos/recibidos), medidas en número
+ * de documentos. Cada fila es de un año.
  *
- * @property string $tipo
+ * @property TipoAcervo $tipo
  */
 class AcervoDocumental extends BaseModel
 {
     use Auditable, HasFuenteDato, SoftDeletes, TieneEvidencias, TieneObservaciones;
 
     protected $table = 'acervo_documental';
-
-    public const TIPO_DIGITAL = 'digital';
-
-    public const TIPO_FISICO = 'fisico';
 
     public const UNIDAD_ARCHIVO_DIGITAL = 'Archivo Digital';
 
@@ -59,6 +56,7 @@ class AcervoDocumental extends BaseModel
             'anio' => 'integer',
             'folios' => 'integer',
             'numero_documentos' => 'integer',
+            'tipo' => TipoAcervo::class,
         ];
     }
 
@@ -85,14 +83,8 @@ class AcervoDocumental extends BaseModel
     }
 
     /** @param  Builder<static>  $query */
-    public function scopeFisico(Builder $query): Builder
+    public function scopeDelTipo(Builder $query, TipoAcervo $tipo): Builder
     {
-        return $query->where('tipo', self::TIPO_FISICO);
-    }
-
-    /** @param  Builder<static>  $query */
-    public function scopeDigital(Builder $query): Builder
-    {
-        return $query->where('tipo', self::TIPO_DIGITAL);
+        return $query->where('tipo', $tipo->value);
     }
 }

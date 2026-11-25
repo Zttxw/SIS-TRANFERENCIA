@@ -7,8 +7,8 @@ namespace App\Modules\Acervo\Requests;
 use App\Support\Http\AnexoFormRequest;
 
 /**
- * Serie física (sección B del Anexo 03). Las series digitales de la sección A
- * se precargan del SGD y no se registran por esta vía.
+ * Serie física (Anexo 03-A). Las series digitales (Anexo 03-B) se precargan
+ * del SGD y no se registran por esta vía.
  */
 class GuardarAcervoRequest extends AnexoFormRequest
 {

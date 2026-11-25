@@ -8,6 +8,7 @@ import {
   FileText,
   FolderOpen,
   FolderTree,
+  HardDrive,
   Inbox,
   LayoutDashboard,
   type LucideIcon,
@@ -67,9 +68,15 @@ export const ITEMS_NAV: ItemNav[] = [
         permiso: PERMISOS.VerAnexos,
       },
       {
-        etiqueta: 'Anexo 03 · Acervo',
-        ruta: '/acervo',
+        etiqueta: 'Anexo 03-A · Acervo físico',
+        ruta: '/acervo-fisico',
         icono: Archive,
+        permiso: PERMISOS.VerAnexos,
+      },
+      {
+        etiqueta: 'Anexo 03-B · Acervo digital',
+        ruta: '/acervo-digital',
+        icono: HardDrive,
         permiso: PERMISOS.VerAnexos,
       },
       {

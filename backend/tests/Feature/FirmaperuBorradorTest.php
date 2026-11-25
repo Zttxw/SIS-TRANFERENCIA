@@ -59,23 +59,23 @@ class FirmaperuBorradorTest extends TestCase
     {
         $dep = $this->iniciarUsuario();
 
-        $this->getJson('/api/firmaperu/estado/anexo03/'.$dep->id)
+        $this->getJson('/api/firmaperu/estado/anexo03a/'.$dep->id)
             ->assertOk()->assertJsonPath('data.borrador_generado', false)
             ->assertJsonPath('data.borrador_generado_en', null);
 
-        $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id])
+        $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03a', 'dependencia_id' => $dep->id])
             ->assertCreated()->assertJsonPath('data.borrador_generado', true);
 
         $this->assertDatabaseCount('firma_borradores', 1);
         $borrador = FirmaBorrador::firstOrFail();
         Storage::disk('local')->assertExists($borrador->pdf_path);
 
-        $this->getJson('/api/firmaperu/estado/anexo03/'.$dep->id)
+        $this->getJson('/api/firmaperu/estado/anexo03a/'.$dep->id)
             ->assertOk()->assertJsonPath('data.borrador_generado', true)
             ->assertJsonPath('data.version', null);
 
         // Re-generar sobrescribe: sigue siendo una sola fila, no versiona.
-        $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id])
+        $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03a', 'dependencia_id' => $dep->id])
             ->assertCreated();
         $this->assertDatabaseCount('firma_borradores', 1);
         $this->assertDatabaseCount('documentos_firma', 0);
@@ -95,7 +95,7 @@ class FirmaperuBorradorTest extends TestCase
         $dep = $this->iniciarUsuario();
         $ajena = Dependencia::factory()->create(['proceso_transferencia_id' => $dep->proceso_transferencia_id]);
 
-        $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03', 'dependencia_id' => $ajena->id])
+        $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03a', 'dependencia_id' => $ajena->id])
             ->assertForbidden();
         $this->assertDatabaseCount('firma_borradores', 0);
     }
@@ -113,16 +113,16 @@ class FirmaperuBorradorTest extends TestCase
         $dep = $this->iniciarUsuario();
 
         // Sin borrador: previsualizar genera al vuelo.
-        $this->get('/api/firmaperu/previsualizar?tipo_documento=anexo03&dependencia_id='.$dep->id)
+        $this->get('/api/firmaperu/previsualizar?tipo_documento=anexo03a&dependencia_id='.$dep->id)
             ->assertOk()->assertHeader('Content-Type', 'application/pdf')
-            ->assertHeader('Content-Disposition', 'inline; filename="Previsualizacion-anexo03.pdf"');
+            ->assertHeader('Content-Disposition', 'inline; filename="Previsualizacion-anexo03a.pdf"');
 
         // Con borrador: previsualizar sirve el archivo persistido (nombre Borrador-*).
-        $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id])
+        $this->postJson('/api/firmaperu/generar-borrador', ['tipo_documento' => 'anexo03a', 'dependencia_id' => $dep->id])
             ->assertCreated();
-        $this->get('/api/firmaperu/previsualizar?tipo_documento=anexo03&dependencia_id='.$dep->id)
+        $this->get('/api/firmaperu/previsualizar?tipo_documento=anexo03a&dependencia_id='.$dep->id)
             ->assertOk()->assertHeader('Content-Type', 'application/pdf')
-            ->assertHeader('Content-Disposition', 'inline; filename="Generado-anexo03.pdf"');
+            ->assertHeader('Content-Disposition', 'inline; filename="Generado-anexo03a.pdf"');
     }
 
     public function test_firma_el_mismo_pdf_del_borrador_revisado(): void
@@ -133,7 +133,7 @@ class FirmaperuBorradorTest extends TestCase
         $this->mock(FirmaperuAuthService::class, function (MockInterface $mock): void {
             $mock->shouldReceive('obtenerJwtToken')->andReturn('jwt-de-prueba');
         });
-        $datos = ['tipo_documento' => 'anexo03', 'dependencia_id' => $dep->id];
+        $datos = ['tipo_documento' => 'anexo03a', 'dependencia_id' => $dep->id];
         $this->postJson('/api/firmaperu/generar-borrador', $datos)->assertCreated();
         $this->postJson('/api/firmaperu/preparar', [...$datos, 'lado' => 'entidad'])->assertCreated();
         $sesion = FirmaSesion::firstOrFail();

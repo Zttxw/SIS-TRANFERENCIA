@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   Archive,
+  HardDrive,
   ArrowRight,
   Boxes,
   Building2,
@@ -192,10 +193,10 @@ export function DespachoPersonalView() {
                 Acervo Documentario
               </p>
               <p className="text-2xl font-bold font-mono text-indigo-600 mt-1">
-                {estadoData?.anexo03_acervo?.total_series ?? 0}
+                {(estadoData?.anexo03a_acervo_fisico?.total_series ?? 0) + (estadoData?.anexo03b_acervo_digital?.total_series ?? 0)}
               </p>
               <p className="text-nota text-muted-foreground mt-0.5">
-                Series documentales inventariadas
+                Series físicas (03-A) y del SGD (03-B)
               </p>
             </div>
             <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600">
@@ -330,7 +331,7 @@ export function DespachoPersonalView() {
       {/* ========================================================
           ACCESOS DIRECTOS A LOS ANEXOS DE TRANSFERENCIA
           ======================================================== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Anexo 04 */}
         <Card
           onClick={() => navigate('/patrimonio')}
@@ -373,26 +374,30 @@ export function DespachoPersonalView() {
           </CardContent>
         </Card>
 
-        {/* Anexo 03 */}
-        <Card
-          onClick={() => navigate('/acervo')}
-          className="border shadow-xs hover:border-primary/50 transition-all cursor-pointer group"
-        >
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                <Archive className="h-5 w-5" />
+        {/* Anexos 03-A y 03-B */}
+        {[
+          { ruta: '/acervo-fisico', Icono: Archive, titulo: 'Anexo 03-A · Acervo físico', detalle: 'Archivadores, paquetes y cajas bajo custodia' },
+          { ruta: '/acervo-digital', Icono: HardDrive, titulo: 'Anexo 03-B · Acervo digital', detalle: 'Documentos emitidos y recibidos en el SGD' },
+        ].map(({ ruta, Icono, titulo, detalle }) => (
+          <Card
+            key={ruta}
+            onClick={() => navigate(ruta)}
+            className="border shadow-xs hover:border-primary/50 transition-all cursor-pointer group"
+          >
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                  <Icono className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-foreground">{titulo}</p>
+                  <p className="text-nota text-muted-foreground mt-0.5">{detalle}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-bold text-foreground">Anexo 03 · Acervo Documentario</p>
-                <p className="text-nota text-muted-foreground mt-0.5">
-                  Inventario físico de archivadores y cajas
-                </p>
-              </div>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-indigo-600 transition-colors" />
-          </CardContent>
-        </Card>
+              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-indigo-600 transition-colors" />
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   )

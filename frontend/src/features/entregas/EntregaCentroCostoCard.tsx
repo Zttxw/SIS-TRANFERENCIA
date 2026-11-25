@@ -223,7 +223,7 @@ export function EntregaCentroCostoCard({ estado }: { estado: EstadoEntregaRespon
           <p className="text-xs text-muted-foreground">
             {actual === 'borrador' && 'Complete los anexos 02 al 06 y ciérrelos para la revisión y firma con el coordinador ETTE.'}
             {actual === 'en_revision' &&
-              `Con el coordinador presente, registre sus observaciones en cada anexo y firmen ambos los anexos 02 al 07 en «PDF y firma» (con ambas firmas: ${firmas?.firmados ?? 0}/6).`}
+              `Con el coordinador presente, registre sus observaciones en cada anexo y firmen ambos los anexos 02 al 07 en «PDF y firma» (con ambas firmas: ${firmas?.firmados ?? 0}/7).`}
             {actual === 'acta_suscrita' && 'Los anexos 02 al 07 tienen ambas firmas. Puede remitir la entrega.'}
             {remitida &&
               (actual === 'remitida'

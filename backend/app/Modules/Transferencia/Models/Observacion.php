@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Transferencia\Models;
 
 use App\Models\User;
+use App\Modules\Acervo\Models\AcervoDocumental;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Services\ObservacionService;
 use App\Support\Concerns\Auditable;
@@ -63,7 +64,9 @@ class Observacion extends BaseModel
             if ($observacion->observable_type === null) {
                 return;
             }
-            $observacion->anexo ??= array_search($observacion->observable_type, ObservacionService::anexosObservables(), true) ?: null;
+            $observacion->anexo ??= $observacion->observable instanceof AcervoDocumental
+                ? $observacion->observable->tipo->claveObservacion()
+                : (array_search($observacion->observable_type, ObservacionService::anexosObservables(), true) ?: null);
             $observacion->dependencia_id ??= $observacion->observable?->dependencia_id;
         });
     }
@@ -73,7 +76,8 @@ class Observacion extends BaseModel
     {
         return match ($this->anexo) {
             'gestion' => 'Anexo 02 — Informe de Gestión',
-            'acervo' => 'Anexo 03 — Acervo',
+            'acervo_fisico' => 'Anexo 03-A — Acervo físico',
+            'acervo_digital' => 'Anexo 03-B — Acervo digital (SGD)',
             'patrimonio' => 'Anexo 04 — Patrimonio',
             'personal' => 'Anexo 05 — Personal',
             'nopatrimonial' => 'Anexo 06 — No Patrimonial',

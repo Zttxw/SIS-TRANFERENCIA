@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Acervo\Services;
 
 /**
- * Referencia de origen de una serie digital del SGD (sección A del Anexo 03):
+ * Referencia de origen de una serie digital del SGD (Anexo 03-B):
  * - emitidos:  `TDTV_REMITOS CO_DEP_EMI=00025,00092 CO_TIP_DOC_ADM=011 NU_ANN=2026`
  * - recibidos: `TDTV_DESTINOS CO_DEP_DES=00025 CO_TIP_DOC_ADM=011 NU_ANN=2026`
  *

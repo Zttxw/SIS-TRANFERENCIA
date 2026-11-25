@@ -18,6 +18,7 @@ use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Enums\AccionPlazo;
 use App\Support\Enums\EstadoEntrega;
 use App\Support\Enums\EstadoVerificacionBien;
+use App\Support\Enums\TipoAcervo;
 use App\Support\Http\ApiResponse;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -207,10 +208,12 @@ class TransferenciaService
             ->where('proceso_transferencia_id', $procesoId)
             ->first();
 
-        // Estado Anexo 03 (Acervo)
-        $totalAcervo = AcervoDocumental::where('dependencia_id', $dependenciaId)
+        // Estado Anexos 03-A (acervo físico) y 03-B (acervo digital SGD)
+        $seriesAcervo = AcervoDocumental::where('dependencia_id', $dependenciaId)
             ->where('proceso_transferencia_id', $procesoId)
-            ->count();
+            ->selectRaw('tipo, count(*) as total')
+            ->groupBy('tipo')
+            ->pluck('total', 'tipo');
 
         // Estado Anexo 04 (Patrimonio)
         $totalBienes = BienPatrimonial::where('dependencia_id', $dependenciaId)
@@ -256,8 +259,11 @@ class TransferenciaService
                 'existe' => ! empty($informe?->funciones),
                 'estado' => $informe?->estado ?? 'pendiente',
             ],
-            'anexo03_acervo' => [
-                'total_series' => $totalAcervo,
+            'anexo03a_acervo_fisico' => [
+                'total_series' => (int) ($seriesAcervo[TipoAcervo::FISICO->value] ?? 0),
+            ],
+            'anexo03b_acervo_digital' => [
+                'total_series' => (int) ($seriesAcervo[TipoAcervo::DIGITAL->value] ?? 0),
             ],
             'anexo04_patrimonio' => [
                 'total_bienes' => $totalBienes,
@@ -403,7 +409,7 @@ class TransferenciaService
                 empty($documento['ette']) ? 'coordinador ETTE' : null,
             ]);
 
-            return str_replace('anexo', 'Anexo ', $tipo).' ('.implode(' y ', $lados).')';
+            return SuscripcionEntrega::etiqueta($tipo).' ('.implode(' y ', $lados).')';
         }, $requisitos['pendientes']);
 
         return 'Pendientes: '.implode(', ', $detalle).'.';
@@ -423,7 +429,8 @@ class TransferenciaService
 
         return [
             'anexo_02' => (bool) ($estado['anexo02_gestion']['existe'] ?? false),
-            'anexo_03' => ($estado['anexo03_acervo']['total_series'] ?? 0) > 0,
+            'anexo_03a' => ($estado['anexo03a_acervo_fisico']['total_series'] ?? 0) > 0,
+            'anexo_03b' => ($estado['anexo03b_acervo_digital']['total_series'] ?? 0) > 0,
             'anexo_04' => ($estado['anexo04_patrimonio']['total_bienes'] ?? 0) > 0,
             'anexo_05' => ($estado['anexo05_personal']['total_personal'] ?? 0) > 0,
             'anexo_06' => ($estado['anexo06_nopatrimonial']['total_bienes'] ?? 0) > 0,

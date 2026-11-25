@@ -2,6 +2,8 @@
  * Tipos del módulo de Reportes (F5) — espejo de ReportesService del backend.
  */
 
+import type { EstadoObservacion } from './observaciones'
+
 export type ClaveReporte = 'matriz-anexos' | 'conciliacion-patrimonial' | 'observaciones' | 'verificacion'
 export type FormatoExport = 'excel' | 'pdf'
 
@@ -36,14 +38,16 @@ export interface FilaMatriz {
   encargado: string | null
   estado_entrega: string
   anexo_02: EstadoAnexoMatriz | boolean | string
-  anexo_03: EstadoAnexoMatriz | boolean | string
+  anexo_03a: EstadoAnexoMatriz | boolean | string
+  anexo_03b: EstadoAnexoMatriz | boolean | string
   anexo_04: EstadoAnexoMatriz | boolean | string
   anexo_05: EstadoAnexoMatriz | boolean | string
   anexo_06: EstadoAnexoMatriz | boolean | string
   anexos_completados?: number
   anexos_firmados?: number
   porcentaje_avance?: number
-  observaciones_abiertas: number
+  /** Observaciones vigentes del coordinador ETTE (constancia en el Acta 07). */
+  observaciones_vigentes: number
   patrimonio_total: number
   patrimonio_confirmados: number
   patrimonio_porcentaje: number
@@ -71,26 +75,32 @@ export interface ReporteConciliacion {
   filas: FilaConciliacion[]
 }
 
+/** Observación del coordinador ETTE: constancia, sin subsanación (D-07). */
 export interface FilaObservacion {
+  id: number
   dependencia_id: number
   codigo: string
   nombre: string
   anexo: string
+  /** «Anexo completo» o «Registro N° …». */
+  detalle: string
   descripcion: string
-  estado: string
+  estado: EstadoObservacion
   estado_etiqueta: string
+  /** Firmante ETTE a cuyo nombre se registró (coordinador o titular suplente). */
   autor: string | null
+  en_calidad_de: string | null
+  registrada_por: string | null
   registrada_en: string | null
-  dias_subsanacion: number | null
 }
 
 export interface ReporteObservaciones {
   generado_en: string
   resumen: {
-    abiertas: number
-    en_subsanacion: number
-    subsanadas: number
-    desestimadas: number
+    total: number
+    registradas: number
+    retiradas: number
+    centros_observados: number
   }
   filas: FilaObservacion[]
 }

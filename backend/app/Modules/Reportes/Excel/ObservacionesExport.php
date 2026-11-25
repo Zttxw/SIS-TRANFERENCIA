@@ -10,7 +10,8 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
 
 /**
- * Hoja Excel del Reporte 3 (Observaciones por dependencia).
+ * Hoja Excel del Reporte 3: observaciones del coordinador ETTE por centro de
+ * costo (constancia, sin subsanación).
  */
 class ObservacionesExport implements FromArray, ShouldAutoSize, WithHeadings, WithTitle
 {
@@ -25,7 +26,7 @@ class ObservacionesExport implements FromArray, ShouldAutoSize, WithHeadings, Wi
     /** @return list<string> */
     public function headings(): array
     {
-        return ['Código', 'Centro de costo', 'Anexo', 'Observación', 'Estado', 'Autor', 'Registrada', 'Días subsanación'];
+        return ['Código', 'Centro de costo', 'Anexo', 'Referida a', 'Observación', 'Firmante ETTE', 'En calidad de', 'Registrada por', 'Fecha', 'Estado'];
     }
 
     /** @return list<list<mixed>> */
@@ -35,11 +36,13 @@ class ObservacionesExport implements FromArray, ShouldAutoSize, WithHeadings, Wi
             $f['codigo'],
             $f['nombre'],
             $f['anexo'],
+            $f['detalle'],
             $f['descripcion'],
-            $f['estado_etiqueta'],
             $f['autor'] ?? '',
+            $f['en_calidad_de'] ?? '',
+            $f['registrada_por'] ?? '',
             $f['registrada_en'] ?? '',
-            $f['dias_subsanacion'] ?? '',
+            $f['estado_etiqueta'],
         ], $this->data['filas']);
     }
 }

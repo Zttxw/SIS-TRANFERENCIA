@@ -3,7 +3,8 @@ export type EstadoObservacion = 'registrada' | 'retirada'
 
 export type ClaveAnexoObservable =
   | 'gestion'
-  | 'acervo'
+  | 'acervo_fisico'
+  | 'acervo_digital'
   | 'patrimonio'
   | 'personal'
   | 'nopatrimonial'
@@ -83,12 +84,19 @@ export const ANEXOS_OBSERVABLES_CONFIG: Record<ClaveAnexoObservable, InfoAnexoOb
     ruta: '/gestion',
     numero: '02',
   },
-  acervo: {
-    clave: 'acervo',
-    nombre: 'Anexo 03 · Acervo Documental',
-    nombreCorto: 'Anexo 03 (Acervo)',
-    ruta: '/acervo',
-    numero: '03',
+  acervo_fisico: {
+    clave: 'acervo_fisico',
+    nombre: 'Anexo 03-A · Acervo Documentario Físico',
+    nombreCorto: 'Anexo 03-A (Acervo físico)',
+    ruta: '/acervo-fisico',
+    numero: '03-A',
+  },
+  acervo_digital: {
+    clave: 'acervo_digital',
+    nombre: 'Anexo 03-B · Acervo Documentario Digital (SGD)',
+    nombreCorto: 'Anexo 03-B (Acervo digital)',
+    ruta: '/acervo-digital',
+    numero: '03-B',
   },
   patrimonio: {
     clave: 'patrimonio',

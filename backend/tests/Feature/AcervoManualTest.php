@@ -11,6 +11,7 @@ use App\Modules\Auth\Models\AsignacionRol;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Enums\Rol;
+use App\Support\Enums\TipoAcervo;
 use Database\Seeders\RolesPermisosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -59,7 +60,7 @@ class AcervoManualTest extends TestCase
         return AcervoDocumental::create([
             'proceso_transferencia_id' => $this->proceso->id,
             'dependencia_id' => $this->dep->id,
-            'tipo' => AcervoDocumental::TIPO_DIGITAL,
+            'tipo' => TipoAcervo::DIGITAL,
             'serie_documental' => 'Informe recibidos',
             'anio' => 2026,
             'numero_documentos' => 40,
@@ -127,16 +128,17 @@ class AcervoManualTest extends TestCase
         $this->assertDatabaseHas('acervo_documental', ['id' => $serie->id, 'numero_documentos' => 40, 'folios' => null, 'deleted_at' => null]);
     }
 
-    public function test_pdf_mide_la_seccion_digital_en_documentos_y_la_fisica_en_folios_por_anio_descendente(): void
+    public function test_el_03b_mide_el_acervo_digital_en_documentos_y_el_03a_el_fisico_en_folios_por_anio_descendente(): void
     {
         $this->serieSgd();
         $this->serieSgd(['serie_documental' => 'Informe emitidos', 'anio' => 2025]);
         $this->postJson('/api/acervo', $this->serieFisica())->assertCreated();
 
-        $pdf = app(AcervoPdf::class)->datos($this->dep->id);
+        $digital = app(AcervoPdf::class)->datos($this->dep->id, TipoAcervo::DIGITAL);
+        $fisica = app(AcervoPdf::class)->datos($this->dep->id, TipoAcervo::FISICO);
 
-        [$digital, $fisica] = $pdf['secciones'];
-        $this->assertSame(['A', 'B'], [$digital['letra'], $fisica['letra']]);
+        $this->assertSame('Anexo 03-B — Registro del Acervo Documentario Digital (SGD)', $digital['titulo']);
+        $this->assertSame('Anexo 03-A — Registro del Acervo Documentario Físico', $fisica['titulo']);
         $this->assertSame(['N° de Documentos', 'Folios'], [$digital['columna_cantidad'], $fisica['columna_cantidad']]);
         $this->assertSame(['2026', '2025'], array_column($digital['grupos'], 'anio'));
         $this->assertSame([

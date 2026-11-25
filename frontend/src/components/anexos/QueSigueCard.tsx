@@ -55,7 +55,7 @@ export function QueSigueCard({
   const { data: requisitos } = useRequisitosRemision(dependenciaId, tiene('entregas.remitir'))
   const puedeFirmar = tiene('anexos.registrar') || tiene('actas.generar')
   const [oculto, setOculto] = useState(false)
-  const tipos: TipoDocumentoFirma[] = ['anexo02', 'anexo03', 'anexo04', 'anexo05', 'anexo06']
+  const tipos: TipoDocumentoFirma[] = ['anexo02', 'anexo03a', 'anexo03b', 'anexo04', 'anexo05', 'anexo06']
   if (puedeConsultarActa(permisos)) tipos.push('anexo07')
   const firmas = useQueries({
     queries: tipos.map((tipo) => ({

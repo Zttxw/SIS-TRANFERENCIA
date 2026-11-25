@@ -13,6 +13,7 @@ use App\Modules\Personal\Models\Personal;
 use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\Observacion;
 use App\Support\Enums\EstadoEntrega;
+use App\Support\Enums\TipoAcervo;
 use Illuminate\Support\Collection;
 
 /**
@@ -95,7 +96,8 @@ class ConsolidacionCentroCosto
                 'enviado_tarde' => $this->enviadoTarde($cc, $entregas),
                 'anexos' => [
                     'anexo02' => (bool) ($volumen['informes'][$cc->id] ?? false),
-                    'anexo03' => (int) ($volumen['acervo'][$cc->id] ?? 0),
+                    'anexo03a' => (int) ($volumen['acervo_fisico'][$cc->id] ?? 0),
+                    'anexo03b' => (int) ($volumen['acervo_digital'][$cc->id] ?? 0),
                     'anexo04' => (int) ($volumen['bienes'][$cc->id] ?? 0),
                     'anexo05' => (int) ($volumen['personal'][$cc->id] ?? 0),
                     'anexo06' => (int) ($volumen['no_patrimoniales'][$cc->id] ?? 0),
@@ -138,8 +140,9 @@ class ConsolidacionCentroCosto
      */
     private function volumenAnexos(int $procesoId, array $ids): array
     {
-        $contar = fn (string $modelo) => $modelo::query()->where('proceso_transferencia_id', $procesoId)
-            ->whereIn('dependencia_id', $ids)->selectRaw('dependencia_id, count(*) as total')
+        $contar = fn (string $modelo, ?TipoAcervo $tipo = null) => $modelo::query()->where('proceso_transferencia_id', $procesoId)
+            ->whereIn('dependencia_id', $ids)->when($tipo !== null, fn ($query) => $query->where('tipo', $tipo->value))
+            ->selectRaw('dependencia_id, count(*) as total')
             ->groupBy('dependencia_id')->pluck('total', 'dependencia_id');
 
         return [
@@ -147,7 +150,8 @@ class ConsolidacionCentroCosto
             'informes' => InformeGestion::query()->where('proceso_transferencia_id', $procesoId)
                 ->whereIn('dependencia_id', $ids)->get(['dependencia_id', 'funciones'])
                 ->mapWithKeys(fn (InformeGestion $informe): array => [$informe->dependencia_id => ! empty($informe->funciones)]),
-            'acervo' => $contar(AcervoDocumental::class),
+            'acervo_fisico' => $contar(AcervoDocumental::class, TipoAcervo::FISICO),
+            'acervo_digital' => $contar(AcervoDocumental::class, TipoAcervo::DIGITAL),
             'bienes' => $contar(BienPatrimonial::class),
             'personal' => $contar(Personal::class),
             'no_patrimoniales' => $contar(BienNoPatrimonial::class),

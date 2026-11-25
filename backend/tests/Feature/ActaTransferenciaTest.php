@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Modules\Acervo\Models\AcervoDocumental;
 use App\Modules\Auth\Models\AsignacionRol;
 use App\Modules\Gestion\Models\InformeGestion;
 use App\Modules\Organization\Models\Dependencia;
@@ -101,10 +102,15 @@ class ActaTransferenciaTest extends TestCase
             'funciones' => [['n' => 1, 'descripcion' => 'Funciones del centro de costo de prueba.']],
             'estado' => 'completado',
         ]);
+        AcervoDocumental::create([
+            'proceso_transferencia_id' => $this->proceso->id, 'dependencia_id' => $this->dep->id,
+            'tipo' => 'fisico', 'serie_documental' => 'Oficios', 'anio' => 2025, 'folios' => 10,
+        ]);
 
         $this->getJson($this->url())->assertOk()
             ->assertJsonPath('data.anexos_entregados.anexo_02.condicion', 'entregado')
-            ->assertJsonPath('data.anexos_entregados.anexo_03.condicion', 'no_entregado')
+            ->assertJsonPath('data.anexos_entregados.anexo_03a.condicion', 'entregado')
+            ->assertJsonPath('data.anexos_entregados.anexo_03b.condicion', 'no_entregado')
             ->assertJsonPath('data.anexos_entregados.anexo_06.condicion', 'no_entregado')
             ->assertJsonPath('data.anexos_entregados.otros.condicion', 'no_aplica');
     }
@@ -135,9 +141,9 @@ class ActaTransferenciaTest extends TestCase
 
     public function test_no_aplica_solo_se_admite_en_el_anexo_06_y_otros(): void
     {
-        $this->guardar(['condiciones' => ['anexo_03' => ['condicion' => 'no_aplica']]])
+        $this->guardar(['condiciones' => ['anexo_03a' => ['condicion' => 'no_aplica']]])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors('condiciones.anexo_03.condicion');
+            ->assertJsonValidationErrors('condiciones.anexo_03a.condicion');
     }
 
     public function test_la_condicion_fijada_a_mano_no_se_recalcula(): void
@@ -177,7 +183,7 @@ class ActaTransferenciaTest extends TestCase
             Observacion::create([
                 'proceso_transferencia_id' => $this->proceso->id,
                 'dependencia_id' => $this->dep->id,
-                'anexo' => 'acervo',
+                'anexo' => 'acervo_digital',
                 'autor_id' => $coordinador->id,
                 'en_calidad_de' => CalidadEtte::COORDINADOR,
                 'descripcion' => "Observación {$estado->value}",
@@ -188,7 +194,7 @@ class ActaTransferenciaTest extends TestCase
         $observaciones = $this->datosPdf()['observaciones'];
         $this->assertCount(1, $observaciones);
         $this->assertSame('Observación registrada', $observaciones[0]['descripcion']);
-        $this->assertSame('Anexo 03 — Acervo (anexo completo)', $observaciones[0]['documentacion']);
+        $this->assertSame('Anexo 03-B — Acervo digital (SGD) (anexo completo)', $observaciones[0]['documentacion']);
         $this->getJson($this->url())->assertOk()->assertJsonCount(1, 'data.observaciones_registradas');
     }
 

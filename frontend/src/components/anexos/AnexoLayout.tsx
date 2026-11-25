@@ -12,7 +12,7 @@ import { EstadoAnexoChip } from './EstadoAnexoChip'
 import { ObservacionesAnexoPanel } from './ObservacionesAnexoPanel'
 
 const TIPOS_FIRMA: Partial<Record<ClaveAnexoObservable, TipoDocumentoFirma>> = {
-  gestion: 'anexo02', acervo: 'anexo03', patrimonio: 'anexo04', personal: 'anexo05', nopatrimonial: 'anexo06',
+  gestion: 'anexo02', acervo_fisico: 'anexo03a', acervo_digital: 'anexo03b', patrimonio: 'anexo04', personal: 'anexo05', nopatrimonial: 'anexo06',
 }
 
 export interface DependenciaResumenAnexo {
@@ -21,7 +21,7 @@ export interface DependenciaResumenAnexo {
 }
 
 interface AnexoLayoutProps {
-  /** Etiqueta normativa, p. ej. «Anexo 03». */
+  /** Etiqueta normativa, p. ej. «Anexo 03-A». */
   numeroAnexo: string
   /** Título cuando aún no se eligió dependencia (guía de selección). */
   tituloCorto: string

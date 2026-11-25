@@ -47,7 +47,7 @@ interface AcervoModalProps {
   loading?: boolean
 }
 
-/** Alta y edición de una serie física (sección B del Anexo 03). */
+/** Alta y edición de una serie física (Anexo 03-A). */
 export function AcervoModal({
   open,
   onClose,

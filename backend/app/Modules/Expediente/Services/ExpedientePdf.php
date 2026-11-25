@@ -11,6 +11,7 @@ use App\Modules\Patrimonio\Services\PatrimonioPdf;
 use App\Modules\Personal\Services\PersonalPdf;
 use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Services\TransferenciaService;
+use App\Support\Enums\TipoAcervo;
 use App\Support\Http\ApiResponse;
 use App\Support\Services\ContextoTransferencia;
 use App\Support\Services\PdfService;
@@ -18,7 +19,8 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Paquete de entrega (F5): un único expediente PDF con todos los anexos (02–06)
+ * Paquete de entrega (F5): un único expediente PDF con todos los anexos (02–06,
+ * con el acervo en 03-A físico y 03-B digital)
  * de una dependencia, listo para la entrega física firmable. Solo se emite con
  * la entrega remitida (409 en otro caso), como el acta. Reutiliza los
  * generadores de cada anexo (su método `datos()`) para no duplicar la lógica de
@@ -30,7 +32,8 @@ class ExpedientePdf
     /** Índice oficial del expediente. */
     private const INDICE = [
         'anexo_02' => ['anexo' => 'Anexo 02', 'nombre' => 'Informe de Gestión'],
-        'anexo_03' => ['anexo' => 'Anexo 03', 'nombre' => 'Registro del Acervo Documentario'],
+        'anexo_03a' => ['anexo' => 'Anexo 03-A', 'nombre' => 'Registro del Acervo Documentario Físico'],
+        'anexo_03b' => ['anexo' => 'Anexo 03-B', 'nombre' => 'Registro del Acervo Documentario Digital (SGD)'],
         'anexo_04' => ['anexo' => 'Anexo 04', 'nombre' => 'Registro de Bienes Patrimoniales'],
         'anexo_05' => ['anexo' => 'Anexo 05', 'nombre' => 'Información del Personal a cargo'],
         'anexo_06' => ['anexo' => 'Anexo 06', 'nombre' => 'Bienes No Patrimoniales'],
@@ -82,8 +85,10 @@ class ExpedientePdf
         if ($presencia['anexo_02'] ?? false) {
             $datos['anexo02'] = $this->gestion->datos($dependenciaId);
         }
-        if ($presencia['anexo_03'] ?? false) {
-            $datos['anexo03'] = $this->acervo->datos($dependenciaId);
+        foreach (TipoAcervo::cases() as $tipo) {
+            if ($presencia[$tipo->itemActa()] ?? false) {
+                $datos['acervo'][] = $this->acervo->datos($dependenciaId, $tipo);
+            }
         }
         if ($presencia['anexo_04'] ?? false) {
             $datos['anexo04'] = $this->patrimonio->datos($dependenciaId);

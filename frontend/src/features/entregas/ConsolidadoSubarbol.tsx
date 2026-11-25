@@ -13,7 +13,8 @@ function volumen(cc: CentroConsolidado): string {
   const { anexos } = cc
   return [
     anexos.anexo02 ? 'A02 ✓' : 'A02 —',
-    `A03 ${anexos.anexo03}`,
+    `A03-A ${anexos.anexo03a}`,
+    `A03-B ${anexos.anexo03b}`,
     `A04 ${anexos.anexo04}`,
     `A05 ${anexos.anexo05}`,
     `A06 ${anexos.anexo06}`,

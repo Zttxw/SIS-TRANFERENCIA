@@ -27,7 +27,7 @@ class FirmaSesionFactory extends Factory
             'dependencia_id' => Dependencia::factory(),
             'usuario_id' => User::factory(),
             'firmante_dni' => '12345678',
-            'tipo_documento' => 'anexo03',
+            'tipo_documento' => 'anexo03a',
             'estado' => 'pendiente',
             'param_token_hash' => hash('sha256', fake()->uuid()),
             'pdf_path' => 'firmaperu/prueba/original.pdf',

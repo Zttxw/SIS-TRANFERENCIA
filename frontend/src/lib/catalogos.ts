@@ -55,22 +55,10 @@ export const SITUACIONES_LABORALES = [
 ] as const satisfies readonly OpcionCatalogo[]
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Anexo 03 — Acervo documental
+// Anexo 03-A — Acervo documentario físico
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Secciones del Anexo 03: A digital (SGD) y B física (registro manual). */
-export const SECCIONES_ACERVO = [
-  { value: 'digital', label: 'A. Acervo digital (SGD)' },
-  { value: 'fisico', label: 'B. Acervo físico' },
-] as const satisfies readonly OpcionCatalogo[]
-
-/** Rótulo de volumen por sección: A (SGD) en documentos; B (física) en folios. */
-export const ETIQUETA_CANTIDAD_ACERVO = {
-  digital: 'N° documentos',
-  fisico: 'Folios',
-} as const satisfies Record<(typeof SECCIONES_ACERVO)[number]['value'], string>
-
-/** Tipos de unidades de conservación del formato oficial del Anexo 03. */
+/** Tipos de unidades de conservación del formato oficial del Anexo 03-A. */
 export const UNIDADES_CONSERVACION = [
   { value: 'Archivadores de Palanca', label: 'Archivadores de Palanca' },
   { value: 'Paquetes', label: 'Paquetes' },

@@ -14,6 +14,7 @@ use App\Modules\Patrimonio\Services\PatrimonioPdf;
 use App\Modules\Personal\Services\PersonalPdf;
 use App\Modules\Transferencia\Models\FirmaBorrador;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
+use App\Support\Enums\TipoAcervo;
 use App\Support\Services\ContextoTransferencia;
 use App\Support\Services\PdfService;
 use Illuminate\Support\Facades\DB;
@@ -122,7 +123,7 @@ class FirmaperuPdfService
 
         $contenido = view($vista, $datos)->render();
         if ($tipoDocumento === 'anexo07') {
-            foreach (['anexo02', 'anexo03', 'anexo04', 'anexo05', 'anexo06'] as $anexo) {
+            foreach (SuscripcionEntrega::ANEXOS_DEL_ACTA as $anexo) {
                 $contenido .= $this->huella($anexo, $dependenciaId, $usuario);
             }
         }
@@ -144,7 +145,8 @@ class FirmaperuPdfService
         [$vista, $datos, $orientacion] = match ($tipoDocumento) {
             'anexo01' => ['pdf.anexo01', $this->centros->datos($dependenciaId), 'portrait'],
             'anexo02' => ['pdf.anexo02', $this->gestion->datos($dependenciaId), 'portrait'],
-            'anexo03' => ['pdf.anexo03', $this->acervo->datos($dependenciaId), 'portrait'],
+            'anexo03a' => ['pdf.anexo03', $this->acervo->datos($dependenciaId, TipoAcervo::FISICO), 'portrait'],
+            'anexo03b' => ['pdf.anexo03', $this->acervo->datos($dependenciaId, TipoAcervo::DIGITAL), 'portrait'],
             'anexo04' => ['pdf.anexo04', $this->patrimonio->datos($dependenciaId), 'landscape'],
             'anexo05' => ['pdf.anexo05', $this->personal->datos($dependenciaId), 'landscape'],
             'anexo06' => ['pdf.anexo06', $this->noPatrimonial->datos($dependenciaId), 'portrait'],

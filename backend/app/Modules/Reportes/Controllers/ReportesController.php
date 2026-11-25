@@ -124,15 +124,16 @@ class ReportesController extends Controller
 
         [$headings, $filas, $metricas] = match ($reporte) {
             'matriz-anexos' => [
-                ['Código', 'Centro de costo', 'Nivel', 'Estado', 'A02', 'A03', 'A04', 'A05', 'A06', 'Obs.', 'Bienes', 'Verif.', '% Patr.'],
+                ['Código', 'Centro de costo', 'Nivel', 'Estado', 'A02', 'A03-A', 'A03-B', 'A04', 'A05', 'A06', 'Obs. vigentes', 'Bienes', 'Verif.', '% Patr.'],
                 array_map(fn (array $f): array => [
                     $f['codigo'], $f['nombre'], $f['nivel'], ucfirst((string) $f['estado_entrega']),
                     $this->etiquetaEstadoAnexo($f['anexo_02']),
-                    $this->etiquetaEstadoAnexo($f['anexo_03']),
+                    $this->etiquetaEstadoAnexo($f['anexo_03a']),
+                    $this->etiquetaEstadoAnexo($f['anexo_03b']),
                     $this->etiquetaEstadoAnexo($f['anexo_04']),
                     $this->etiquetaEstadoAnexo($f['anexo_05']),
                     $this->etiquetaEstadoAnexo($f['anexo_06']),
-                    $f['observaciones_abiertas'], $f['patrimonio_total'], $f['patrimonio_confirmados'],
+                    $f['observaciones_vigentes'], $f['patrimonio_total'], $f['patrimonio_confirmados'],
                     $f['patrimonio_porcentaje'].' %',
                 ], $datos['filas']),
                 [
@@ -153,14 +154,16 @@ class ReportesController extends Controller
                 ],
             ],
             'observaciones' => [
-                ['Código', 'Centro de costo', 'Anexo', 'Observación', 'Estado', 'Registrada', 'Días'],
+                ['Código', 'Centro de costo', 'Anexo', 'Referida a', 'Observación', 'Firmante ETTE', 'Registrada', 'Estado'],
                 array_map(fn (array $f): array => [
-                    $f['codigo'], $f['nombre'], $f['anexo'], $f['descripcion'],
-                    $f['estado_etiqueta'], $f['registrada_en'] ?? '', $f['dias_subsanacion'] ?? '',
+                    $f['codigo'], $f['nombre'], $f['anexo'], $f['detalle'], $f['descripcion'],
+                    trim(($f['autor'] ?? '').' · '.($f['en_calidad_de'] ?? ''), ' ·'),
+                    $f['registrada_en'] ?? '', $f['estado_etiqueta'],
                 ], $datos['filas']),
                 [
-                    'Abiertas' => $datos['resumen']['abiertas'] ?? 0,
-                    'Subsanadas' => $datos['resumen']['subsanadas'] ?? 0,
+                    'Vigentes' => $datos['resumen']['registradas'],
+                    'Retiradas' => $datos['resumen']['retiradas'],
+                    'CC observados' => $datos['resumen']['centros_observados'],
                 ],
             ],
         };

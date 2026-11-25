@@ -118,7 +118,9 @@ class ExpedientePdfTest extends TestCase
         $zip = new \ZipArchive;
         $zip->open($respuesta->baseResponse->getFile()->getPathname());
         $nombres = collect(range(0, $zip->numFiles - 1))->map(fn (int $i): string => (string) $zip->getNameIndex($i));
-        $this->assertCount(6, $nombres, 'Consulta + 5 anexos completos; el 06 sin ambas firmas no entra.');
+        $this->assertCount(7, $nombres, 'Consulta + 6 documentos completos (03-A y 03-B por separado); el 06 sin ambas firmas no entra.');
+        $this->assertTrue($nombres->contains(fn (string $n): bool => str_ends_with($n, 'Anexo-03A-Acervo-documentario-fisico-firmado.pdf')));
+        $this->assertTrue($nombres->contains(fn (string $n): bool => str_ends_with($n, 'Anexo-03B-Acervo-documentario-digital-firmado.pdf')));
         $this->assertTrue($nombres->contains(fn (string $n): bool => str_ends_with($n, 'Anexo-07-Acta-de-transferencia-firmado.pdf')));
         $this->assertFalse($nombres->contains(fn (string $n): bool => str_contains($n, 'Anexo-06')));
     }

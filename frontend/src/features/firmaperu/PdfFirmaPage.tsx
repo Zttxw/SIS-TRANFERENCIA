@@ -19,7 +19,8 @@ import type { TipoDocumentoFirma } from './firmaperu.types'
 
 const DOCUMENTOS: { tipo: TipoDocumentoFirma; nombre: string }[] = [
   { tipo: 'anexo02', nombre: 'Informe de gestión' },
-  { tipo: 'anexo03', nombre: 'Acervo documental' },
+  { tipo: 'anexo03a', nombre: 'Acervo documental físico' },
+  { tipo: 'anexo03b', nombre: 'Acervo documental digital (SGD)' },
   { tipo: 'anexo04', nombre: 'Bienes patrimoniales' },
   { tipo: 'anexo05', nombre: 'Personal' },
   { tipo: 'anexo06', nombre: 'Bienes no patrimoniales' },
@@ -28,7 +29,7 @@ const DOCUMENTOS: { tipo: TipoDocumentoFirma; nombre: string }[] = [
 ]
 
 /** Documentos que exigen ambas firmas para remitir (el Anexo 01 es institucional). */
-const TOTAL_A_FIRMAR = 6
+const TOTAL_A_FIRMAR = 7
 
 type Filtro = 'todos' | 'por_firmar' | 'firmados'
 
@@ -165,7 +166,7 @@ export function PdfFirmaPage() {
             )}>
               <p className={cn('text-xs', requisitos?.puede_remitir ? 'font-medium text-success-fg' : 'text-muted-foreground')}>
                 {requisitos?.puede_remitir
-                  ? 'Los seis documentos tienen ambas firmas. Ya puede remitir la entrega.'
+                  ? 'Los siete documentos tienen ambas firmas. Ya puede remitir la entrega.'
                   : `Documentos con ambas firmas: ${firmados}/${TOTAL_A_FIRMAR}. Al completarlos podrá remitir la entrega.`}
               </p>
               <Link to="/entregas" className={buttonVariants({ size: 'sm', variant: requisitos?.puede_remitir ? 'default' : 'outline', className: 'gap-2' })}>

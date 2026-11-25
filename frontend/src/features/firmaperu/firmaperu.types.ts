@@ -1,6 +1,6 @@
 import type { CalidadEtte } from '@/types/transferencia'
 
-export type TipoDocumentoFirma = 'anexo01' | 'anexo02' | 'anexo03' | 'anexo04' | 'anexo05' | 'anexo06' | 'anexo07'
+export type TipoDocumentoFirma = 'anexo01' | 'anexo02' | 'anexo03a' | 'anexo03b' | 'anexo04' | 'anexo05' | 'anexo06' | 'anexo07'
 
 export interface PreparacionFirma {
   sesion_id: string

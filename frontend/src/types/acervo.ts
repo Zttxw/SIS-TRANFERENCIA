@@ -1,9 +1,9 @@
 export type TipoAcervo = 'fisico' | 'digital'
 
 /**
- * Serie del Anexo 03. `digital` = sección A (precargada del SGD, solo lectura,
- * medida en `numero_documentos`); `fisico` = sección B (registrada a mano,
- * medida en `folios`).
+ * Serie del acervo documentario. `fisico` = Anexo 03-A (registrada a mano,
+ * medida en `folios`); `digital` = Anexo 03-B (precargada del SGD, solo
+ * lectura, medida en `numero_documentos`).
  */
 export interface AcervoDocumental {
   id: number
@@ -28,7 +28,7 @@ export interface AcervoDocumental {
   }
 }
 
-/** Serie física (sección B). */
+/** Serie física (Anexo 03-A). */
 export interface GuardarAcervoPayload {
   dependencia_id: number
   serie_documental: string
@@ -46,7 +46,7 @@ export interface FiltrosAcervo {
   page?: number
 }
 
-/** Documento individual del SGD que respalda una serie digital del Anexo 03. */
+/** Documento individual del SGD que respalda una serie digital del Anexo 03-B. */
 export interface DocumentoSgd {
   emi: string
   numero_documento: string | null

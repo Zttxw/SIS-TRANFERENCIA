@@ -197,7 +197,7 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
 
     public function test_anexo_agregado_registra_su_documento_y_version_sin_inventar_un_acta(): void
     {
-        $sesion = $this->recibir($this->preparar('anexo03'));
+        $sesion = $this->recibir($this->preparar('anexo03a'));
         $this->assertDatabaseHas('firmas_anexo', ['firma_sesion_id' => $sesion->id,
             'firmable_type' => $sesion->documento->getMorphClass(), 'firmable_id' => $sesion->documento_firma_id,
             'version' => 1, 'lado' => 'entidad']);
@@ -207,23 +207,23 @@ class FirmaperuFlujoInstitucionalTest extends TestCase
 
     public function test_el_paso_del_tiempo_no_crea_otra_version_del_mismo_anexo(): void
     {
-        $primera = $this->recibir($this->preparar('anexo03'));
+        $primera = $this->recibir($this->preparar('anexo03a'));
         $this->travel(1)->hours();
-        $segunda = $this->recibir($this->preparar('anexo03', $primera->id));
+        $segunda = $this->recibir($this->preparar('anexo03a', $primera->id));
         $this->assertSame($primera->documento_firma_id, $segunda->documento_firma_id);
         $this->assertSame(1, $segunda->documento->version);
     }
 
     public function test_recibir_una_version_antigua_despues_no_oculta_el_pdf_vigente(): void
     {
-        $primera = $this->preparar('anexo03');
+        $primera = $this->preparar('anexo03a');
         AcervoDocumental::create(['dependencia_id' => $this->dep->id,
             'proceso_transferencia_id' => $this->dep->proceso_transferencia_id,
             'tipo' => 'fisico', 'serie_documental' => 'Contenido actual', 'anio' => 2026, 'folios' => 1]);
-        $vigente = $this->recibir($this->preparar('anexo03'));
+        $vigente = $this->recibir($this->preparar('anexo03a'));
         $this->travel(1)->minutes();
         $this->recibir($primera);
-        $this->getJson('/api/firmaperu/estado/anexo03/'.$this->dep->id)->assertOk()
+        $this->getJson('/api/firmaperu/estado/anexo03a/'.$this->dep->id)->assertOk()
             ->assertJsonPath('data.documento_id', $vigente->id)->assertJsonPath('data.vigente', true)
             ->assertJsonPath('data.version', 2);
     }

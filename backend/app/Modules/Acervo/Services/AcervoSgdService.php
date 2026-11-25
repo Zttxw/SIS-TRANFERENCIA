@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Consulta en vivo (SOLO LECTURA) de los documentos individuales del SGD que
- * respaldan una serie digital del Anexo 03 (sección A). La ingesta sólo
+ * respaldan una serie digital del Anexo 03-B. La ingesta sólo
  * materializa el resumen por centro de costo + tipo + sentido + año (ver
  * {@see IngestaDocumentalSgd}); aquí se listan los documentos uno a uno y se
  * sirve el PDF principal por streaming desde {@code TDTV_ARCHIVO_DOC.BL_DOC},

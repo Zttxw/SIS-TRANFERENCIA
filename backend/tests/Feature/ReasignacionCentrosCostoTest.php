@@ -14,6 +14,7 @@ use App\Modules\Patrimonio\Models\BienPatrimonial;
 use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Enums\Rol;
+use App\Support\Enums\TipoAcervo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
 use Tests\TestCase;
@@ -157,7 +158,7 @@ class ReasignacionCentrosCostoTest extends TestCase
         AcervoDocumental::create([
             'proceso_transferencia_id' => $this->proceso->id,
             'dependencia_id' => $dependencia->id,
-            'tipo' => AcervoDocumental::TIPO_DIGITAL,
+            'tipo' => TipoAcervo::DIGITAL,
             'serie_documental' => 'Oficio',
             'anio' => 2026,
             'numero_documentos' => $cantidad,

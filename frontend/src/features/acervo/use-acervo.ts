@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
@@ -6,6 +7,7 @@ import type {
   FiltrosAcervo,
   FiltrosDocumentosSgd,
   GuardarAcervoPayload,
+  TipoAcervo,
 } from '@/types/acervo'
 import { acervoService } from './acervo.service'
 
@@ -19,6 +21,41 @@ export function useAcervo(filtros: FiltrosAcervo = {}) {
     enabled: Boolean(filtros.dependencia_id),
     staleTime: 1000 * 30,
   })
+}
+
+export type VistaAcervo = 'lista' | 'anio'
+
+/**
+ * Series de un anexo del acervo (03-A o 03-B) con su búsqueda, paginación y
+ * vista. La vista por año agrupa en cliente: trae todas las series (sin paginar).
+ */
+export function useSeriesAcervo(tipo: TipoAcervo, dependenciaId: number | null) {
+  const [pagina, setPagina] = useState(1)
+  const [busqueda, setBusqueda] = useState('')
+  const [vista, setVista] = useState<VistaAcervo>('anio')
+  const esVistaAnio = vista === 'anio'
+
+  const consulta = useAcervo({
+    dependencia_id: dependenciaId ?? undefined,
+    tipo,
+    search: busqueda || undefined,
+    page: esVistaAnio ? 1 : pagina,
+    per_page: esVistaAnio ? 500 : 15,
+  })
+
+  return {
+    ...consulta,
+    series: consulta.data?.data ?? [],
+    meta: consulta.data?.meta,
+    vista,
+    setVista,
+    setPagina,
+    busqueda,
+    buscar: (valor: string) => {
+      setBusqueda(valor)
+      setPagina(1)
+    },
+  }
 }
 
 /**

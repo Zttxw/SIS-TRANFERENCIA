@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Modules\Acervo\Models\AcervoDocumental;
 use App\Modules\Auth\Models\AsignacionRol;
 use App\Modules\Gestion\Models\InformeGestion;
 use App\Modules\Organization\Models\Dependencia;
@@ -136,12 +137,31 @@ class ObservacionesTest extends TestCase
         $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
 
         $this->postJson('/api/observaciones', [
-            'anexo' => 'acervo',
+            'anexo' => 'acervo_fisico',
             'dependencia_id' => $this->hija->id,
             'descripcion' => 'No se registró el archivo de gestión.',
         ])->assertCreated()->assertJsonPath('data.observable_id', null);
 
-        $this->assertDatabaseHas('observaciones', ['dependencia_id' => $this->hija->id, 'anexo' => 'acervo', 'observable_id' => null]);
+        $this->assertDatabaseHas('observaciones', ['dependencia_id' => $this->hija->id, 'anexo' => 'acervo_fisico', 'observable_id' => null]);
+    }
+
+    public function test_la_serie_del_acervo_se_observa_solo_desde_su_anexo_03a_o_03b(): void
+    {
+        $serieSgd = AcervoDocumental::create([
+            'proceso_transferencia_id' => $this->proceso->id, 'dependencia_id' => $this->hija->id,
+            'tipo' => 'digital', 'serie_documental' => 'Informe recibidos', 'anio' => 2026, 'numero_documentos' => 4, 'fuente' => 'sgd',
+        ]);
+        $this->entregaEn($this->hija, EstadoEntrega::EN_REVISION);
+        $this->actuarComo(Rol::RESPONSABLE_CENTRO_COSTO, $this->hija);
+        $observar = fn (string $anexo) => $this->postJson('/api/observaciones', [
+            'anexo' => $anexo, 'observable_id' => $serieSgd->id, 'descripcion' => 'Faltan documentos del año.',
+        ]);
+
+        $observar('acervo_fisico')->assertNotFound();
+        $observar('acervo_digital')->assertCreated();
+
+        $this->assertDatabaseHas('observaciones', ['observable_id' => $serieSgd->id, 'anexo' => 'acervo_digital']);
+        $this->assertDatabaseCount('observaciones', 1);
     }
 
     /** @return array<string, array{0: ?EstadoEntrega}> */

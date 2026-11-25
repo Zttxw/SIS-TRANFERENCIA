@@ -137,10 +137,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/informe/pdf', [GestionController::class, 'pdf'])->middleware('permiso:anexos.ver');
     });
 
-    // Anexo 03: Acervo Documental Físico y Digital (plan §7.3).
+    // Anexo 03-A (acervo físico) y Anexo 03-B (acervo digital del SGD).
     Route::prefix('acervo')->group(function () {
         Route::get('/', [AcervoController::class, 'index'])->middleware('permiso:anexos.ver');
-        Route::get('/pdf', [AcervoController::class, 'pdf'])->middleware('permiso:anexos.ver');
+        Route::get('/{tipo}/pdf', [AcervoController::class, 'pdf'])->middleware('permiso:anexos.ver');
         // Exploración en vivo de los documentos del SGD de una fila-resumen digital.
         Route::get('/{id}/documentos', [AcervoController::class, 'documentosSgd'])
             ->whereNumber('id')->middleware('permiso:anexos.ver');

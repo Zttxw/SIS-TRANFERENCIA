@@ -31,7 +31,7 @@ class FirmaperuController extends Controller
 {
     use AutorizaAmbito;
 
-    private const TIPOS = 'anexo01,anexo02,anexo03,anexo04,anexo05,anexo06,anexo07,acta';
+    private const TIPOS = 'anexo01,anexo02,anexo03a,anexo03b,anexo04,anexo05,anexo06,anexo07,acta';
 
     public function __construct(
         private readonly FirmaperuSesionService $sesiones,

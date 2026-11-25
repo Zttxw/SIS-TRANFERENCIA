@@ -29,7 +29,8 @@ class ExpedienteFirmado
 {
     private const NOMBRES = [
         'anexo02' => 'Anexo-02-Informe-de-gestion',
-        'anexo03' => 'Anexo-03-Acervo-documentario',
+        'anexo03a' => 'Anexo-03A-Acervo-documentario-fisico',
+        'anexo03b' => 'Anexo-03B-Acervo-documentario-digital',
         'anexo04' => 'Anexo-04-Bienes-patrimoniales',
         'anexo05' => 'Anexo-05-Personal',
         'anexo06' => 'Anexo-06-Bienes-no-patrimoniales',
