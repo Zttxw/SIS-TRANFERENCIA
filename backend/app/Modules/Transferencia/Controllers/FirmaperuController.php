@@ -25,6 +25,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FirmaperuController extends Controller
@@ -167,6 +168,20 @@ class FirmaperuController extends Controller
 
         return ApiResponse::success(['sesion_id' => $sesion->id, 'estado' => $sesion->estado],
             $sesion->estado === 'firmada' ? 'PDF firmado recibido y comprobado.' : 'PDF recibido. Verificación pendiente.');
+    }
+
+    /**
+     * Sello / gráfico institucional oficial que estampa Firma Perú en el PDF.
+     */
+    public function sello(): BinaryFileResponse
+    {
+        $ruta = (string) config('firmaperu.stamp_image_path', resource_path('images/firma-sello.png'));
+        abort_unless(file_exists($ruta), 404, 'Sello institucional de firma no encontrado.');
+
+        return response()->file($ruta, [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
     }
 
     /**

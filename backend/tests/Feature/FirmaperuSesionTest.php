@@ -358,4 +358,18 @@ class FirmaperuSesionTest extends TestCase
         $this->assertDatabaseHas('firma_sesiones', ['id' => $sesion->id, 'estado' => 'rechazada', 'firmado_en' => null]);
         $this->getJson('/api/firmaperu/documentos/'.$sesion->id.'/descargar')->assertNotFound();
     }
+
+    public function test_sello_institucional_esta_disponible_y_se_incluye_en_parametros(): void
+    {
+        $dep = $this->iniciarUsuario();
+        $preparacion = $this->preparar($dep);
+        $parametros = $this->emitir($preparacion);
+
+        $this->assertArrayHasKey('imageToStamp', $parametros);
+        $this->assertStringContainsString('/api/firmaperu/sello.png', $parametros['imageToStamp']);
+
+        $res = $this->get('/api/firmaperu/sello.png');
+        $res->assertOk();
+        $res->assertHeader('Content-Type', 'image/png');
+    }
 }

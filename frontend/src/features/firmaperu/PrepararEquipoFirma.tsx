@@ -46,6 +46,18 @@ export function PrepararEquipoFirma({ onCerrar, onContinuar }: { onCerrar: () =>
             : estado === 'comprobando' ? 'Comprobando el servicio de Firma Perú…'
               : 'Firma Perú todavía no responde. Puede estar cerrado, faltar la instalación o un permiso del navegador.'}</span>
         </div>
+
+        <div className="flex items-center justify-between gap-3 rounded-lg border bg-card p-2.5">
+          <div className="text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground">Sello Oficial de Firma Digital</span>
+            <p className="text-[11px]">Municipalidad Distrital de San Jerónimo</p>
+          </div>
+          <img
+            src="/brand/firma-sello.png"
+            alt="Sello oficial de Firma Digital"
+            className="h-8 w-auto object-contain rounded border bg-white p-0.5 shadow-xs"
+          />
+        </div>
         {estado !== 'listo' && (
           <>
             {entorno.windows ? (

@@ -11,4 +11,5 @@ return [
     'max_upload_kb' => (int) env('FIRMAPERU_MAX_UPLOAD_KB', 20480),
     'ca_bundle' => env('FIRMAPERU_CA_BUNDLE'),
     'openssl_binary' => env('FIRMAPERU_OPENSSL_BINARY', 'openssl'),
+    'stamp_image_path' => env('FIRMAPERU_STAMP_IMAGE', resource_path('images/firma-sello.png')),
 ];

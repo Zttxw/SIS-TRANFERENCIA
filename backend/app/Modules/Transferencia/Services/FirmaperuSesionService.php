@@ -130,6 +130,8 @@ class FirmaperuSesionService
             $this->exigirVigente($sesion, 'pendiente');
             $descarga = Str::random(64);
             $subida = Str::random(64);
+            $stampPath = (string) config('firmaperu.stamp_image_path', resource_path('images/firma-sello.png'));
+            $imageToStamp = file_exists($stampPath) ? $this->url('sello.png') : '';
             $parametros = [
                 'signatureFormat' => 'PAdES', 'signatureLevel' => 'B', 'signaturePackaging' => 'enveloped',
                 'documentToSign' => $this->url('documento/'.$descarga),
@@ -138,7 +140,7 @@ class FirmaperuSesionService
                 'theme' => 'claro', 'visiblePosition' => true, 'contactInfo' => $sesion->id,
                 'signatureReason' => 'Suscripción del '.strtoupper($sesion->tipo_documento),
                 'bachtOperation' => false, 'oneByOne' => true, 'signatureStyle' => 4,
-                'imageToStamp' => '', 'stampTextSize' => 12, 'stampWordWrap' => 37,
+                'imageToStamp' => $imageToStamp, 'stampTextSize' => 12, 'stampWordWrap' => 37,
                 'role' => '', 'stampPage' => 1, 'positionx' => 60, 'positiony' => 70,
                 'uploadDocumentSigned' => $this->url('subir-firmado/'.$subida),
                 'certificationSignature' => false, 'token' => $jwt,

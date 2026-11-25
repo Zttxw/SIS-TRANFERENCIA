@@ -37,6 +37,8 @@ Route::prefix('firmaperu')->middleware('throttle:60,1')->group(function () {
     Route::post('/param', [FirmaperuController::class, 'param']);
     Route::get('/documento/{token}', [FirmaperuController::class, 'documento'])->where('token', '[A-Za-z0-9]{64}');
     Route::post('/subir-firmado/{token}', [FirmaperuController::class, 'subir'])->where('token', '[A-Za-z0-9]{64}');
+    Route::get('/sello.png', [FirmaperuController::class, 'sello']);
+    Route::get('/sello', [FirmaperuController::class, 'sello']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {
