@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { Navigate, useLocation } from 'react-router-dom'
+import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { useAuth } from '@/auth/hooks'
@@ -10,6 +11,7 @@ import { destinoPermitidoSesion } from '@/auth/sesion-runtime'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { obtenerYLimpiarMotivoCierre } from '@/lib/token'
 import { ApiError } from '@/types/api'
 
 const esquema = z.object({
@@ -26,6 +28,16 @@ export function LoginPage() {
   const { estado, permisos, iniciarSesion } = useAuth()
   const location = useLocation()
   const [mostrarPassword, setMostrarPassword] = useState(false)
+
+  useEffect(() => {
+    const motivo = obtenerYLimpiarMotivoCierre()
+    if (motivo === 'inactividad') {
+      toast.warning('Su sesión anterior caducó por inactividad (1 hora). Ingrese nuevamente.', {
+        id: 'sesion-inactiva',
+        duration: 8000,
+      })
+    }
+  }, [])
 
   const {
     register,
