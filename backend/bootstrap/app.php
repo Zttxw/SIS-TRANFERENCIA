@@ -18,6 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
         __DIR__.'/../app/Integrations/Siga/Commands',
     ])
     ->withMiddleware(function (Middleware $middleware): void {
+        // En una API REST pura no hay ruta web 'login'; las peticiones sin autenticación devuelven 401 JSON
+        $middleware->redirectGuestsTo(fn () => null);
+
         // Autorización por permiso (plan §5). Combinar siempre con auth:sanctum.
         $middleware->alias([
             'permiso' => VerificarPermiso::class,

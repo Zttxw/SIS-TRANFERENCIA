@@ -28,7 +28,7 @@ export function PrevisualizarAnexo(props: Props) {
   </>
 }
 
-function VisorAnexo({ tipoDocumento, dependenciaId, soloGenerado = false, documentoFirmadoId, onCerrar }: Props & { onCerrar: () => void }) {
+export function VisorAnexo({ tipoDocumento, dependenciaId, soloGenerado = false, documentoFirmadoId, onCerrar }: Props & { onCerrar: () => void }) {
   const dialogo = useRef<HTMLDialogElement>(null)
   const [url, setUrl] = useState<string | null>(null)
   const [error, setError] = useState('')

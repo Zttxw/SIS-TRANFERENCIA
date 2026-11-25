@@ -15,7 +15,6 @@ import {
 } from 'lucide-react'
 
 import { useAuth, useDependenciaActiva } from '@/auth/hooks'
-import { Can } from '@/auth/Can'
 import { AlertaBloqueoEntrega } from '@/components/anexos/AlertaBloqueoEntrega'
 import { AnexoHeader } from '@/components/anexos/AnexoHeader'
 import { UsuarioRegistro } from '@/components/anexos/UsuarioRegistro'
@@ -157,62 +156,104 @@ export function PatrimonioPage() {
     return (
       <Fragment key={bien.id}>
         <tr className={cn('transition-colors', expandida ? 'bg-muted/30' : 'hover:bg-muted/20')}>
-          <td className="p-3 font-mono font-bold text-foreground whitespace-nowrap">
-            {bien.codigo_patrimonial}
+          <td className="p-3 align-top font-mono font-bold text-foreground">
+            <span className="whitespace-nowrap">{bien.codigo_patrimonial}</span>
+            {/* Acción y estado en móvil (< md) para evitar scroll horizontal */}
+            <div className="mt-1.5 flex flex-col items-start gap-1 md:hidden">
+              {estadoVerif !== 'pendiente' && (
+                <div>{renderEstadoBadge(estadoVerif)}</div>
+              )}
+              <Button
+                variant={estadoVerif === 'pendiente' ? 'default' : 'outline'}
+                size="sm"
+                className={cn(
+                  'h-7 gap-1 px-2.5 text-xs font-semibold shadow-sm',
+                  estadoVerif === 'pendiente'
+                    ? 'border border-primary bg-primary text-primary-foreground hover:bg-primary-hover'
+                    : 'border-slate-300 dark:border-slate-700',
+                )}
+                disabled={!esModificable}
+                aria-expanded={expandida}
+                onClick={() => alternarFila(bien.id)}
+              >
+                {expandida ? (
+                  <ChevronDown className="h-3 w-3" />
+                ) : (
+                  <ClipboardCheck className="h-3 w-3" />
+                )}
+                {expandida ? 'Cerrar' : estadoVerif === 'pendiente' ? 'Verificar' : 'Editar'}
+              </Button>
+            </div>
           </td>
-          <td className="p-3 max-w-xs font-medium text-foreground">
-            <p className="line-clamp-2">{bien.denominacion}</p>
+          <td className="p-3 align-top font-medium text-foreground">
+            <p className="line-clamp-3 md:line-clamp-none">{bien.denominacion}</p>
+            {/* Metadatos secundarios en móvil */}
+            <div className="mt-1 space-y-0.5 text-mini text-muted-foreground md:hidden">
+              {(bien.marca || bien.modelo || bien.serie) && (
+                <div>
+                  {[bien.marca, bien.modelo && `Mod: ${bien.modelo}`, bien.serie && `S/N: ${bien.serie}`]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </div>
+              )}
+              {bien.servidor && (
+                <div>Custodio: {bien.servidor.apellidos}, {bien.servidor.nombres}</div>
+              )}
+              {!dependenciaId && bien.dependencia && (
+                <div className="font-mono text-primary font-semibold">
+                  [{bien.dependencia.codigo}] {bien.dependencia.nombre}
+                </div>
+              )}
+            </div>
           </td>
           {!dependenciaId && (
-            <td className="p-3 max-w-[200px] text-nota text-muted-foreground truncate">
+            <td className="p-3 align-top max-w-[200px] text-nota text-muted-foreground truncate hidden md:table-cell">
               <span className="font-mono text-primary font-semibold block">
                 [{bien.dependencia?.codigo}]
               </span>
               <span className="truncate block">{bien.dependencia?.nombre}</span>
             </td>
           )}
-          <td className="p-3 whitespace-nowrap text-muted-foreground">
+          <td className="p-3 align-top whitespace-nowrap text-muted-foreground hidden md:table-cell">
             <div>{bien.marca ? `${bien.marca}` : 'S/M'}</div>
             <div className="text-mini text-muted-foreground/80">
               {bien.modelo ? `Mod: ${bien.modelo}` : ''} {bien.serie ? `· S/N: ${bien.serie}` : ''}
             </div>
           </td>
-          <td className="p-3 max-w-[180px] text-muted-foreground truncate">
+          <td className="p-3 align-top max-w-[180px] text-muted-foreground truncate hidden lg:table-cell">
             {bien.servidor ? (
               `${bien.servidor.apellidos}, ${bien.servidor.nombres}`
             ) : (
               <span className="italic text-muted-foreground/60">Sin custodio</span>
             )}
           </td>
-          <td className="p-3 whitespace-nowrap">{renderEstadoBadge(estadoVerif)}</td>
-          <td className="p-3 whitespace-nowrap capitalize text-muted-foreground">
+          <td className="p-3 align-top whitespace-nowrap hidden md:table-cell">{renderEstadoBadge(estadoVerif)}</td>
+          <td className="p-3 align-top whitespace-nowrap capitalize text-muted-foreground hidden lg:table-cell">
             {verif?.estado_conservacion ?? '-'}
           </td>
-          <td className="p-3">
+          <td className="p-3 align-top hidden xl:table-cell">
             <UsuarioRegistro
               usuario={verif?.verificado_por}
               fecha={verif?.verificado_en}
               sinUsuario={verif ? 'Sin usuario registrado' : 'Sin verificar'}
             />
           </td>
-          <td className="p-3 text-right whitespace-nowrap">
-            <Can permiso="bienes.verificar">
-              <Button
-                variant="default"
-                size="sm"
-                className="h-8 gap-1.5 border border-primary bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary-hover"
-                disabled={!esModificable}
-                aria-expanded={expandida}
-                onClick={() => alternarFila(bien.id)}
-              >
-                {expandida ? (
-                  <ChevronDown className="h-3.5 w-3.5" />
-                ) : (
-                  <ClipboardCheck className="h-3.5 w-3.5" />
-                )}
-                {expandida ? 'Cerrar' : estadoVerif === 'pendiente' ? 'Verificar' : 'Editar'}
-              </Button>
-            </Can>
+          <td className="p-3 align-top text-right whitespace-nowrap hidden md:table-cell">
+            <Button
+              variant="default"
+              size="sm"
+              className="h-8 gap-1.5 border border-primary bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary-hover"
+              disabled={!esModificable}
+              aria-expanded={expandida}
+              onClick={() => alternarFila(bien.id)}
+            >
+              {expandida ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ClipboardCheck className="h-3.5 w-3.5" />
+              )}
+              {expandida ? 'Cerrar' : estadoVerif === 'pendiente' ? 'Verificar' : 'Editar'}
+            </Button>
           </td>
         </tr>
 
@@ -379,19 +420,21 @@ export function PatrimonioPage() {
               />
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {toggleVista}
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select
-                className="w-52"
-                options={FILTRO_ESTADO_OPCIONES}
-                value={filtroEstado}
-                onChange={(v) => {
-                  setFiltroEstado(v as EstadoVerificacionBien | '')
-                  setPagina(1)
-                }}
-                placeholder="Todos los estados"
-              />
+              <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+                <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+                <Select
+                  className="w-full sm:w-52"
+                  options={FILTRO_ESTADO_OPCIONES}
+                  value={filtroEstado}
+                  onChange={(v) => {
+                    setFiltroEstado(v as EstadoVerificacionBien | '')
+                    setPagina(1)
+                  }}
+                  placeholder="Todos los estados"
+                />
+              </div>
             </div>
           </div>
         </CardContent>
@@ -403,15 +446,15 @@ export function PatrimonioPage() {
           <table className="w-full text-left text-xs">
             <thead className="border-b bg-muted/40 font-medium text-muted-foreground">
               <tr>
-                <th className="p-3">Cód. Patrimonial</th>
+                <th className="p-3 w-32 sm:w-36 md:w-44">Cód. Patrimonial</th>
                 <th className="p-3">Denominación del Bien (SIGA)</th>
-                {!dependenciaId && <th className="p-3">Centro de Costo</th>}
-                <th className="p-3">Marca / Modelo / Serie</th>
-                <th className="p-3">Custodio Asignado</th>
-                <th className="p-3">Estado Verificación</th>
-                <th className="p-3">Conservación</th>
-                <th className="p-3">Última verificación por</th>
-                <th className="p-3 text-right">Acción</th>
+                {!dependenciaId && <th className="p-3 hidden md:table-cell">Centro de Costo</th>}
+                <th className="p-3 hidden md:table-cell">Marca / Modelo / Serie</th>
+                <th className="p-3 hidden lg:table-cell">Custodio Asignado</th>
+                <th className="p-3 hidden md:table-cell">Estado Verificación</th>
+                <th className="p-3 hidden lg:table-cell">Conservación</th>
+                <th className="p-3 hidden xl:table-cell">Última verificación por</th>
+                <th className="p-3 text-right hidden md:table-cell">Acción</th>
               </tr>
             </thead>
             <tbody className="divide-y">

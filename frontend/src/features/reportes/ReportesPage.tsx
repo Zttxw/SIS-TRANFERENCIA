@@ -8,8 +8,10 @@ import {
   Check,
   CheckCheck,
   Clock,
+  Eye,
   FileText,
   Filter,
+  FolderOpen,
   Layers,
   MessageSquareWarning,
   Minus,
@@ -32,14 +34,18 @@ import {
   YAxis,
 } from 'recharts'
 
+import { Link, useNavigate } from 'react-router-dom'
+
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { DataTable, type ColumnaTabla } from '@/components/ui/data-table'
 import { cn } from '@/lib/utils'
 import { BotonesExport } from './BotonesExport'
+import { VisorAnexo } from '@/features/firmaperu/PrevisualizarAnexo'
+import type { TipoDocumentoFirma } from '@/features/firmaperu/firmaperu.types'
 import {
   useConciliacionPatrimonial,
   useMatrizAnexos,
@@ -85,29 +91,65 @@ function esFirmadoAnexo(v: unknown): boolean {
   return v === 'firmado' || v === 'entregado'
 }
 
-/** Chip visual de estado de anexo (Entregado / Sí / —) */
-function Presencia({ valor }: { valor: unknown }) {
+interface PresenciaProps {
+  valor: unknown
+  dependenciaId?: number
+  tipoDocumento?: TipoDocumentoFirma
+  onVerAnexo?: (tipo: TipoDocumentoFirma, dependenciaId: number) => void
+}
+
+/** Chip visual de estado de anexo (Entregado / Sí / —) con opción de previsualización */
+function Presencia({ valor, dependenciaId, tipoDocumento, onVerAnexo }: PresenciaProps) {
+  const tieneDocumento = esCompletoAnexo(valor) || esFirmadoAnexo(valor)
+  const puedeVer = Boolean(tieneDocumento && dependenciaId != null && tipoDocumento && onVerAnexo)
+
   if (esFirmadoAnexo(valor)) {
     return (
-      <span
-        className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-microdato font-bold text-emerald-800 border border-emerald-300 shadow-2xs"
-        title="Documento firmado y entregado conforme"
-      >
-        <CheckCheck className="h-3 w-3 stroke-[2.5] text-emerald-700" />
-        Entregado
-      </span>
+      <div className="inline-flex items-center gap-1 justify-center" onClick={(e) => e.stopPropagation()}>
+        <span
+          className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-microdato font-bold text-emerald-800 border border-emerald-300 shadow-2xs"
+          title="Documento firmado y entregado conforme"
+        >
+          <CheckCheck className="h-3 w-3 stroke-[2.5] text-emerald-700" />
+          Entregado
+        </span>
+        {puedeVer && (
+          <button
+            type="button"
+            onClick={() => onVerAnexo!(tipoDocumento!, dependenciaId!)}
+            className="inline-flex h-5 w-5 items-center justify-center rounded text-emerald-700 hover:text-emerald-950 hover:bg-emerald-200/60 transition-colors cursor-pointer"
+            title={`Ver PDF firmado de ${tipoDocumento!.replace('anexo', 'Anexo ')}`}
+            aria-label={`Ver PDF firmado de ${tipoDocumento!.replace('anexo', 'Anexo ')}`}
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
     )
   }
 
   if (esCompletoAnexo(valor)) {
     return (
-      <span
-        className="inline-flex items-center gap-1 rounded bg-sky-50 px-2 py-0.5 text-microdato font-bold text-sky-800 border border-sky-200"
-        title="Documento generado en PDF y firma (en avance)"
-      >
-        <Check className="h-3 w-3 stroke-[3] text-sky-600" />
-        Sí
-      </span>
+      <div className="inline-flex items-center gap-1 justify-center" onClick={(e) => e.stopPropagation()}>
+        <span
+          className="inline-flex items-center gap-1 rounded bg-sky-50 px-2 py-0.5 text-microdato font-bold text-sky-800 border border-sky-200"
+          title="Documento generado en PDF y firma (en avance)"
+        >
+          <Check className="h-3 w-3 stroke-[3] text-sky-600" />
+          Sí
+        </span>
+        {puedeVer && (
+          <button
+            type="button"
+            onClick={() => onVerAnexo!(tipoDocumento!, dependenciaId!)}
+            className="inline-flex h-5 w-5 items-center justify-center rounded text-sky-700 hover:text-sky-950 hover:bg-sky-100 transition-colors cursor-pointer"
+            title={`Previsualizar PDF de ${tipoDocumento!.replace('anexo', 'Anexo ')}`}
+            aria-label={`Previsualizar PDF de ${tipoDocumento!.replace('anexo', 'Anexo ')}`}
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
     )
   }
 
@@ -207,13 +249,18 @@ function ModalDetalleDependencia({
       ? 'text-rose-700'
       : 'text-amber-700'
 
-  const anexosLista = [
-    { clave: 'A02', nombre: 'Informe de Gestión', valor: fila.anexo_02 },
-    { clave: 'A03-A', nombre: 'Acervo Documentario Físico', valor: fila.anexo_03a },
-    { clave: 'A03-B', nombre: 'Acervo Documentario Digital', valor: fila.anexo_03b },
-    { clave: 'A04', nombre: 'Bienes Patrimoniales', valor: fila.anexo_04 },
-    { clave: 'A05', nombre: 'Personal', valor: fila.anexo_05 },
-    { clave: 'A06', nombre: 'Bienes No Patrimoniales', valor: fila.anexo_06 },
+  const [modalPreview, setModalPreview] = useState<{
+    tipo: TipoDocumentoFirma
+    dependenciaId: number
+  } | null>(null)
+
+  const anexosLista: { clave: string; nombre: string; valor: unknown; tipo: TipoDocumentoFirma }[] = [
+    { clave: 'A02', nombre: 'Informe de Gestión', valor: fila.anexo_02, tipo: 'anexo02' },
+    { clave: 'A03-A', nombre: 'Acervo Documentario Físico', valor: fila.anexo_03a, tipo: 'anexo03a' },
+    { clave: 'A03-B', nombre: 'Acervo Documentario Digital', valor: fila.anexo_03b, tipo: 'anexo03b' },
+    { clave: 'A04', nombre: 'Bienes Patrimoniales', valor: fila.anexo_04, tipo: 'anexo04' },
+    { clave: 'A05', nombre: 'Personal', valor: fila.anexo_05, tipo: 'anexo05' },
+    { clave: 'A06', nombre: 'Bienes No Patrimoniales', valor: fila.anexo_06, tipo: 'anexo06' },
   ]
 
   return (
@@ -258,7 +305,12 @@ function ModalDetalleDependencia({
                   <span className="font-mono font-bold text-primary">[{anexo.clave}]</span>
                   <span className="text-foreground font-medium">{anexo.nombre}</span>
                 </div>
-                <Presencia valor={anexo.valor} />
+                <Presencia
+                  valor={anexo.valor}
+                  dependenciaId={fila.dependencia_id}
+                  tipoDocumento={anexo.tipo}
+                  onVerAnexo={(tipo, depId) => setModalPreview({ tipo, dependenciaId: depId })}
+                />
               </div>
             ))}
           </div>
@@ -308,16 +360,35 @@ function ModalDetalleDependencia({
           </div>
         </div>
 
-        {/* Botón Cerrar */}
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onClose}
-          className="w-full mt-2"
-        >
-          Cerrar detalle
-        </Button>
+        {/* Acciones del detalle */}
+        <div className="flex flex-col gap-2 pt-2">
+          <Link
+            to={`/anexos-entidad?dependenciaId=${fila.dependencia_id}`}
+            className={cn(
+              buttonVariants({ variant: 'default' }),
+              'w-full gap-2 text-xs font-semibold shadow-xs',
+            )}
+          >
+            <FolderOpen className="h-4 w-4" />
+            Abrir carpeta de anexos
+          </Link>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            className="w-full text-xs"
+          >
+            Cerrar detalle
+          </Button>
+        </div>
       </div>
+      {modalPreview && (
+        <VisorAnexo
+          tipoDocumento={modalPreview.tipo}
+          dependenciaId={modalPreview.dependenciaId}
+          onCerrar={() => setModalPreview(null)}
+        />
+      )}
     </Dialog>
   )
 }
@@ -326,11 +397,16 @@ function ModalDetalleDependencia({
    VISTA 1: MATRIZ DE ANEXOS (CONSOLIDADOS DINÁMICOS Y GRÁFICOS)
    ========================================================================= */
 function MatrizView() {
+  const navigate = useNavigate()
   const { data, isLoading, error, refetch } = useMatrizAnexos()
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<string>('todos')
   const [filtroFaltante, setFiltroFaltante] = useState<string>('todos')
   const [filaDetalle, setFilaDetalle] = useState<FilaMatriz | null>(null)
+  const [previewAnexo, setPreviewAnexo] = useState<{
+    tipo: TipoDocumentoFirma
+    dependenciaId: number
+  } | null>(null)
 
   const metricas = data?.metricas
   const filas = data?.filas ?? []
@@ -416,9 +492,14 @@ function MatrizView() {
       header: 'Código',
       className: 'w-14 sm:w-16 whitespace-nowrap',
       cell: (f) => (
-        <span className="font-mono font-bold text-primary text-nota whitespace-nowrap">
+        <Link
+          to={`/anexos-entidad?dependenciaId=${f.dependencia_id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="font-mono font-bold text-primary text-nota whitespace-nowrap hover:underline block"
+          title={`Ver carpeta de anexos de ${f.nombre}`}
+        >
           [{f.codigo}]
-        </span>
+        </Link>
       ),
     },
     {
@@ -450,9 +531,14 @@ function MatrizView() {
 
         return (
           <div className="min-w-0 max-w-[210px] sm:max-w-[280px]">
-            <div className="font-semibold text-foreground uppercase text-nota truncate">
+            <Link
+              to={`/anexos-entidad?dependenciaId=${f.dependencia_id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="font-semibold text-foreground uppercase text-nota truncate hover:text-primary hover:underline block transition-colors"
+              title={`Ver carpeta de anexos de ${f.nombre}`}
+            >
               {f.nombre}
-            </div>
+            </Link>
             {f.encargado && (
               <div className="text-microdato text-muted-foreground truncate">
                 {f.encargado}
@@ -503,42 +589,84 @@ function MatrizView() {
       header: 'A02 Gestión',
       align: 'center',
       ocultarEnMovil: true,
-      cell: (f) => <Presencia valor={f.anexo_02} />,
+      cell: (f) => (
+        <Presencia
+          valor={f.anexo_02}
+          dependenciaId={f.dependencia_id}
+          tipoDocumento="anexo02"
+          onVerAnexo={(tipo, depId) => setPreviewAnexo({ tipo, dependenciaId: depId })}
+        />
+      ),
     },
     {
       id: 'a03a',
       header: 'A03-A Físico',
       align: 'center',
       ocultarEnMovil: true,
-      cell: (f) => <Presencia valor={f.anexo_03a} />,
+      cell: (f) => (
+        <Presencia
+          valor={f.anexo_03a}
+          dependenciaId={f.dependencia_id}
+          tipoDocumento="anexo03a"
+          onVerAnexo={(tipo, depId) => setPreviewAnexo({ tipo, dependenciaId: depId })}
+        />
+      ),
     },
     {
       id: 'a03b',
       header: 'A03-B SGD',
       align: 'center',
       ocultarEnMovil: true,
-      cell: (f) => <Presencia valor={f.anexo_03b} />,
+      cell: (f) => (
+        <Presencia
+          valor={f.anexo_03b}
+          dependenciaId={f.dependencia_id}
+          tipoDocumento="anexo03b"
+          onVerAnexo={(tipo, depId) => setPreviewAnexo({ tipo, dependenciaId: depId })}
+        />
+      ),
     },
     {
       id: 'a04',
       header: 'A04 Patr.',
       align: 'center',
       ocultarEnMovil: true,
-      cell: (f) => <Presencia valor={f.anexo_04} />,
+      cell: (f) => (
+        <Presencia
+          valor={f.anexo_04}
+          dependenciaId={f.dependencia_id}
+          tipoDocumento="anexo04"
+          onVerAnexo={(tipo, depId) => setPreviewAnexo({ tipo, dependenciaId: depId })}
+        />
+      ),
     },
     {
       id: 'a05',
       header: 'A05 Personal',
       align: 'center',
       ocultarEnMovil: true,
-      cell: (f) => <Presencia valor={f.anexo_05} />,
+      cell: (f) => (
+        <Presencia
+          valor={f.anexo_05}
+          dependenciaId={f.dependencia_id}
+          tipoDocumento="anexo05"
+          onVerAnexo={(tipo, depId) => setPreviewAnexo({ tipo, dependenciaId: depId })}
+        />
+      ),
     },
     {
       id: 'a06',
       header: 'A06 No Patr.',
       align: 'center',
       ocultarEnMovil: true,
-      cell: (f) => <Presencia valor={f.anexo_06} />,
+      cell: (f) => (
+        <Presencia
+          valor={f.anexo_06}
+          dependenciaId={f.dependencia_id}
+          tipoDocumento="anexo06"
+          onVerAnexo={(tipo, depId) => setPreviewAnexo({ tipo, dependenciaId: depId })}
+        />
+      ),
     },
     {
       id: 'obs',
@@ -924,7 +1052,7 @@ function MatrizView() {
             loading={isLoading}
             error={error}
             onReintentar={() => refetch()}
-            onRowClick={(f) => setFilaDetalle(f)}
+            onRowClick={(f) => navigate(`/anexos-entidad?dependenciaId=${f.dependencia_id}`)}
             vacio={{
               titulo: 'No se encontraron dependencias con los filtros seleccionados',
               descripcion: 'Pruebe ajustando el término de búsqueda o cambiando el filtro de estado.',
@@ -939,6 +1067,14 @@ function MatrizView() {
         open={filaDetalle !== null}
         onClose={() => setFilaDetalle(null)}
       />
+
+      {previewAnexo && (
+        <VisorAnexo
+          tipoDocumento={previewAnexo.tipo}
+          dependenciaId={previewAnexo.dependenciaId}
+          onCerrar={() => setPreviewAnexo(null)}
+        />
+      )}
     </div>
   )
 }
@@ -947,6 +1083,7 @@ function MatrizView() {
    VISTA 2: CONCILIACIÓN PATRIMONIAL (SIGA VS ENTREGA CON GRÁFICOS)
    ========================================================================= */
 function ConciliacionView() {
+  const navigate = useNavigate()
   const { data, isLoading, error, refetch } = useConciliacionPatrimonial()
   const [busqueda, setBusqueda] = useState('')
   const [filtroRango, setFiltroRango] = useState<'todos' | '100' | 'proceso' | 'cero'>('todos')
@@ -1009,18 +1146,28 @@ function ConciliacionView() {
       id: 'codigo',
       header: 'Código',
       cell: (f) => (
-        <span className="font-mono font-bold text-primary text-nota whitespace-nowrap">
+        <Link
+          to={`/anexos-entidad?dependenciaId=${f.dependencia_id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="font-mono font-bold text-primary text-nota whitespace-nowrap hover:underline block"
+          title={`Ver carpeta de anexos de ${f.nombre}`}
+        >
           [{f.codigo}]
-        </span>
+        </Link>
       ),
     },
     {
       id: 'nombre',
       header: 'Centro de costo',
       cell: (f) => (
-        <span className="font-medium text-foreground uppercase text-nota">
+        <Link
+          to={`/anexos-entidad?dependenciaId=${f.dependencia_id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="font-medium text-foreground uppercase text-nota hover:text-primary hover:underline block"
+          title={`Ver carpeta de anexos de ${f.nombre}`}
+        >
           {f.nombre}
-        </span>
+        </Link>
       ),
     },
     {
@@ -1296,6 +1443,7 @@ function ConciliacionView() {
             loading={isLoading}
             error={error}
             onReintentar={() => refetch()}
+            onRowClick={(f) => navigate(`/anexos-entidad?dependenciaId=${f.dependencia_id}`)}
             vacio={{
               titulo: 'Sin bienes patrimoniales',
               descripcion: 'Ninguna dependencia coincide con los filtros aplicados.',

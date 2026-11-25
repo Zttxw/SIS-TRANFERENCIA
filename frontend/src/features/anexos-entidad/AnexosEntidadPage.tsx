@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   AlertTriangle,
   CheckCircle2,
@@ -60,10 +61,53 @@ export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil }
   const [busqueda, setBusqueda] = useState('')
   const [soloRemitidas, setSoloRemitidas] = useState<'todas' | 'en_firma' | 'remitidas' | 'pendientes'>('todas')
   const [abierta, setAbierta] = useState<DependenciaSemaforoItem | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const roles = new Set(usuario?.roles.map(({ rol }) => rol) ?? [])
   const perfil = perfilForzado ?? perfilDe(roles)
   const esDelegado = perfil === 'delegado'
+
+  // Abrir carpeta automáticamente si viene indicada en la URL (?dependenciaId=... o ?codigo=...)
+  const depParam = searchParams.get('dependenciaId') || searchParams.get('codigo')
+
+  useEffect(() => {
+    if (!depParam || !data?.dependencias || data.dependencias.length === 0) return
+    const match = data.dependencias.find(
+      (d) => String(d.id) === depParam || d.codigo.toLowerCase() === depParam.toLowerCase(),
+    )
+    if (match) {
+      setAbierta(match)
+    }
+  }, [data?.dependencias, depParam])
+
+  // Mantener 'abierta' sincronizada con datos actualizados
+  useEffect(() => {
+    if (abierta && data?.dependencias) {
+      const match = data.dependencias.find((d) => d.id === abierta.id)
+      if (match && match !== abierta) {
+        setAbierta(match)
+      }
+    }
+  }, [data?.dependencias, abierta])
+
+  const abrirCarpeta = (dep: DependenciaSemaforoItem) => {
+    setAbierta(dep)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('dependenciaId', String(dep.id))
+      return next
+    })
+  }
+
+  const cerrarCarpeta = () => {
+    setAbierta(null)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.delete('dependenciaId')
+      next.delete('codigo')
+      return next
+    })
+  }
 
   const { porNivel, totales } = useMemo(() => {
     const deps = data?.dependencias ?? []
@@ -231,7 +275,7 @@ export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil }
         <nav className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
           <button
             type="button"
-            onClick={() => setAbierta(null)}
+            onClick={cerrarCarpeta}
             className={cn(
               'inline-flex items-center gap-1 rounded-lg px-2 py-1 transition-colors',
               abierta
@@ -302,7 +346,7 @@ export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil }
       </div>
 
       {abierta ? (
-        <CarpetaAbierta dependencia={abierta} onCerrar={() => setAbierta(null)} />
+        <CarpetaAbierta dependencia={abierta} onCerrar={cerrarCarpeta} />
       ) : totales.visibles === 0 ? (
         <Card className="p-10 text-center text-sm text-muted-foreground">
           No se encontraron carpetas que coincidan con los filtros aplicados.
@@ -336,7 +380,7 @@ export function AnexosEntidadPage({ perfil: perfilForzado }: { perfil?: Perfil }
                       key={dep.id}
                       dependencia={dep}
                       nivel={grupo.nivel}
-                      onAbrir={() => setAbierta(dep)}
+                      onAbrir={() => abrirCarpeta(dep)}
                     />
                   ))}
                 </div>

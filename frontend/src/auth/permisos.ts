@@ -73,6 +73,10 @@ const PERMISOS_POR_ROL: Record<RolCodigo, readonly Permiso[]> = {
     PERMISOS.GestionarCronograma,
     PERMISOS.VerReportes,
     PERMISOS.ExportarReportes,
+    PERMISOS.VerAnexos,
+    PERMISOS.RegistrarAnexos,
+    PERMISOS.VerificarBienes,
+    PERMISOS.VerExpediente,
   ],
   [ROLES.Servidor]: [
     PERMISOS.AccederPlataforma,

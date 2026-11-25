@@ -86,8 +86,7 @@ enum Permiso: string
     public static function inicialesPorRol(Rol $rol): array
     {
         return match ($rol) {
-            // Administrador: configuración e ingesta; no recibe acceso a anexos
-            // de dependencias por defecto.
+            // Administrador: plataforma, gestión institucional y supervisión técnica/operativa de anexos.
             Rol::ADMINISTRADOR => [
                 self::AccederPlataforma,
                 self::GestionarUsuarios,
@@ -97,6 +96,10 @@ enum Permiso: string
                 self::GestionarCronograma,
                 self::VerReportes,
                 self::ExportarReportes,
+                self::VerAnexos,
+                self::RegistrarAnexos,
+                self::VerificarBienes,
+                self::VerExpediente,
             ],
             // Servidor público: verifica lo precargado y registra lo faltante.
             // La remisión corresponde al responsable.
