@@ -300,7 +300,7 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6">
           {navigation.state !== 'idle' && <p role="status" className="mb-3 text-xs text-muted-foreground">Cargando módulo…</p>}
           <Outlet />
         </main>

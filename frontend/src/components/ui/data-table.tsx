@@ -37,6 +37,8 @@ interface DataTableProps<T> {
   /** Click de fila (opcional). */
   onRowClick?: (fila: T) => void
   className?: string
+  /** Clases CSS extra para la etiqueta <table> (ej. table-fixed). */
+  tableClassName?: string
 }
 
 /**
@@ -57,6 +59,7 @@ export function DataTable<T>({
   onPageChange,
   onRowClick,
   className,
+  tableClassName,
 }: DataTableProps<T>) {
   const alinear = (a?: 'left' | 'center' | 'right') =>
     a === 'center' ? 'text-center' : a === 'right' ? 'text-right' : 'text-left'
@@ -83,7 +86,7 @@ export function DataTable<T>({
         {(datos) => (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
+              <table className={cn('w-full border-collapse text-sm', tableClassName)}>
                 <thead>
                   <tr className="border-b text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     {columnas.map((col) => (
