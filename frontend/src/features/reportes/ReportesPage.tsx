@@ -490,7 +490,7 @@ function MatrizView() {
     {
       id: 'codigo',
       header: 'Código',
-      className: 'w-14 sm:w-16 whitespace-nowrap',
+      className: 'w-12 sm:w-16 whitespace-nowrap px-1.5 sm:px-3 text-center sm:text-left',
       cell: (f) => (
         <Link
           to={`/anexos-entidad?dependenciaId=${f.dependencia_id}`}
@@ -505,7 +505,7 @@ function MatrizView() {
     {
       id: 'nombre',
       header: 'Centro de costo',
-      className: 'min-w-0',
+      className: 'min-w-0 px-1.5 sm:px-3',
       cell: (f) => {
         const sem = getEstadoSemaforo(f)
         const anexosCompletados = contarAnexosCompletos(f)
@@ -530,7 +530,7 @@ function MatrizView() {
             : 'text-amber-700'
 
         return (
-          <div className="min-w-0 max-w-[210px] sm:max-w-[280px]">
+          <div className="min-w-0 w-full max-w-[155px] xs:max-w-[210px] sm:max-w-[280px]">
             <Link
               to={`/anexos-entidad?dependenciaId=${f.dependencia_id}`}
               onClick={(e) => e.stopPropagation()}
@@ -545,7 +545,7 @@ function MatrizView() {
               </div>
             )}
             {/* Barrita de progreso semafórico (inicia en amarillo) */}
-            <div className="flex items-center gap-1.5 mt-1">
+            <div className="flex items-center gap-1.5 mt-1 max-w-[135px] xs:max-w-[180px] sm:max-w-none">
               <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden border border-border/60">
                 <div
                   className={cn('h-full rounded-full transition-all duration-300', colorBarra)}
@@ -564,15 +564,17 @@ function MatrizView() {
       id: 'acciones_movil',
       header: '',
       align: 'right',
-      className: 'table-cell sm:hidden w-18 text-right',
+      className:
+        'table-cell sm:hidden w-20 min-w-[76px] text-right px-2 sticky right-0 bg-card z-10 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]',
       cell: (f) => (
         <button
           type="button"
-          className="text-xs font-semibold text-primary hover:text-primary/80 hover:underline cursor-pointer transition-colors p-0 whitespace-nowrap bg-transparent border-0"
+          className="inline-flex items-center justify-center text-[11px] font-bold text-primary bg-primary/10 hover:bg-primary/20 active:bg-primary/30 px-2 py-1 rounded-md transition-colors whitespace-nowrap cursor-pointer border-0"
           onClick={(e) => {
             e.stopPropagation()
             setFilaDetalle(f)
           }}
+          title="Ver detalle de dependencias y anexos"
         >
           Ver más
         </button>
