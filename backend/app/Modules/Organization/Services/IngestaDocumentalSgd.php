@@ -54,6 +54,13 @@ class IngestaDocumentalSgd
      */
     public const RECEPCION_NO_RECIBIDA = ['0', '9'];
 
+    /**
+     * Tipos documentales del SGD (CO_TIP_DOC_ADM) que solo acompañan el trámite
+     * y no forman parte del acervo documentario del Anexo 03-B: proveído (232)
+     * y hoja de envío (304).
+     */
+    public const TIPOS_FUERA_DEL_ACERVO = ['232', '304'];
+
     public function __construct(
         private readonly string $esquema,
         private readonly string $conexionSgd = 'sgd',
@@ -188,11 +195,12 @@ class IngestaDocumentalSgd
                 WHERE r.ES_ELI = '0'
                   AND r.ES_DOC_EMI NOT IN ('9')
                   AND r.CO_DEP_EMI IS NOT NULL
-                  AND r.NU_ANN IS NOT NULL";
-        $bindings = [];
+                  AND r.NU_ANN IS NOT NULL
+                  AND {$this->condicionTipoDelAcervo()}";
+        $bindings = self::TIPOS_FUERA_DEL_ACERVO;
         if ($codigos !== null) {
             $sql .= ' AND r.CO_DEP_EMI IN ('.$this->marcadores($codigos).')';
-            $bindings = $codigos;
+            $bindings = array_merge($bindings, $codigos);
         }
         $sql .= ' GROUP BY r.NU_ANN, r.CO_DEP_EMI, r.CO_TIP_DOC_ADM';
 
@@ -223,8 +231,9 @@ class IngestaDocumentalSgd
                   AND d.ES_DOC_REC IS NOT NULL
                   AND d.ES_DOC_REC NOT IN ({$noRecibida})
                   AND d.CO_DEP_DES IS NOT NULL
-                  AND d.NU_ANN IS NOT NULL";
-        $bindings = array_merge(self::EMISION_EXCLUIDA, self::RECEPCION_NO_RECIBIDA);
+                  AND d.NU_ANN IS NOT NULL
+                  AND {$this->condicionTipoDelAcervo()}";
+        $bindings = array_merge(self::EMISION_EXCLUIDA, self::RECEPCION_NO_RECIBIDA, self::TIPOS_FUERA_DEL_ACERVO);
         if ($codigos !== null) {
             $sql .= ' AND d.CO_DEP_DES IN ('.$this->marcadores($codigos).')';
             $bindings = array_merge($bindings, $codigos);
@@ -236,6 +245,15 @@ class IngestaDocumentalSgd
              GROUP BY x.anio, x.dep, x.tipo",
             $bindings,
         );
+    }
+
+    /**
+     * Condición sobre `TDTV_REMITOS r` que deja fuera los tipos ajenos al acervo.
+     * Conserva los documentos sin tipo, que forman la serie «Documentos sin tipo».
+     */
+    private function condicionTipoDelAcervo(): string
+    {
+        return '(r.CO_TIP_DOC_ADM IS NULL OR r.CO_TIP_DOC_ADM NOT IN ('.$this->marcadores(self::TIPOS_FUERA_DEL_ACERVO).'))';
     }
 
     /** «Informe emitidos», «Memorándum recibidos»: tipo documental + sentido. */
