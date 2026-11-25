@@ -5,7 +5,6 @@ import {
   ClipboardList,
   FileCheck2,
   Files,
-  FileText,
   FolderOpen,
   FolderTree,
   HardDrive,
@@ -22,7 +21,6 @@ import {
 } from 'lucide-react'
 
 import { PERMISOS, type Permiso } from '@/auth/permisos'
-import type { ModuloConfigurable } from '@/types/auth'
 
 export interface SubItemNav {
   etiqueta: string
@@ -38,8 +36,6 @@ export interface ItemNav {
   icono: LucideIcon
   permiso: Permiso
   permisosAlternativos?: readonly Permiso[]
-  /** Se oculta si este módulo está apagado. */
-  modulo?: ModuloConfigurable
   hijos?: SubItemNav[]
 }
 
@@ -110,13 +106,6 @@ export const ITEMS_NAV: ItemNav[] = [
     ruta: '/anexos-entidad',
     icono: FolderOpen,
     permiso: PERMISOS.VerAnexos,
-  },
-  {
-    etiqueta: 'Documentos pendientes',
-    ruta: '/documentos',
-    icono: FileText,
-    permiso: PERMISOS.VerAnexos,
-    modulo: 'documentos_pendientes',
   },
   {
     etiqueta: 'PDF y firma',

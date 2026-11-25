@@ -120,11 +120,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // Aviso al responsable del CC: sus coordinadores ETTE y reemplazos recientes (F-12).
     Route::get('/coordinadores-ette/mis-centros', [DelegadoController::class, 'misCoordinadores']);
 
-    // Anexo 01: Reporte de Asuntos Pendientes y Prioritarios (SGD) (plan §7.7).
-    Route::prefix('documentos-pendientes')->middleware('modulo:documentos_pendientes')->group(function () {
+    // Documentos pendientes del SGD: alimentan la sección IV del Anexo 02 (siempre
+    // activos). El drill-down de indicadores sigue sujeto al interruptor del módulo.
+    Route::prefix('documentos-pendientes')->group(function () {
         Route::get('/', [DocumentoPendienteController::class, 'index'])->middleware('permiso:anexos.ver');
         Route::get('/resumen', [DocumentoPendienteController::class, 'resumen'])->middleware('permiso:anexos.ver,reportes.ver');
-        Route::get('/drilldown', [DocumentoPendienteController::class, 'drilldown'])->middleware('permiso:anexos.ver,reportes.ver');
+        Route::get('/drilldown', [DocumentoPendienteController::class, 'drilldown'])
+            ->middleware(['modulo:documentos_pendientes', 'permiso:anexos.ver,reportes.ver']);
         Route::post('/', [DocumentoPendienteController::class, 'store'])->middleware('permiso:anexos.registrar');
         Route::put('/{id}', [DocumentoPendienteController::class, 'update'])->middleware('permiso:anexos.registrar');
         Route::delete('/{id}', [DocumentoPendienteController::class, 'destroy'])->middleware('permiso:anexos.registrar');

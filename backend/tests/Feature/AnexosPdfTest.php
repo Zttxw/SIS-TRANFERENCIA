@@ -6,19 +6,24 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Modules\Acervo\Models\AcervoDocumental;
+use App\Modules\Acervo\Services\AcervoPdf;
 use App\Modules\Auth\Models\AsignacionRol;
+use App\Modules\Gestion\Services\InformeGestionPdf;
 use App\Modules\NoPatrimonial\Models\BienNoPatrimonial;
+use App\Modules\NoPatrimonial\Services\NoPatrimonialPdf;
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Organization\Models\Servidor;
 use App\Modules\Patrimonio\Models\BienPatrimonial;
 use App\Modules\Patrimonio\Models\VerificacionBien;
 use App\Modules\Patrimonio\Services\PatrimonioPdf;
 use App\Modules\Personal\Models\Personal;
+use App\Modules\Personal\Services\PersonalPdf;
 use App\Modules\Transferencia\Models\Entrega;
 use App\Modules\Transferencia\Models\ProcesoTransferencia;
 use App\Support\Enums\EstadoEntrega;
 use App\Support\Enums\EstadoVerificacionBien;
 use App\Support\Enums\Rol;
+use App\Support\Enums\TipoAcervo;
 use Database\Seeders\RolesPermisosSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
@@ -28,7 +33,8 @@ use Tests\TestCase;
 
 /**
  * PDF oficiales de los anexos 03–06 y del acta 07 (F5). Verifica que cada
- * endpoint produce un PDF y que el acta se obtiene antes de remitir.
+ * endpoint produce un PDF, que el acta se obtiene antes de remitir y que los
+ * anexos 02–06 llevan el bloque de firmas de ambos lados.
  */
 class AnexosPdfTest extends TestCase
 {
@@ -198,5 +204,45 @@ class AnexosPdfTest extends TestCase
         ]);
 
         $this->assertEsPdf($this->get("/api/transferencia/acta/pdf?dependencia_id={$this->dep->id}"));
+    }
+
+    #[TestWith(['anexo02'])]
+    #[TestWith(['anexo03a'])]
+    #[TestWith(['anexo04'])]
+    #[TestWith(['anexo05'])]
+    #[TestWith(['anexo06'])]
+    public function test_pdf_individual_de_los_anexos_02_al_06_incluye_las_firmas_de_entrega_y_recepcion(string $anexo): void
+    {
+        $responsable = $this->usuarioDelCentro(Rol::RESPONSABLE_CENTRO_COSTO, 'Rosa Huamán Quispe', '45454545');
+        $coordinador = $this->usuarioDelCentro(Rol::DELEGADO_ETTE, 'Luis Mamani Torres', '46464646');
+
+        [$vista, $datos] = match ($anexo) {
+            'anexo02' => ['pdf.anexo02', app(InformeGestionPdf::class)->datos($this->dep->id)],
+            'anexo03a' => ['pdf.anexo03', app(AcervoPdf::class)->datos($this->dep->id, TipoAcervo::FISICO)],
+            'anexo04' => ['pdf.anexo04', app(PatrimonioPdf::class)->datos($this->dep->id)],
+            'anexo05' => ['pdf.anexo05', app(PersonalPdf::class)->datos($this->dep->id)],
+            'anexo06' => ['pdf.anexo06', app(NoPatrimonialPdf::class)->datos($this->dep->id)],
+        };
+        $html = view($vista, $datos)->render();
+
+        $this->assertStringContainsString('Responsable que efectúa la entrega', $html);
+        $this->assertStringContainsString($responsable->name, $html);
+        $this->assertStringContainsString('DNI: 45454545', $html);
+        $this->assertStringContainsString('Responsable de la recepción y verificación', $html);
+        $this->assertStringContainsString($coordinador->name, $html);
+        $this->assertStringContainsString('DNI: 46464646', $html);
+        $this->assertStringContainsString('Coordinador acreditado por el ETTE', $html);
+    }
+
+    private function usuarioDelCentro(Rol $rol, string $nombre, string $dni): User
+    {
+        $usuario = User::factory()->create(['name' => $nombre, 'dni' => $dni]);
+        AsignacionRol::factory()->rol($rol)->create([
+            'user_id' => $usuario->id,
+            'proceso_transferencia_id' => $this->proceso->id,
+            'dependencia_id' => $this->dep->id,
+        ]);
+
+        return $usuario;
     }
 }

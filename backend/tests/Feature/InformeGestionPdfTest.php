@@ -141,7 +141,6 @@ class InformeGestionPdfTest extends TestCase
 
     public function test_la_seccion_iv_combina_la_entrada_libre_con_los_pendientes_del_sgd_y_manuales(): void
     {
-        config(['modulos.documentos_pendientes' => true]);
         $this->servidorEn($this->dep);
         EstadoSgd::create(['dominio' => EstadoSgd::DOMINIO_RECEPCION, 'codigo' => '1', 'descripcion' => 'RECIBIDO']);
         InformeGestion::create([
@@ -186,7 +185,6 @@ class InformeGestionPdfTest extends TestCase
 
     public function test_los_pendientes_se_leen_en_vivo_hasta_presentar_y_luego_quedan_congelados(): void
     {
-        config(['modulos.documentos_pendientes' => true]);
         $responsable = User::factory()->create();
         AsignacionRol::factory()->rol(Rol::RESPONSABLE_CENTRO_COSTO)->create([
             'user_id' => $responsable->id,

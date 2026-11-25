@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AlertCircle, Building2, CheckCircle, Save } from 'lucide-react'
 
-import { useDependenciaActiva, useModulo } from '@/auth/hooks'
+import { useDependenciaActiva } from '@/auth/hooks'
 import { Can } from '@/auth/Can'
 import { AnexoLayout } from '@/components/anexos/AnexoLayout'
 import { UsuarioRegistro } from '@/components/anexos/UsuarioRegistro'
@@ -34,7 +34,6 @@ const NIVELES: { valor: NivelOrganizacional; etiqueta: string }[] = [
 
 export function InformeGestionPage() {
   const { dependenciaId } = useDependenciaActiva()
-  const conDocumentosPendientes = useModulo('documentos_pendientes')
   const { data: estadoData, isLoading: cargandoEstado } = useEstadoEntrega(dependenciaId)
   const { data: informe, isLoading: cargandoInforme } = useInformeGestion(dependenciaId)
   const guardarMut = useGuardarInformeGestion()
@@ -354,12 +353,10 @@ export function InformeGestionPage() {
             etiquetaAgregar="Agregar asunto"
           />
 
-          {conDocumentosPendientes && (
-            <PendientesDocumentalesTabla
-              filas={informe?.agenda_documental ?? []}
-              congeladosEn={informe?.pendientes_congelados_en ?? null}
-            />
-          )}
+          <PendientesDocumentalesTabla
+            filas={informe?.agenda_documental ?? []}
+            congeladosEn={informe?.pendientes_congelados_en ?? null}
+          />
 
           {/* Barra de acciones inferior */}
           <Can permiso="anexos.registrar">

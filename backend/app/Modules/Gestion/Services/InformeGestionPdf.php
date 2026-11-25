@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Gestion\Services;
 
 use App\Modules\Gestion\Models\InformeGestion;
+use App\Modules\Transferencia\Services\FirmasAnexo;
 use App\Support\Services\ContextoTransferencia;
 use App\Support\Services\PdfService;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -24,6 +25,7 @@ class InformeGestionPdf
         private readonly GestionService $gestionService,
         private readonly AgendaPendiente $agenda,
         private readonly ContextoTransferencia $contexto,
+        private readonly FirmasAnexo $firmas,
         private readonly PdfService $pdf,
     ) {}
 
@@ -48,6 +50,7 @@ class InformeGestionPdf
 
         return [
             'contexto' => $contexto,
+            'firmas' => $this->firmas->paraDependencia($dependenciaId),
             'informe' => $this->modeloDeVista($informe),
             'nivelCheck' => fn (string $nivel): string => $this->nivelCheck($informe, $nivel),
         ];

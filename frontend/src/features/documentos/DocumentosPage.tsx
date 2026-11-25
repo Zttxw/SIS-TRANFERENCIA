@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
+  ArrowLeft,
   Building2,
   Calendar,
   FilePlus,
@@ -16,7 +18,7 @@ import { AlertaBloqueoEntrega } from '@/components/anexos/AlertaBloqueoEntrega'
 import { AnexoHeader } from '@/components/anexos/AnexoHeader'
 import { UsuarioRegistro } from '@/components/anexos/UsuarioRegistro'
 import { ObservacionesAnexoPanel } from '@/components/anexos/ObservacionesAnexoPanel'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -122,20 +124,26 @@ export function DocumentosPage() {
         dependenciaCodigo={dependencia?.codigo}
         dependenciaNombre={dependencia?.nombre}
         acciones={
-          <Can permiso="anexos.registrar">
-            <Button
-              size="sm"
-              className="gap-1.5"
-              disabled={!esModificable}
-              onClick={() => {
-                setDocAEditar(null)
-                setModalAbierto(true)
-              }}
-            >
-              <FilePlus className="h-4 w-4" />
-              Agregar pendiente manual
-            </Button>
-          </Can>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to="/gestion" className={buttonVariants({ size: 'sm', variant: 'outline', className: 'gap-1.5' })}>
+              <ArrowLeft className="h-4 w-4" />
+              Volver al Anexo 02
+            </Link>
+            <Can permiso="anexos.registrar">
+              <Button
+                size="sm"
+                className="gap-1.5"
+                disabled={!esModificable}
+                onClick={() => {
+                  setDocAEditar(null)
+                  setModalAbierto(true)
+                }}
+              >
+                <FilePlus className="h-4 w-4" />
+                Agregar pendiente manual
+              </Button>
+            </Can>
+          </div>
         }
       />
 

@@ -33,7 +33,6 @@ class DocumentoPendienteSumillaTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['modulos.documentos_pendientes' => true]);
         $this->seed(RolesPermisosSeeder::class);
         $this->proceso = ProcesoTransferencia::factory()->create();
         $this->dep = Dependencia::factory()->create([

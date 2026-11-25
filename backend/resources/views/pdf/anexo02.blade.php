@@ -14,18 +14,5 @@
         a la normativa vigente.
     </p>
 
-    <table class="firma-bloque">
-        <tr>
-            <td>
-                <div class="firma-linea">{{ $informe['responsable'] ?: 'Nombres y apellidos' }}</div>
-                DNI: {{ $informe['responsable_dni'] ?: '________________' }}<br>
-                {{ $informe['cargo_periodo'] ?: 'Cargo / centro de costo' }}<br>
-                Responsable que efectúa la entrega
-            </td>
-            <td>
-                <div class="firma-linea">Lugar y fecha</div>
-                San Jerónimo, ______ de ____________ de 20____
-            </td>
-        </tr>
-    </table>
+    @include('pdf.partials.firmas', $firmas)
 @endsection

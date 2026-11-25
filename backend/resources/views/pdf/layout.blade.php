@@ -11,11 +11,11 @@
 <head>
     <meta charset="utf-8">
     <style>
-        /* Margen superior = alto real de la cabecera (58px) + aire (10px).
-           Inferior = alto del pie (26px) + aire. Así el cuerpo nunca se solapa
-           ni queda empujado hacia abajo. */
+        /* Margen superior = alto de la cabecera (62px) + aire (10px) + desfase
+           superior (12px). Inferior = alto del pie (26px) + aire. Si cambia la
+           cabecera, ajustar juntos este margen y `header { top }`. */
         @page {
-            margin: 74px 36px 48px 36px;
+            margin: 84px 36px 48px 36px;
         }
 
         * {
@@ -30,26 +30,52 @@
             margin: 0;
         }
 
-        /* ---- Cabecera institucional fija (alto fijo: 58px) ---- */
+        /* ---- Cabecera institucional fija (alto fijo: 62px) ----
+           Escudo a la izquierda, títulos centrados y una columna vacía del mismo
+           ancho que el escudo a la derecha para que el centrado sea exacto. */
         header {
             position: fixed;
-            top: -62px;
+            top: -72px;
             left: 0;
             right: 0;
-            height: 56px;
+            height: 62px;
         }
 
-        header .marca {
-            border-bottom: 1.5px solid #333333;
-            padding-bottom: 5px;
+        header table.marca {
+            margin: 0;
+            border-bottom: 1.5px solid #1a1a1a;
+        }
+
+        header .marca td {
+            border: none;
+            padding: 0 0 4px 0;
+            vertical-align: middle;
+            text-align: center;
+        }
+
+        header .marca td.escudo,
+        header .marca td.contrapeso {
+            width: 58px;
+        }
+
+        header .marca td.escudo { text-align: left; }
+
+        header .marca img {
+            height: 48px;
+        }
+
+        /* Filete fino bajo la línea gruesa: doble filete institucional. */
+        header .filete {
+            border-top: 0.5px solid #1a1a1a;
+            margin-top: 1.5px;
         }
 
         header .entidad {
-            font-size: 10.5px;
+            font-size: 11px;
             font-weight: bold;
             color: #1a1a1a;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.6px;
         }
 
         header .subtitulo {
@@ -59,15 +85,17 @@
         }
 
         header .anexo-titulo {
-            margin-top: 5px;
+            margin-top: 4px;
             font-size: 10.5px;
             font-weight: bold;
             color: #1a1a1a;
             text-transform: uppercase;
-            letter-spacing: 0.2px;
+            letter-spacing: 0.3px;
         }
 
-        /* ---- Pie fijo con numeración y folio (alto fijo: 26px) ---- */
+        /* ---- Pie fijo (alto fijo: 26px). El número de página «Pág. X / Y» lo
+           dibuja PdfService::binario() en el hueco derecho: el contador CSS
+           counter(pages) no funciona en dompdf. ---- */
         footer {
             position: fixed;
             bottom: -34px;
@@ -80,12 +108,9 @@
             padding-top: 4px;
         }
 
-        footer .izq { position: absolute; left: 0; width: 65%; }
-        footer .der { position: absolute; right: 0; width: 35%; text-align: right; }
-
-        footer .pagina:after {
-            content: counter(page) " / " counter(pages);
-        }
+        footer .izq { position: absolute; left: 0; width: 50%; }
+        /* Deja libres 60px a la derecha para «Pág. X / Y» (PdfService). */
+        footer .der { position: absolute; right: 60px; width: 40%; text-align: right; }
 
         /* ---- Marca de agua para borradores ---- */
         .watermark {
@@ -162,7 +187,7 @@
 
         /* ---- Bloque de firma: proporcionado y nunca partido ---- */
         .firma-bloque {
-            margin-top: 22px;
+            margin-top: 28px;
             width: 100%;
             page-break-inside: avoid;
         }
@@ -170,7 +195,7 @@
         .firma-bloque td {
             border: none;
             text-align: center;
-            padding-top: 30px;
+            padding-top: 60px;
             font-size: 8px;
             width: 50%;
         }
@@ -188,6 +213,12 @@
             color: #333333;
         }
 
+        /* Lugar y fecha de suscripción, alineados a la derecha sobre las firmas. */
+        .lugar-fecha {
+            text-align: right;
+            margin-top: 14px;
+        }
+
         /* Título de cada anexo embebido en el expediente consolidado. */
         .titulo-anexo-interno {
             font-size: 11px;
@@ -195,6 +226,7 @@
             color: #1a1a1a;
             text-transform: uppercase;
             letter-spacing: 0.2px;
+            text-align: center;
             border-bottom: 1px solid #808080;
             padding-bottom: 4px;
             margin-bottom: 8px;
@@ -207,14 +239,23 @@
 </head>
 <body>
     <header>
-        <div class="marca">
-            <div class="entidad">Municipalidad Distrital de San Jerónimo</div>
-            <div class="subtitulo">
-                Proceso de Transferencia Administrativa de Gestión y Entrega de Cargo
-                &mdash; Directiva CGR N.° 016-2022-CG/PREVI
-            </div>
-            <div class="anexo-titulo">@yield('anexo_titulo')</div>
-        </div>
+        <table class="marca">
+            <tr>
+                <td class="escudo">
+                    <img src="{{ once(fn (): string => 'data:image/png;base64,'.base64_encode(file_get_contents(resource_path('images/logo-mdsj.png')))) }}" alt="Escudo de la Municipalidad Distrital de San Jerónimo">
+                </td>
+                <td>
+                    <div class="entidad">Municipalidad Distrital de San Jerónimo</div>
+                    <div class="subtitulo">
+                        Proceso de Transferencia Administrativa de Gestión y Entrega de Cargo
+                        &mdash; Directiva CGR N.° 016-2022-CG/PREVI
+                    </div>
+                    <div class="anexo-titulo">@yield('anexo_titulo')</div>
+                </td>
+                <td class="contrapeso"></td>
+            </tr>
+        </table>
+        <div class="filete"></div>
     </header>
 
     <footer>
@@ -222,10 +263,7 @@
             {{ $contexto['dependencia']['codigo'] ?? '' }} &mdash;
             {{ $contexto['dependencia']['nombre'] ?? '' }}
         </span>
-        <span class="der">
-            Emitido el {{ $contexto['emitido_en'] ?? '' }} &middot;
-            Pág. <span class="pagina"></span>
-        </span>
+        <span class="der">Emitido el {{ $contexto['emitido_en'] ?? '' }} &middot;</span>
     </footer>
 
     @if (($contexto['es_borrador'] ?? false))

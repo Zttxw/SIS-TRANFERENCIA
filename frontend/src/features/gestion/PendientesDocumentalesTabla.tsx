@@ -1,8 +1,6 @@
-import { Link } from 'react-router-dom'
-import { ExternalLink, Lock } from 'lucide-react'
+import { Lock } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
-import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import type { FilaPendienteDocumental } from '@/types/gestion'
 
@@ -14,28 +12,20 @@ interface PendientesDocumentalesTablaProps {
 
 /**
  * Documentos pendientes del CC que entran a la sección IV del Anexo 02 (D-09):
- * los ingeridos del SGD y los registrados a mano en "Documentos pendientes". Son
- * de solo lectura aquí; se corrigen desde su propia pantalla. Antes de presentar
- * se leen en vivo; al cerrar la entrega para firma quedan congelados.
+ * los ingeridos del SGD y los registrados a mano. Son de solo lectura aquí.
+ * Antes de presentar se leen en vivo; al cerrar la entrega para firma quedan
+ * congelados.
  */
 export function PendientesDocumentalesTabla({ filas, congeladosEn }: PendientesDocumentalesTablaProps) {
   return (
     <Card className="overflow-hidden border-primary/15">
       <CardHeader className="border-b bg-muted/25 pb-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <CardTitle className="text-base">Documentos pendientes del centro de costo ({filas.length})</CardTitle>
-            <CardDescription className="text-xs">
-              {congeladosEn
-                ? `Copia fija tomada al presentar la entrega (${new Date(congeladosEn).toLocaleString('es-PE')}); ya no cambia aunque cambie el SGD.`
-                : 'Se agregan a la sección IV del PDF a continuación de los asuntos anteriores. Reflejan la última ingesta del SGD y quedarán fijos al presentar la entrega al coordinador.'}
-            </CardDescription>
-          </div>
-          <Link to="/documentos" className={buttonVariants({ size: 'sm', variant: 'outline', className: 'gap-1.5' })}>
-            <ExternalLink className="h-3.5 w-3.5" />
-            Ver documentos pendientes
-          </Link>
-        </div>
+        <CardTitle className="text-base">Documentos pendientes del centro de costo ({filas.length})</CardTitle>
+        <CardDescription className="text-xs">
+          {congeladosEn
+            ? `Copia fija tomada al presentar la entrega (${new Date(congeladosEn).toLocaleString('es-PE')}); ya no cambia aunque cambie el SGD.`
+            : 'Se agregan a la sección IV del PDF a continuación de los asuntos anteriores. Reflejan la última ingesta del SGD y quedarán fijos al presentar la entrega al coordinador.'}
+        </CardDescription>
       </CardHeader>
 
       <CardContent className="p-0">

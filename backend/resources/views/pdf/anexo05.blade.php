@@ -4,4 +4,6 @@
 
 @section('cuerpo')
     @include('pdf.partials.anexo05', ['cabecera' => $cabecera, 'personal' => $personal])
+
+    @include('pdf.partials.firmas', $firmas)
 @endsection

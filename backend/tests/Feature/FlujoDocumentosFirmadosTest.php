@@ -175,11 +175,12 @@ class FlujoDocumentosFirmadosTest extends TestCase
     public function test_el_servidor_no_firma_y_la_firma_del_coordinador_sola_no_basta(): void
     {
         $this->entregaEn($this->dep);
+        $this->usuario(Rol::DELEGADO_ETTE, $this->dep);
+        Sanctum::actingAs($this->jefe);
         $this->generar('anexo03a');
         $this->usuario(Rol::SERVIDOR, $this->dep);
         $this->postJson('/api/firmaperu/preparar', ['lado' => 'entidad', 'tipo_documento' => 'anexo03a', 'dependencia_id' => $this->dep->id])->assertForbidden();
 
-        $this->usuario(Rol::DELEGADO_ETTE, $this->dep);
         Sanctum::actingAs($this->jefe);
         $sesion = $this->firmar('anexo03a', false, 'ette');
         $this->assertDatabaseHas('firmas_anexo', ['firma_sesion_id' => $sesion->id, 'lado' => 'ette']);

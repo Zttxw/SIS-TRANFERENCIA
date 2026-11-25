@@ -132,26 +132,11 @@
         Administrativa de Gestión y Entrega de Cargo.
     </p>
 
-    <table class="firma-bloque">
-        <tr>
-            <td>
-                <div class="firma-linea">Responsable que efectúa la entrega</div>
-                {{ $acta['entrega']['nombre'] ?: 'Nombres y apellidos' }}<br>
-                DNI: {{ $acta['entrega']['dni'] ?: '________________' }}<br>
-                {{ $acta['entrega']['cargo'] }}<br>
-                {{ $acta['codigo'] }} — {{ $acta['dependencia'] }}
-            </td>
-            <td>
-                <div class="firma-linea">Responsable de la recepción y verificación</div>
-                {{ $acta['recepcion']['nombre'] ?: 'Nombres y apellidos' }}<br>
-                DNI: {{ $acta['recepcion']['dni'] ?: '________________' }}<br>
-                {{ $acta['recepcion']['calidad'] }}
-                @if ($acta['recepcion']['cargo'])
-                    <br>{{ $acta['recepcion']['cargo'] }}
-                @endif
-            </td>
-        </tr>
-    </table>
+    @include('pdf.partials.firmas', [
+        'entrega' => $acta['entrega'],
+        'recepcion' => $acta['recepcion'],
+        'centro' => trim($acta['codigo'].' — '.$acta['dependencia'], ' —'),
+    ])
 
     <p class="declaracion">
         <strong>Nota:</strong> esta acta es un documento interno del procedimiento de transferencia administrativa

@@ -66,14 +66,13 @@ export function AppLayout() {
   const rutasEtte = new Set(['/', '/organigrama', '/anexos-entidad', '/cadena-etts', '/reportes', '/observaciones', '/delegados'])
   const rutasEtts = new Set(['/', '/organigrama', '/anexos-entidad', '/entregas', '/cadena-etts', '/observaciones', '/reportes', '/cronograma', '/acta'])
   // El portal del delegado («/») ya es el explorador de sus dependencias; su
-  // navegación se acota a él más documentos y observaciones.
-  const rutasDelegado = new Set(['/', '/documentos', '/observaciones'])
+  // navegación se acota a él más observaciones.
+  const rutasDelegado = new Set(['/', '/observaciones'])
   const items = ITEMS_NAV.filter(
     (item) =>
       (!soloEtte || (item.ruta !== undefined && rutasEtte.has(item.ruta))) &&
       (!soloEtts || (item.ruta !== undefined && rutasEtts.has(item.ruta))) &&
       (!soloDelegado || (item.ruta !== undefined && rutasDelegado.has(item.ruta))) &&
-      (!item.modulo || usuario?.modulos?.[item.modulo] === true) &&
       (permisos.has(item.permiso) ||
       item.permisosAlternativos?.some((permiso) => permisos.has(permiso))),
   )

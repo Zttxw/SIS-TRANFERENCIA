@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support\Services;
 
 use Barryvdh\DomPDF\Facade\Pdf;
+use Dompdf\Dompdf;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -50,11 +51,26 @@ class PdfService
             ->setOption('isHtml5ParserEnabled', true)
             ->setOption('defaultFont', 'DejaVu Sans');
         $pdf->render();
-        $canvas = $pdf->getDomPDF()->getCanvas();
-        $fuente = $pdf->getDomPDF()->getFontMetrics()->getFont('DejaVu Sans', 'normal');
-        $canvas->page_text($canvas->get_width() - 100, $canvas->get_height() - 30,
-            'Pág. {PAGE_NUM} / {PAGE_COUNT}', $fuente, 6, [0.42, 0.45, 0.5]);
+        $this->numerarPaginas($pdf->getDomPDF());
 
         return $pdf->output();
+    }
+
+    /**
+     * Dibuja «Pág. X / Y» en el hueco derecho del pie del layout (el contador
+     * CSS `counter(pages)` no funciona en dompdf). Las medidas, en puntos,
+     * replican las del pie: margen lateral de 36px, texto a 7px y gris #737373.
+     */
+    private function numerarPaginas(Dompdf $dompdf): void
+    {
+        $canvas = $dompdf->getCanvas();
+        $metricas = $dompdf->getFontMetrics();
+        $fuente = $metricas->getFont('DejaVu Sans', 'normal');
+        $tamano = 5.25;
+        $margenLateral = 27;
+        $anchoTexto = $metricas->getTextWidth('Pág. 00 / 00', $fuente, $tamano);
+
+        $canvas->page_text($canvas->get_width() - $margenLateral - $anchoTexto, $canvas->get_height() - 29,
+            'Pág. {PAGE_NUM} / {PAGE_COUNT}', $fuente, $tamano, [0.45, 0.45, 0.45]);
     }
 }

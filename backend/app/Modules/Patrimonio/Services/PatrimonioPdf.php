@@ -6,6 +6,7 @@ namespace App\Modules\Patrimonio\Services;
 
 use App\Modules\Organization\Models\Dependencia;
 use App\Modules\Patrimonio\Models\BienPatrimonial;
+use App\Modules\Transferencia\Services\FirmasAnexo;
 use App\Support\Services\ContextoTransferencia;
 use App\Support\Services\PdfService;
 use Illuminate\Support\Collection;
@@ -23,6 +24,7 @@ class PatrimonioPdf
 {
     public function __construct(
         private readonly ContextoTransferencia $contexto,
+        private readonly FirmasAnexo $firmas,
         private readonly PdfService $pdf,
     ) {}
 
@@ -57,6 +59,7 @@ class PatrimonioPdf
 
         return [
             'contexto' => $contexto,
+            'firmas' => $this->firmas->paraDependencia($dependenciaId),
             'cabecera' => ['dependencia' => $dep?->nombre ?? ''],
             'grupos' => $this->agruparPorServidor($bienes),
         ];
